@@ -1422,10 +1422,8 @@ init_xexts(session_t *ps) {
 #ifdef CFG_XINERAMA
 	ps->xinfo.xinerama_exist = XineramaQueryExtension(dpy,
 			&ps->xinfo.xinerama_ev_base, &ps->xinfo.xinerama_err_base);
-# ifdef DEBUG_XINERAMA
 	printfef(true, "(): Xinerama extension: %s",
 			(ps->xinfo.xinerama_exist ? "yes": "no"));
-# endif /* DEBUG_XINERAMA */
 #endif /* CFG_XINERAMA */
 
 	if(!XDamageQueryExtension(dpy,

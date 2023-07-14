@@ -119,9 +119,7 @@ mainwin_create(session_t *ps) {
 #ifdef CFG_XINERAMA
 	if (ps->xinfo.xinerama_exist && XineramaIsActive(dpy)) {
 		mw->xin_info = XineramaQueryScreens(ps->dpy, &mw->xin_screens);
-# ifdef DEBUG_XINERAMA
 		printfdf(false, "(): Xinerama is enabled (%d screens).", mw->xin_screens);
-# endif /* DEBUG_XINERAMA */
 	}
 #endif /* CFG_XINERAMA */
 
@@ -359,33 +357,25 @@ mainwin_update(MainWin *mw)
 		return;
 	}
 	
-# ifdef DEBUG
-	printfdf(false, "(): --> querying pointer... ");
-# endif /* DEBUG */
+	printfdf(false, "(): XINERAMA --> querying pointer... ");
 	XQueryPointer(ps->dpy, ps->root, &dummy_w, &dummy_w, &root_x, &root_y, &dummy_i, &dummy_i, &dummy_u);
-# ifdef DEBUG	
-	printfdf(false, "(): +%i+%i\n", root_x, root_y);
+	printfdf(false, "(): XINERAMA +%i+%i\n", root_x, root_y);
 	
-	printfdf(false, "(): --> figuring out which screen we're on... ");
-# endif /* DEBUG */
+	printfdf(false, "(): XINERAMA --> figuring out which screen we're on... ");
 	iter = mw->xin_info;
 	for(i = 0; i < mw->xin_screens; ++i)
 	{
 		if(root_x >= iter->x_org && root_x < iter->x_org + iter->width &&
 		   root_y >= iter->y_org && root_y < iter->y_org + iter->height)
 		{
-# ifdef DEBUG
-			printfdf(false, "(): screen %i %ix%i+%i+%i\n", iter->screen_number, iter->width, iter->height, iter->x_org, iter->y_org);
-# endif /* DEBUG */
+			printfdf(false, "(): XINERAMA screen %i %ix%i+%i+%i\n", iter->screen_number, iter->width, iter->height, iter->x_org, iter->y_org);
 			break;
 		}
 		iter++;
 	}
 	if(i == mw->xin_screens)
 	{
-# ifdef DEBUG 
-		printfdf(false, "(): unknown\n");
-# endif /* DEBUG */
+		printfdf(false, "(): XINERAMA unknown\n");
 		return;
 	}
 	mw->x = iter->x_org;
