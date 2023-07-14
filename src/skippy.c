@@ -771,13 +771,13 @@ skippy_activate(MainWin *mw, enum layoutmode layout)
 
 	foreach_dlist(mw->clients) {
 		ClientWin *cw = iter->data;
+		cw->x *= mw->multiplier;
+		cw->y *= mw->multiplier;
 		if (mw->ps->o.lazyTrans)
 		{
 			cw->x += cw->mainwin->x;
 			cw->y += cw->mainwin->y;
 		}
-		cw->x *= mw->multiplier;
-		cw->y *= mw->multiplier;
 	}
 
 	return true;
