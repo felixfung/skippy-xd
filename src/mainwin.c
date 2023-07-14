@@ -519,6 +519,10 @@ mainwin_handle(MainWin *mw, XEvent *ev, enum layoutmode layout) {
 						focus_miniw_next(ps, mw->client_to_focus);
 						return 0;
 					}
+					else if (action == CLIENTOP_FOCUS) {
+						mw->refocus = true;
+						return 1;
+					}
 					else if (action == CLIENTOP_NO) {
 						return 0;
 					}
