@@ -116,13 +116,6 @@ mainwin_create(session_t *ps) {
 
 	mainwin_create_pixmap(mw);
 
-#ifdef CFG_XINERAMA
-	if (ps->xinfo.xinerama_exist && XineramaIsActive(dpy)) {
-		mw->xin_info = XineramaQueryScreens(ps->dpy, &mw->xin_screens);
-		printfdf(false, "(): Xinerama is enabled (%d screens).", mw->xin_screens);
-	}
-#endif /* CFG_XINERAMA */
-
 	XCompositeRedirectSubwindows (ps->dpy, ps->root, CompositeRedirectAutomatic);
 
 	return mw;
@@ -350,6 +343,11 @@ mainwin_update(MainWin *mw)
 	Window dummy_w;
 	int root_x, root_y, dummy_i;
 	unsigned int dummy_u;
+
+	if (ps->xinfo.xinerama_exist && XineramaIsActive(ps->dpy)) {
+		mw->xin_info = XineramaQueryScreens(ps->dpy, &mw->xin_screens);
+		printfdf(false, "(): Xinerama is enabled (%d screens).", mw->xin_screens);
+	}
 	
 	if(! mw->xin_info || ! mw->xin_screens)
 	{
