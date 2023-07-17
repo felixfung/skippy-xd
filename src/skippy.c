@@ -557,6 +557,32 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 		screencount = 1;
 	int desktop_dim = ceil(sqrt(screencount));
 
+	int desktop_width = mw->width;
+	int desktop_height = mw->height;
+
+#ifdef CFG_XINERAMA
+	int minx = INT_MAX;
+	int miny = INT_MAX;
+	int maxx = INT_MIN;
+	int maxy = INT_MIN;
+
+	{
+		XineramaScreenInfo *iter = mw->xin_info;
+		for (int i = 0; i < mw->xin_screens; ++i)
+		{
+			minx = MIN(minx, iter->x_org);
+			miny = MIN(miny, iter->y_org);
+			maxx = MAX(maxx, iter->x_org + iter->width);
+			maxy = MAX(maxy,  iter->y_org +iter->height);
+
+			iter++;
+		}
+	}
+
+	desktop_width = maxx - minx;
+	desktop_height = maxy - miny;
+#endif /* CFG_XINERAMA */
+
 	// the paging layout is rectangular
 	// such that screenwidth == ceil(sqrt(screencount))
 	// and the screenheight == ceil(screencount / screenwidth)
@@ -564,8 +590,8 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 	int screenheight = ceil((float)screencount / (float)screenwidth);
 
     {
-		int totalwidth = screenwidth * (mw->width + mw->distance) - mw->distance;
-		int totalheight = screenheight * (mw->height + mw->distance) - mw->distance;
+		int totalwidth = screenwidth * (desktop_width + mw->distance) - mw->distance;
+		int totalheight = screenheight * (desktop_height + mw->distance) - mw->distance;
 
 		float multiplier = (float) (mw->width - 1 * mw->distance) / (float) totalwidth;
 		if (multiplier * totalheight > mw->height - 1 * mw->distance)
@@ -590,11 +616,11 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 		int current_desktop_x = current_desktop % screenwidth;
 		int current_desktop_y = current_desktop / screenwidth;
 
-		cw->x = cw->src.x + win_desktop_x * (mw->width + mw->distance);
-		cw->y = cw->src.y + win_desktop_y * (mw->height + mw->distance);
+		cw->x = cw->src.x + win_desktop_x * (desktop_width + mw->distance);
+		cw->y = cw->src.y + win_desktop_y * (desktop_height + mw->distance);
 
-		cw->src.x += (win_desktop_x - current_desktop_x) * (mw->width + mw->distance);
-		cw->src.y += (win_desktop_y - current_desktop_y) * (mw->height + mw->distance);
+		cw->src.x += (win_desktop_x - current_desktop_x) * (desktop_width + mw->distance);
+		cw->src.y += (win_desktop_y - current_desktop_y) * (desktop_height + mw->distance);
 	}
 
 	// create windows which represent each virtual desktop
@@ -641,10 +667,10 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 			cw->zombie = false;
 			cw->mode = CLIDISP_DESKTOP;
 
-			cw->x = cw->src.x = (i * (mw->width + mw->distance)) * mw->multiplier;
-			cw->y = cw->src.y = (j * (mw->height + mw->distance)) * mw->multiplier;
-			cw->src.width = mw->width;
-			cw->src.height = mw->height;
+			cw->x = cw->src.x = (i * (desktop_width + mw->distance)) * mw->multiplier;
+			cw->y = cw->src.y = (j * (desktop_height + mw->distance)) * mw->multiplier;
+			cw->src.width = desktop_width;
+			cw->src.height = desktop_height;
 
 			clientwin_move(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
 
@@ -777,13 +803,13 @@ skippy_activate(MainWin *mw, enum layoutmode layout)
 
 	foreach_dlist(mw->clients) {
 		ClientWin *cw = iter->data;
+		cw->x *= mw->multiplier;
+		cw->y *= mw->multiplier;
 		if (mw->ps->o.lazyTrans)
 		{
 			cw->x += cw->mainwin->x;
 			cw->y += cw->mainwin->y;
 		}
-		cw->x *= mw->multiplier;
-		cw->y *= mw->multiplier;
 	}
 
 	return true;
@@ -1428,10 +1454,8 @@ init_xexts(session_t *ps) {
 #ifdef CFG_XINERAMA
 	ps->xinfo.xinerama_exist = XineramaQueryExtension(dpy,
 			&ps->xinfo.xinerama_ev_base, &ps->xinfo.xinerama_err_base);
-# ifdef DEBUG_XINERAMA
 	printfef(true, "(): Xinerama extension: %s",
 			(ps->xinfo.xinerama_exist ? "yes": "no"));
-# endif /* DEBUG_XINERAMA */
 #endif /* CFG_XINERAMA */
 
 	if(!XDamageQueryExtension(dpy,

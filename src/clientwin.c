@@ -415,12 +415,34 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 		else if (cw->zombie)
 			tint = &cw->mainwin->shadowTint;
 
-		if (tint->alpha)
-			XRenderFillRectangle(cw->mainwin->ps->dpy, PictOpOver, cw->destination, tint, s_x, s_y, s_w, s_h);
+		if (tint->alpha) {
+#ifdef CFG_XINERAMA
+			if (cw->mode == CLIDISP_DESKTOP)
+			{
+				XineramaScreenInfo *iter = cw->mainwin->xin_info;
+				for (int i = 0; i < cw->mainwin->xin_screens; ++i)
+				{
+					s_x = iter->x_org * cw->mainwin->multiplier;
+					s_y = iter->y_org * cw->mainwin->multiplier;
+					s_w = iter->width * cw->mainwin->multiplier;
+					s_h = iter->height * cw->mainwin->multiplier;
+
+					XRenderFillRectangle(cw->mainwin->ps->dpy,
+							PictOpOver, cw->destination, tint,
+							s_x, s_y, s_w, s_h);
+
+					iter++;
+				}
+			}
+			else
+#endif /* CFG_XINERAMA */
+				XRenderFillRectangle(cw->mainwin->ps->dpy, PictOpOver,
+						cw->destination, tint, s_x, s_y, s_w, s_h);
+			if(ps->o.cornerRadius)
+				clientwin_round_corners(cw);
+		}
 	}
 
-	if(ps->o.cornerRadius)
-		clientwin_round_corners(cw);
 	XClearArea(cw->mainwin->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
 }
 
