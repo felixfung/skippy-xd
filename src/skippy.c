@@ -1705,7 +1705,6 @@ load_config_file(session_t *ps)
     ps->o.bindings_keysPrev = mstrdup(config_get(config, "bindings", "keysPrev", "p b"));
     ps->o.bindings_keysNext = mstrdup(config_get(config, "bindings", "keysNext", "n f"));
     ps->o.bindings_keysExitCancelOnPress = mstrdup(config_get(config, "bindings", "keysExitCancelOnPress", "Escape BackSpace x q"));
-    ps->o.bindings_keysExitCancelOnRelease = mstrdup(config_get(config, "bindings", "keysExitCancelOnRelease", ""));
     ps->o.bindings_keysExitSelectOnPress = mstrdup(config_get(config, "bindings", "keysExitSelectOnPress", "Return space"));
     ps->o.bindings_keysExitSelectOnRelease = mstrdup(config_get(config, "bindings", "keysExitSelectOnRelease", "Super_L Super_R Alt_L Alt_R ISO_Level3_Shift"));
     ps->o.bindings_keysReverseDirection = mstrdup(config_get(config, "bindings", "keysReverseDirection", "Tab"));
@@ -1719,7 +1718,6 @@ load_config_file(session_t *ps)
     check_keysyms(ps->o.config_path, ": [bindings] keysPrev =", ps->o.bindings_keysPrev);
     check_keysyms(ps->o.config_path, ": [bindings] keysNext =", ps->o.bindings_keysNext);
     check_keysyms(ps->o.config_path, ": [bindings] keysExitCancelOnPress =", ps->o.bindings_keysExitCancelOnPress);
-    check_keysyms(ps->o.config_path, ": [bindings] keysExitCancelOnRelease =", ps->o.bindings_keysExitCancelOnRelease);
     check_keysyms(ps->o.config_path, ": [bindings] keysExitSelectOnPress =", ps->o.bindings_keysExitSelectOnPress);
     check_keysyms(ps->o.config_path, ": [bindings] keysExitSelectOnRelease =", ps->o.bindings_keysExitSelectOnRelease);
     check_keysyms(ps->o.config_path, ": [bindings] keysReverseDirection =", ps->o.bindings_keysReverseDirection);
@@ -2007,7 +2005,6 @@ main_end:
 			free(ps->o.bindings_keysPrev);
 			free(ps->o.bindings_keysNext);
 			free(ps->o.bindings_keysExitCancelOnPress);
-			free(ps->o.bindings_keysExitCancelOnRelease);
 			free(ps->o.bindings_keysExitSelectOnPress);
 			free(ps->o.bindings_keysExitSelectOnRelease);
 			free(ps->o.bindings_keysReverseDirection);

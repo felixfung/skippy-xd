@@ -147,7 +147,6 @@ keysRight = Right d
 keysPrev = p b
 keysNext = Tab n f
 keysExitCancelOnPress = Escape BackSpace x q
-keysExitCancelOnRelease =
 keysExitSelectOnPress = Return space
 keysExitSelectOnRelease = Super_L Super_R Alt_L Alt_R ISO_Level3_Shift
 keysReverseDirection = Tab

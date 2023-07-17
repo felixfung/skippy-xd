@@ -138,7 +138,6 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keys_str_syms(ps->o.bindings_keysPrev, &mw->keysyms_Prev);
 	keys_str_syms(ps->o.bindings_keysNext, &mw->keysyms_Next);
 	keys_str_syms(ps->o.bindings_keysExitCancelOnPress, &mw->keysyms_ExitCancelOnPress);
-	keys_str_syms(ps->o.bindings_keysExitCancelOnRelease, &mw->keysyms_ExitCancelOnRelease);
 	keys_str_syms(ps->o.bindings_keysExitSelectOnPress, &mw->keysyms_ExitSelectOnPress);
 	keys_str_syms(ps->o.bindings_keysExitSelectOnRelease, &mw->keysyms_ExitSelectOnRelease);
 	keys_str_syms(ps->o.bindings_keysReverseDirection, &mw->keysyms_ReverseDirection);
