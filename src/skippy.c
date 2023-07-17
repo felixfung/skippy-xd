@@ -561,9 +561,6 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 	int desktop_height = mw->height;
 
 #ifdef CFG_XINERAMA
-	int screenx[mw->xin_screens];
-	int screeny[mw->xin_screens];
-
 	int minx = INT_MAX;
 	int miny = INT_MAX;
 	int maxx = INT_MIN;
@@ -578,8 +575,6 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 			maxx = MAX(maxx, iter->x_org + iter->width);
 			maxy = MAX(maxy,  iter->y_org +iter->height);
 
-			screenx[i] = iter->x_org;
-			screeny[i] = iter->y_org;
 			iter++;
 		}
 	}
