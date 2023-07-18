@@ -685,13 +685,13 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 				focus_miniw_next(ps, cw->mainwin->client_to_focus);
 		}
 
-		else if (arr_keycodes_includes(cw->mainwin->keycodes_ExitCancelOnPress, evk->keycode))
+		else if (arr_keycodes_includes(cw->mainwin->keycodes_Cancel, evk->keycode))
 		{
 			mw->refocus = true;
 			return 1;
 		}
 
-		else if (arr_keycodes_includes(cw->mainwin->keycodes_ExitSelectOnPress, evk->keycode))
+		else if (arr_keycodes_includes(cw->mainwin->keycodes_Select, evk->keycode))
 		{
 			mw->client_to_focus = cw->mainwin->client_to_focus;
 			return 1;
@@ -703,17 +703,11 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 		report_key_modifiers(evk);
 		if (debuglog) fputs("\n", stdout);
 
-		if (arr_keycodes_includes(cw->mainwin->keycodes_ExitSelectOnRelease, evk->keycode))
+		if (arr_keycodes_includes(cw->mainwin->keycodes_SelectOnRelease, evk->keycode))
 		{
-			printfdf(false, "(): if (arr_keycodes_includes(cw->mainwin->keycodes_ExitSelectOnRelease, evk->keycode))");
+			printfdf(false, "(): if (arr_keycodes_includes(cw->mainwin->keycodes_SelectOnRelease, evk->keycode))");
 			printfdf(false, "(): client_to_focus = %p", ps->mainwin->client_to_focus);
 			// mw->client_to_focus = cw;
-			return 1;
-		}
-
-		else if (arr_keycodes_includes(cw->mainwin->keycodes_ExitCancelOnRelease, evk->keycode))
-		{
-			cw->mainwin->refocus = true;
 			return 1;
 		}
 	}

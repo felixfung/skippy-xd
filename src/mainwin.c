@@ -137,9 +137,9 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keys_str_syms(ps->o.bindings_keysRight, &mw->keysyms_Right);
 	keys_str_syms(ps->o.bindings_keysPrev, &mw->keysyms_Prev);
 	keys_str_syms(ps->o.bindings_keysNext, &mw->keysyms_Next);
-	keys_str_syms(ps->o.bindings_keysExitCancelOnPress, &mw->keysyms_ExitCancelOnPress);
-	keys_str_syms(ps->o.bindings_keysExitSelectOnPress, &mw->keysyms_ExitSelectOnPress);
-	keys_str_syms(ps->o.bindings_keysExitSelectOnRelease, &mw->keysyms_ExitSelectOnRelease);
+	keys_str_syms(ps->o.bindings_keysCancel, &mw->keysyms_Cancel);
+	keys_str_syms(ps->o.bindings_keysSelect, &mw->keysyms_Select);
+	keys_str_syms(ps->o.bindings_keysSelectOnRelease, &mw->keysyms_SelectOnRelease);
 	keys_str_syms(ps->o.bindings_keysReverseDirection, &mw->keysyms_ReverseDirection);
 
 	// convert the modifier key masks settings strings into arrays of enums
@@ -152,49 +152,35 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keysyms_arr_keycodes(dpy, mw->keysyms_Right, &mw->keycodes_Right);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Prev, &mw->keycodes_Prev);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Next, &mw->keycodes_Next);
-	keysyms_arr_keycodes(dpy, mw->keysyms_ExitCancelOnPress, &mw->keycodes_ExitCancelOnPress);
-	keysyms_arr_keycodes(dpy, mw->keysyms_ExitCancelOnRelease, &mw->keycodes_ExitCancelOnRelease);
-	keysyms_arr_keycodes(dpy, mw->keysyms_ExitSelectOnPress, &mw->keycodes_ExitSelectOnPress);
-	keysyms_arr_keycodes(dpy, mw->keysyms_ExitSelectOnRelease, &mw->keycodes_ExitSelectOnRelease);
+	keysyms_arr_keycodes(dpy, mw->keysyms_Cancel, &mw->keycodes_Cancel);
+	keysyms_arr_keycodes(dpy, mw->keysyms_Select, &mw->keycodes_Select);
+	keysyms_arr_keycodes(dpy, mw->keysyms_SelectOnRelease, &mw->keycodes_SelectOnRelease);
 	keysyms_arr_keycodes(dpy, mw->keysyms_ReverseDirection, &mw->keycodes_ReverseDirection);
 
 	// we check all possible pairs, one pair at a time. This is in a specific order, to give a more helpful error msg
 	check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysDown", mw->keysyms_Down);
 	check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysLeft", mw->keysyms_Left);
 	check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysRight", mw->keysyms_Right);
-	check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysExitCancelOnPress", mw->keysyms_ExitCancelOnPress);
-	check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysExitCancelOnRelease", mw->keysyms_ExitCancelOnRelease);
-	check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysExitSelectOnPress", mw->keysyms_ExitSelectOnPress);
-	check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysExitSelectOnRelease", mw->keysyms_ExitSelectOnRelease);
+	check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysCancel", mw->keysyms_Cancel);
+	check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysSelect", mw->keysyms_Select);
+	check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysSelectOnRelease", mw->keysyms_SelectOnRelease);
 	check_keybindings_conflict(ps->o.config_path, "keysDown", mw->keysyms_Down, "keysLeft", mw->keysyms_Left);
 	check_keybindings_conflict(ps->o.config_path, "keysDown", mw->keysyms_Down, "keysRight", mw->keysyms_Right);
-	check_keybindings_conflict(ps->o.config_path, "keysDown", mw->keysyms_Down, "keysExitCancelOnPress", mw->keysyms_ExitCancelOnPress);
-	check_keybindings_conflict(ps->o.config_path, "keysDown", mw->keysyms_Down, "keysExitCancelOnRelease", mw->keysyms_ExitCancelOnRelease);
-	check_keybindings_conflict(ps->o.config_path, "keysDown", mw->keysyms_Down, "keysExitSelectOnPress", mw->keysyms_ExitSelectOnPress);
-	check_keybindings_conflict(ps->o.config_path, "keysDown", mw->keysyms_Down, "keysExitSelectOnRelease", mw->keysyms_ExitSelectOnRelease);
+	check_keybindings_conflict(ps->o.config_path, "keysDown", mw->keysyms_Down, "keysCancel", mw->keysyms_Cancel);
+	check_keybindings_conflict(ps->o.config_path, "keysDown", mw->keysyms_Down, "keysSelect", mw->keysyms_Select);
+	check_keybindings_conflict(ps->o.config_path, "keysDown", mw->keysyms_Down, "keysSelectOnRelease", mw->keysyms_SelectOnRelease);
 	check_keybindings_conflict(ps->o.config_path, "keysLeft", mw->keysyms_Left, "keysRight", mw->keysyms_Right);
-	check_keybindings_conflict(ps->o.config_path, "keysLeft", mw->keysyms_Left, "keysExitCancelOnPress", mw->keysyms_ExitCancelOnPress);
-	check_keybindings_conflict(ps->o.config_path, "keysLeft", mw->keysyms_Left, "keysExitCancelOnRelease", mw->keysyms_ExitCancelOnRelease);
-	check_keybindings_conflict(ps->o.config_path, "keysLeft", mw->keysyms_Left, "keysExitSelectOnPress", mw->keysyms_ExitSelectOnPress);
-	check_keybindings_conflict(ps->o.config_path, "keysLeft", mw->keysyms_Left, "keysExitSelectOnRelease", mw->keysyms_ExitSelectOnRelease);
-	check_keybindings_conflict(ps->o.config_path, "keysRight", mw->keysyms_Prev, "keysExitCancelOnPress", mw->keysyms_ExitCancelOnPress);
-	check_keybindings_conflict(ps->o.config_path, "keysRight", mw->keysyms_Prev, "keysExitCancelOnRelease", mw->keysyms_ExitCancelOnRelease);
-	check_keybindings_conflict(ps->o.config_path, "keysRight", mw->keysyms_Prev, "keysExitSelectOnPress", mw->keysyms_ExitSelectOnPress);
-	check_keybindings_conflict(ps->o.config_path, "keysRight", mw->keysyms_Prev, "keysExitSelectOnRelease", mw->keysyms_ExitSelectOnRelease);
-	check_keybindings_conflict(ps->o.config_path, "keysPrev", mw->keysyms_Prev, "keysExitCancelOnPress", mw->keysyms_ExitCancelOnPress);
-	check_keybindings_conflict(ps->o.config_path, "keysPrev", mw->keysyms_Prev, "keysExitCancelOnRelease", mw->keysyms_ExitCancelOnRelease);
-	check_keybindings_conflict(ps->o.config_path, "keysPrev", mw->keysyms_Prev, "keysExitSelectOnPress", mw->keysyms_ExitSelectOnPress);
-	check_keybindings_conflict(ps->o.config_path, "keysPrev", mw->keysyms_Prev, "keysExitSelectOnRelease", mw->keysyms_ExitSelectOnRelease);
-	check_keybindings_conflict(ps->o.config_path, "keysNext", mw->keysyms_Next, "keysExitCancelOnPress", mw->keysyms_ExitCancelOnPress);
-	check_keybindings_conflict(ps->o.config_path, "keysNext", mw->keysyms_Next, "keysExitCancelOnRelease", mw->keysyms_ExitCancelOnRelease);
-	check_keybindings_conflict(ps->o.config_path, "keysNext", mw->keysyms_Next, "keysExitSelectOnPress", mw->keysyms_ExitSelectOnPress);
-	check_keybindings_conflict(ps->o.config_path, "keysNext", mw->keysyms_Next, "keysExitSelectOnRelease", mw->keysyms_ExitSelectOnRelease);
-	check_keybindings_conflict(ps->o.config_path, "keysExitCancelOnPress", mw->keysyms_ExitCancelOnPress, "keysExitCancelOnRelease", mw->keysyms_ExitCancelOnRelease);
-	check_keybindings_conflict(ps->o.config_path, "keysExitCancelOnPress", mw->keysyms_ExitCancelOnPress, "keysExitSelectOnPress", mw->keysyms_ExitSelectOnPress);
-	check_keybindings_conflict(ps->o.config_path, "keysExitCancelOnPress", mw->keysyms_ExitCancelOnPress, "keysExitSelectOnRelease", mw->keysyms_ExitSelectOnRelease);
-	check_keybindings_conflict(ps->o.config_path, "keysExitCancelOnRelease", mw->keysyms_ExitCancelOnRelease, "keysExitSelectOnPress", mw->keysyms_ExitSelectOnPress);
-	check_keybindings_conflict(ps->o.config_path, "keysExitCancelOnRelease", mw->keysyms_ExitCancelOnRelease, "keysExitSelectOnRelease", mw->keysyms_ExitSelectOnRelease);
-	check_keybindings_conflict(ps->o.config_path, "keysExitSelectOnPress", mw->keysyms_ExitSelectOnPress, "keysExitSelectOnRelease", mw->keysyms_ExitSelectOnRelease);
+	check_keybindings_conflict(ps->o.config_path, "keysLeft", mw->keysyms_Left, "keysCancel", mw->keysyms_Cancel);
+	check_keybindings_conflict(ps->o.config_path, "keysLeft", mw->keysyms_Left, "keysSelect", mw->keysyms_Select);
+	check_keybindings_conflict(ps->o.config_path, "keysLeft", mw->keysyms_Left, "keysSelectOnRelease", mw->keysyms_SelectOnRelease);
+	check_keybindings_conflict(ps->o.config_path, "keysRight", mw->keysyms_Prev, "keysCancel", mw->keysyms_Cancel);
+	check_keybindings_conflict(ps->o.config_path, "keysRight", mw->keysyms_Prev, "keysSelect", mw->keysyms_Select);
+	check_keybindings_conflict(ps->o.config_path, "keysRight", mw->keysyms_Prev, "keysSelectOnRelease", mw->keysyms_SelectOnRelease);
+	check_keybindings_conflict(ps->o.config_path, "keysPrev", mw->keysyms_Prev, "keysCancel", mw->keysyms_Cancel);
+	check_keybindings_conflict(ps->o.config_path, "keysPrev", mw->keysyms_Prev, "keysSelect", mw->keysyms_Select);
+	check_keybindings_conflict(ps->o.config_path, "keysNext", mw->keysyms_Next, "keysCancel", mw->keysyms_Cancel);
+	check_keybindings_conflict(ps->o.config_path, "keysNext", mw->keysyms_Next, "keysSelect", mw->keysyms_Select);
+	check_keybindings_conflict(ps->o.config_path, "keysCancel", mw->keysyms_Cancel, "keysSelect", mw->keysyms_Select);
 	
 	if (ps->o.updateFreq != 0.0)
 		mw->poll_time = (1.0 / ps->o.updateFreq) * 1000.0;
@@ -463,10 +449,9 @@ mainwin_destroy(MainWin *mw) {
 	free(mw->keysyms_Right);
 	free(mw->keysyms_Prev);
 	free(mw->keysyms_Next);
-	free(mw->keysyms_ExitCancelOnPress);
-	free(mw->keysyms_ExitCancelOnRelease);
-	free(mw->keysyms_ExitSelectOnPress);
-	free(mw->keysyms_ExitSelectOnRelease);
+	free(mw->keysyms_Cancel);
+	free(mw->keysyms_Select);
+	free(mw->keysyms_SelectOnRelease);
 	free(mw->keysyms_ReverseDirection);
 
 	free(mw->modifierKeyMasks_ReverseDirection);
@@ -477,10 +462,9 @@ mainwin_destroy(MainWin *mw) {
 	free(mw->keycodes_Right);
 	free(mw->keycodes_Prev);
 	free(mw->keycodes_Next);
-	free(mw->keycodes_ExitCancelOnPress);
-	free(mw->keycodes_ExitCancelOnRelease);
-	free(mw->keycodes_ExitSelectOnPress);
-	free(mw->keycodes_ExitSelectOnRelease);
+	free(mw->keycodes_Cancel);
+	free(mw->keycodes_Select);
+	free(mw->keycodes_SelectOnRelease);
 	free(mw->keycodes_ReverseDirection);
 
 	free(mw);

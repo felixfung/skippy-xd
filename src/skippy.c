@@ -1704,9 +1704,9 @@ load_config_file(session_t *ps)
     ps->o.bindings_keysRight = mstrdup(config_get(config, "bindings", "keysRight", "Right Tab d"));
     ps->o.bindings_keysPrev = mstrdup(config_get(config, "bindings", "keysPrev", "p b"));
     ps->o.bindings_keysNext = mstrdup(config_get(config, "bindings", "keysNext", "n f"));
-    ps->o.bindings_keysExitCancelOnPress = mstrdup(config_get(config, "bindings", "keysExitCancelOnPress", "Escape BackSpace x q"));
-    ps->o.bindings_keysExitSelectOnPress = mstrdup(config_get(config, "bindings", "keysExitSelectOnPress", "Return space"));
-    ps->o.bindings_keysExitSelectOnRelease = mstrdup(config_get(config, "bindings", "keysExitSelectOnRelease", "Super_L Super_R Alt_L Alt_R ISO_Level3_Shift"));
+    ps->o.bindings_keysCancel = mstrdup(config_get(config, "bindings", "keysCancel", "Escape BackSpace x q"));
+    ps->o.bindings_keysSelect = mstrdup(config_get(config, "bindings", "keysSelect", "Return space"));
+    ps->o.bindings_keysSelectOnRelease = mstrdup(config_get(config, "bindings", "keysSelectOnRelease", "Super_L Super_R Alt_L Alt_R ISO_Level3_Shift"));
     ps->o.bindings_keysReverseDirection = mstrdup(config_get(config, "bindings", "keysReverseDirection", "Tab"));
     ps->o.bindings_modifierKeyMasksReverseDirection = mstrdup(config_get(config, "bindings", "modifierKeyMasksReverseDirection", "ShiftMask ControlMask"));
 
@@ -1717,9 +1717,9 @@ load_config_file(session_t *ps)
     check_keysyms(ps->o.config_path, ": [bindings] keysRight =", ps->o.bindings_keysRight);
     check_keysyms(ps->o.config_path, ": [bindings] keysPrev =", ps->o.bindings_keysPrev);
     check_keysyms(ps->o.config_path, ": [bindings] keysNext =", ps->o.bindings_keysNext);
-    check_keysyms(ps->o.config_path, ": [bindings] keysExitCancelOnPress =", ps->o.bindings_keysExitCancelOnPress);
-    check_keysyms(ps->o.config_path, ": [bindings] keysExitSelectOnPress =", ps->o.bindings_keysExitSelectOnPress);
-    check_keysyms(ps->o.config_path, ": [bindings] keysExitSelectOnRelease =", ps->o.bindings_keysExitSelectOnRelease);
+    check_keysyms(ps->o.config_path, ": [bindings] keysCancel =", ps->o.bindings_keysCancel);
+    check_keysyms(ps->o.config_path, ": [bindings] keysSelect =", ps->o.bindings_keysSelect);
+    check_keysyms(ps->o.config_path, ": [bindings] keysSelectOnRelease =", ps->o.bindings_keysSelectOnRelease);
     check_keysyms(ps->o.config_path, ": [bindings] keysReverseDirection =", ps->o.bindings_keysReverseDirection);
     check_modmasks(ps->o.config_path, ": [bindings] modifierKeyMasksReverseDirection =", ps->o.bindings_modifierKeyMasksReverseDirection);
 
@@ -2004,9 +2004,9 @@ main_end:
 			free(ps->o.bindings_keysRight);
 			free(ps->o.bindings_keysPrev);
 			free(ps->o.bindings_keysNext);
-			free(ps->o.bindings_keysExitCancelOnPress);
-			free(ps->o.bindings_keysExitSelectOnPress);
-			free(ps->o.bindings_keysExitSelectOnRelease);
+			free(ps->o.bindings_keysCancel);
+			free(ps->o.bindings_keysSelect);
+			free(ps->o.bindings_keysSelectOnRelease);
 			free(ps->o.bindings_keysReverseDirection);
 			free(ps->o.bindings_modifierKeyMasksReverseDirection);
 		}

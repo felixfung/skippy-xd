@@ -248,9 +248,9 @@ typedef struct {
 	char *bindings_keysRight;
 	char *bindings_keysPrev;
 	char *bindings_keysNext;
-	char *bindings_keysExitCancelOnPress;
-	char *bindings_keysExitSelectOnPress;
-	char *bindings_keysExitSelectOnRelease;
+	char *bindings_keysCancel;
+	char *bindings_keysSelect;
+	char *bindings_keysSelectOnRelease;
 	char *bindings_keysReverseDirection;
 	char *bindings_modifierKeyMasksReverseDirection;
 } options_t;
