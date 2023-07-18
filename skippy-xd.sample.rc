@@ -135,17 +135,21 @@ textShadow = black
 font = fixed-11:weight=bold
 
 [bindings]
+
 miwMouse1 = focus
 miwMouse2 = close-ewmh
 miwMouse3 = iconify
 miwMouse4 = keysNext
 miwMouse5 = keysPrev
+
 keysUp = Up w
 keysDown = Down s
 keysLeft = Left a
 keysRight = Right d
+
 keysPrev = p b
 keysNext = Tab n f
+
 keysCancel = Escape BackSpace x q
 keysSelect = Return space
 keysPivot = Super_L Super_R Alt_L Alt_R ISO_Level3_Shift
