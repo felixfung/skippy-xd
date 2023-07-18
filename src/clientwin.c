@@ -617,7 +617,7 @@ clientwin_tooltip(ClientWin *cw, XEvent *ev) {
 }
 
 int
-clientwin_handle(ClientWin *cw, XEvent *ev) {
+clientwin_handle(ClientWin *cw, XEvent *ev, enum layoutmode layout) {
 	if (! cw)
 		return 1;
 
@@ -679,7 +679,8 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 		report_key_modifiers(evk);
 		if (debuglog) fputs("\n", stdout);
 
-		if (arr_keycodes_includes(cw->mainwin->keycodes_TabSwitch, evk->keycode))
+		if (arr_keycodes_includes(cw->mainwin->keycodes_TabSwitch, evk->keycode)
+				&& layout == LAYOUTMODE_SWITCH)
 		{
 			printfdf(false, "(): if (arr_keycodes_includes(cw->mainwin->keycodes_TabSwitch, evk->keycode))");
 			printfdf(false, "(): client_to_focus = %p", ps->mainwin->client_to_focus);
@@ -687,7 +688,8 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 			return 1;
 		}
 
-		if (arr_keycodes_includes(cw->mainwin->keycodes_PivotSwitch, evk->keycode))
+		if (arr_keycodes_includes(cw->mainwin->keycodes_PivotSwitch, evk->keycode)
+				&& layout == LAYOUTMODE_SWITCH)
 		{
 			printfdf(false, "(): if (arr_keycodes_includes(cw->mainwin->keycodes_PivotSwitch, evk->keycode))");
 			printfdf(false, "(): client_to_focus = %p", ps->mainwin->client_to_focus);

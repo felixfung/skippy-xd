@@ -90,7 +90,7 @@ void clientwin_destroy(ClientWin *, bool destroyed);
 void clientwin_move(ClientWin *, float, int, int, float);
 void clientwin_map(ClientWin *);
 void clientwin_unmap(ClientWin *);
-int clientwin_handle(ClientWin *, XEvent *);
+int clientwin_handle(ClientWin *, XEvent *, enum layoutmode);
 int clientwin_cmp_func(dlist *, void*);
 bool clientwin_update(ClientWin *cw);
 bool clientwin_update2(ClientWin *cw);

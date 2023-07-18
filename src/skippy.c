@@ -1024,7 +1024,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 							ClientWin *cw = (ClientWin *) iter->data;
 							if (cw->mini.window == wid) {
 								if (!(POLLIN & r_fd[1].revents)) {
-									die = clientwin_handle(cw, &ev);
+									die = clientwin_handle(cw, &ev, layout);
 								}
 							}
 						}
@@ -1083,7 +1083,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					//}
 				}
 				else if (mw && wid == mw->window)
-					die = mainwin_handle(mw, &ev);
+					die = mainwin_handle(mw, &ev, layout);
 				else if (mw && PropertyNotify == ev.type) {
 					printfdf(false, "(): else if (ev.type == PropertyNotify) {");
 
@@ -1110,7 +1110,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 									&& ev.type != GraphicsExpose
 									&& ev.type != EnterNotify
 									&& ev.type != LeaveNotify))) {
-								die = clientwin_handle(cw, &ev);
+								die = clientwin_handle(cw, &ev, layout);
 								if (layout == LAYOUTMODE_PAGING
 									&& ev.type != MotionNotify){
 									desktopwin_map(cw);}

@@ -97,7 +97,7 @@ MainWin *mainwin_reload(session_t *ps, MainWin *mw);
 void mainwin_destroy(MainWin *);
 void mainwin_map(MainWin *);
 void mainwin_unmap(MainWin *);
-int mainwin_handle(MainWin *, XEvent *);
+int mainwin_handle(MainWin *, XEvent *, enum layoutmode);
 void mainwin_update_background(MainWin *mw);
 void mainwin_update(MainWin *mw);
 MainWin *mainwin_create_pixmap(MainWin *mw);

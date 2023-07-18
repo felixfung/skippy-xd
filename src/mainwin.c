@@ -480,7 +480,7 @@ mainwin_transform(MainWin *mw, float f)
 }
 
 int
-mainwin_handle(MainWin *mw, XEvent *ev) {
+mainwin_handle(MainWin *mw, XEvent *ev, enum layoutmode layout) {
 	printfdf(false, "(): ");
 	session_t *ps = mw->ps;
 
@@ -494,7 +494,7 @@ mainwin_handle(MainWin *mw, XEvent *ev) {
 			// if(mw->client_to_focus)
 			// {
 				// printfdf(false, "(): clientwin_handle(mw->client_to_focus, ev);");
-			if(clientwin_handle(mw->client_to_focus, ev))
+			if(clientwin_handle(mw->client_to_focus, ev, layout))
 				return 1;
 
 			// }
