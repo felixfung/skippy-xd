@@ -149,5 +149,3 @@ keysNext = Tab n f
 keysCancel = Escape BackSpace x q
 keysSelect = Return space
 keysExitSelectOnRelease = Super_L Super_R Alt_L Alt_R ISO_Level3_Shift
-keysReverseDirection = Tab
-modifierKeyMasksReverseDirection = ShiftMask ControlMask

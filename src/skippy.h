@@ -251,8 +251,6 @@ typedef struct {
 	char *bindings_keysCancel;
 	char *bindings_keysSelect;
 	char *bindings_keysSelectOnRelease;
-	char *bindings_keysReverseDirection;
-	char *bindings_modifierKeyMasksReverseDirection;
 } options_t;
 
 #define OPTIONST_INIT { \

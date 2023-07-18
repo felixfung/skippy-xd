@@ -1707,8 +1707,6 @@ load_config_file(session_t *ps)
     ps->o.bindings_keysCancel = mstrdup(config_get(config, "bindings", "keysCancel", "Escape BackSpace x q"));
     ps->o.bindings_keysSelect = mstrdup(config_get(config, "bindings", "keysSelect", "Return space"));
     ps->o.bindings_keysSelectOnRelease = mstrdup(config_get(config, "bindings", "keysSelectOnRelease", "Super_L Super_R Alt_L Alt_R ISO_Level3_Shift"));
-    ps->o.bindings_keysReverseDirection = mstrdup(config_get(config, "bindings", "keysReverseDirection", "Tab"));
-    ps->o.bindings_modifierKeyMasksReverseDirection = mstrdup(config_get(config, "bindings", "modifierKeyMasksReverseDirection", "ShiftMask ControlMask"));
 
     // print an error message for any key bindings that aren't recognized
     check_keysyms(ps->o.config_path, ": [bindings] keysUp =", ps->o.bindings_keysUp);
@@ -1720,8 +1718,6 @@ load_config_file(session_t *ps)
     check_keysyms(ps->o.config_path, ": [bindings] keysCancel =", ps->o.bindings_keysCancel);
     check_keysyms(ps->o.config_path, ": [bindings] keysSelect =", ps->o.bindings_keysSelect);
     check_keysyms(ps->o.config_path, ": [bindings] keysSelectOnRelease =", ps->o.bindings_keysSelectOnRelease);
-    check_keysyms(ps->o.config_path, ": [bindings] keysReverseDirection =", ps->o.bindings_keysReverseDirection);
-    check_modmasks(ps->o.config_path, ": [bindings] modifierKeyMasksReverseDirection =", ps->o.bindings_modifierKeyMasksReverseDirection);
 
 	if (!parse_cliop(ps, config_get(config, "bindings", "miwMouse1", "focus"), &ps->o.bindings_miwMouse[1])
 			|| !parse_cliop(ps, config_get(config, "bindings", "miwMouse2", "close-ewmh"), &ps->o.bindings_miwMouse[2])
@@ -2007,8 +2003,6 @@ main_end:
 			free(ps->o.bindings_keysCancel);
 			free(ps->o.bindings_keysSelect);
 			free(ps->o.bindings_keysSelectOnRelease);
-			free(ps->o.bindings_keysReverseDirection);
-			free(ps->o.bindings_modifierKeyMasksReverseDirection);
 		}
 
 		if (ps->fd_pipe >= 0)

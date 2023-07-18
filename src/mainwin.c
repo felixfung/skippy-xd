@@ -140,10 +140,6 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keys_str_syms(ps->o.bindings_keysCancel, &mw->keysyms_Cancel);
 	keys_str_syms(ps->o.bindings_keysSelect, &mw->keysyms_Select);
 	keys_str_syms(ps->o.bindings_keysSelectOnRelease, &mw->keysyms_SelectOnRelease);
-	keys_str_syms(ps->o.bindings_keysReverseDirection, &mw->keysyms_ReverseDirection);
-
-	// convert the modifier key masks settings strings into arrays of enums
-	modkeymasks_str_enums(ps->o.bindings_modifierKeyMasksReverseDirection, &mw->modifierKeyMasks_ReverseDirection);
 
 	// convert the arrays of KeySyms into arrays of KeyCodes, for this specific Display
 	keysyms_arr_keycodes(dpy, mw->keysyms_Up, &mw->keycodes_Up);
@@ -155,7 +151,6 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keysyms_arr_keycodes(dpy, mw->keysyms_Cancel, &mw->keycodes_Cancel);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Select, &mw->keycodes_Select);
 	keysyms_arr_keycodes(dpy, mw->keysyms_SelectOnRelease, &mw->keycodes_SelectOnRelease);
-	keysyms_arr_keycodes(dpy, mw->keysyms_ReverseDirection, &mw->keycodes_ReverseDirection);
 
 	// we check all possible pairs, one pair at a time. This is in a specific order, to give a more helpful error msg
 	check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysDown", mw->keysyms_Down);
@@ -452,9 +447,6 @@ mainwin_destroy(MainWin *mw) {
 	free(mw->keysyms_Cancel);
 	free(mw->keysyms_Select);
 	free(mw->keysyms_SelectOnRelease);
-	free(mw->keysyms_ReverseDirection);
-
-	free(mw->modifierKeyMasks_ReverseDirection);
 
 	free(mw->keycodes_Up);
 	free(mw->keycodes_Down);
@@ -465,7 +457,6 @@ mainwin_destroy(MainWin *mw) {
 	free(mw->keycodes_Cancel);
 	free(mw->keycodes_Select);
 	free(mw->keycodes_SelectOnRelease);
-	free(mw->keycodes_ReverseDirection);
 
 	free(mw);
 }
