@@ -250,7 +250,7 @@ typedef struct {
 	char *bindings_keysNext;
 	char *bindings_keysCancel;
 	char *bindings_keysSelect;
-	char *bindings_keysSelectOnRelease;
+	char *bindings_keysPivot;
 } options_t;
 
 #define OPTIONST_INIT { \
