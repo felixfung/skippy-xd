@@ -679,11 +679,19 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 		report_key_modifiers(evk);
 		if (debuglog) fputs("\n", stdout);
 
-		if (arr_keycodes_includes(cw->mainwin->keycodes_Pivot, evk->keycode))
+		if (arr_keycodes_includes(cw->mainwin->keycodes_TabSwitch, evk->keycode))
 		{
-			printfdf(false, "(): if (arr_keycodes_includes(cw->mainwin->keycodes_SelectOnRelease, evk->keycode))");
+			printfdf(false, "(): if (arr_keycodes_includes(cw->mainwin->keycodes_TabSwitch, evk->keycode))");
 			printfdf(false, "(): client_to_focus = %p", ps->mainwin->client_to_focus);
-			// mw->client_to_focus = cw;
+
+			return 1;
+		}
+
+		if (arr_keycodes_includes(cw->mainwin->keycodes_PivotSwitch, evk->keycode))
+		{
+			printfdf(false, "(): if (arr_keycodes_includes(cw->mainwin->keycodes_PivotSwitch, evk->keycode))");
+			printfdf(false, "(): client_to_focus = %p", ps->mainwin->client_to_focus);
+
 			return 1;
 		}
 	}

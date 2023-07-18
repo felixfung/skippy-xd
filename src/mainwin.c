@@ -139,7 +139,8 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keys_str_syms(ps->o.bindings_keysNext, &mw->keysyms_Next);
 	keys_str_syms(ps->o.bindings_keysCancel, &mw->keysyms_Cancel);
 	keys_str_syms(ps->o.bindings_keysSelect, &mw->keysyms_Select);
-	keys_str_syms(ps->o.bindings_keysPivot, &mw->keysyms_Pivot);
+	keys_str_syms(ps->o.bindings_keysTabSwitch, &mw->keysyms_TabSwitch);
+	keys_str_syms(ps->o.bindings_keysPivotSwitch, &mw->keysyms_PivotSwitch);
 
 	// convert the arrays of KeySyms into arrays of KeyCodes, for this specific Display
 	keysyms_arr_keycodes(dpy, mw->keysyms_Up, &mw->keycodes_Up);
@@ -150,7 +151,8 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keysyms_arr_keycodes(dpy, mw->keysyms_Next, &mw->keycodes_Next);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Cancel, &mw->keycodes_Cancel);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Select, &mw->keycodes_Select);
-	keysyms_arr_keycodes(dpy, mw->keysyms_Pivot, &mw->keycodes_Pivot);
+	keysyms_arr_keycodes(dpy, mw->keysyms_TabSwitch, &mw->keycodes_TabSwitch);
+	keysyms_arr_keycodes(dpy, mw->keysyms_PivotSwitch, &mw->keycodes_PivotSwitch);
 
 	// we check all possible pairs, one pair at a time. This is in a specific order, to give a more helpful error msg
 	check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysDown", mw->keysyms_Down);
@@ -158,19 +160,19 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysRight", mw->keysyms_Right);
 	check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysCancel", mw->keysyms_Cancel);
 	check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysSelect", mw->keysyms_Select);
-	check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysPivot", mw->keysyms_Pivot);
+	//check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysPivot", mw->keysyms_Pivot);
 	check_keybindings_conflict(ps->o.config_path, "keysDown", mw->keysyms_Down, "keysLeft", mw->keysyms_Left);
 	check_keybindings_conflict(ps->o.config_path, "keysDown", mw->keysyms_Down, "keysRight", mw->keysyms_Right);
 	check_keybindings_conflict(ps->o.config_path, "keysDown", mw->keysyms_Down, "keysCancel", mw->keysyms_Cancel);
 	check_keybindings_conflict(ps->o.config_path, "keysDown", mw->keysyms_Down, "keysSelect", mw->keysyms_Select);
-	check_keybindings_conflict(ps->o.config_path, "keysDown", mw->keysyms_Down, "keysPivot", mw->keysyms_Pivot);
+	//check_keybindings_conflict(ps->o.config_path, "keysDown", mw->keysyms_Down, "keysPivot", mw->keysyms_Pivot);
 	check_keybindings_conflict(ps->o.config_path, "keysLeft", mw->keysyms_Left, "keysRight", mw->keysyms_Right);
 	check_keybindings_conflict(ps->o.config_path, "keysLeft", mw->keysyms_Left, "keysCancel", mw->keysyms_Cancel);
 	check_keybindings_conflict(ps->o.config_path, "keysLeft", mw->keysyms_Left, "keysSelect", mw->keysyms_Select);
-	check_keybindings_conflict(ps->o.config_path, "keysLeft", mw->keysyms_Left, "keysPivot", mw->keysyms_Pivot);
+	//check_keybindings_conflict(ps->o.config_path, "keysLeft", mw->keysyms_Left, "keysPivot", mw->keysyms_Pivot);
 	check_keybindings_conflict(ps->o.config_path, "keysRight", mw->keysyms_Prev, "keysCancel", mw->keysyms_Cancel);
 	check_keybindings_conflict(ps->o.config_path, "keysRight", mw->keysyms_Prev, "keysSelect", mw->keysyms_Select);
-	check_keybindings_conflict(ps->o.config_path, "keysRight", mw->keysyms_Prev, "keysPivot", mw->keysyms_Pivot);
+	//check_keybindings_conflict(ps->o.config_path, "keysRight", mw->keysyms_Prev, "keysPivot", mw->keysyms_Pivot);
 	check_keybindings_conflict(ps->o.config_path, "keysPrev", mw->keysyms_Prev, "keysCancel", mw->keysyms_Cancel);
 	check_keybindings_conflict(ps->o.config_path, "keysPrev", mw->keysyms_Prev, "keysSelect", mw->keysyms_Select);
 	check_keybindings_conflict(ps->o.config_path, "keysNext", mw->keysyms_Next, "keysCancel", mw->keysyms_Cancel);
@@ -446,7 +448,8 @@ mainwin_destroy(MainWin *mw) {
 	free(mw->keysyms_Next);
 	free(mw->keysyms_Cancel);
 	free(mw->keysyms_Select);
-	free(mw->keysyms_Pivot);
+	free(mw->keysyms_TabSwitch);
+	free(mw->keysyms_PivotSwitch);
 
 	free(mw->keycodes_Up);
 	free(mw->keycodes_Down);
@@ -456,7 +459,8 @@ mainwin_destroy(MainWin *mw) {
 	free(mw->keycodes_Next);
 	free(mw->keycodes_Cancel);
 	free(mw->keycodes_Select);
-	free(mw->keycodes_Pivot);
+	free(mw->keycodes_TabSwitch);
+	free(mw->keycodes_PivotSwitch);
 
 	free(mw);
 }

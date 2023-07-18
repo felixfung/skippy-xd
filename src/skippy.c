@@ -1701,12 +1701,13 @@ load_config_file(session_t *ps)
     ps->o.bindings_keysUp = mstrdup(config_get(config, "bindings", "keysUp", "Up w"));
     ps->o.bindings_keysDown = mstrdup(config_get(config, "bindings", "keysDown", "Down s"));
     ps->o.bindings_keysLeft = mstrdup(config_get(config, "bindings", "keysLeft", "Left a"));
-    ps->o.bindings_keysRight = mstrdup(config_get(config, "bindings", "keysRight", "Right Tab d"));
+    ps->o.bindings_keysRight = mstrdup(config_get(config, "bindings", "keysRight", "Right d"));
     ps->o.bindings_keysPrev = mstrdup(config_get(config, "bindings", "keysPrev", "p b"));
     ps->o.bindings_keysNext = mstrdup(config_get(config, "bindings", "keysNext", "n f"));
     ps->o.bindings_keysCancel = mstrdup(config_get(config, "bindings", "keysCancel", "Escape BackSpace x q"));
     ps->o.bindings_keysSelect = mstrdup(config_get(config, "bindings", "keysSelect", "Return space"));
-    ps->o.bindings_keysPivot = mstrdup(config_get(config, "bindings", "keysPivot", "Super_L Super_R Alt_L Alt_R ISO_Level3_Shift"));
+    ps->o.bindings_keysTabSwitch = mstrdup(config_get(config, "bindings", "keysTabSwitch", "Tab"));
+    ps->o.bindings_keysPivotSwitch = mstrdup(config_get(config, "bindings", "keysPivotSwitch", "Alt_L"));
 
     // print an error message for any key bindings that aren't recognized
     check_keysyms(ps->o.config_path, ": [bindings] keysUp =", ps->o.bindings_keysUp);
@@ -1717,7 +1718,8 @@ load_config_file(session_t *ps)
     check_keysyms(ps->o.config_path, ": [bindings] keysNext =", ps->o.bindings_keysNext);
     check_keysyms(ps->o.config_path, ": [bindings] keysCancel =", ps->o.bindings_keysCancel);
     check_keysyms(ps->o.config_path, ": [bindings] keysSelect =", ps->o.bindings_keysSelect);
-    check_keysyms(ps->o.config_path, ": [bindings] keysPivot =", ps->o.bindings_keysPivot);
+    check_keysyms(ps->o.config_path, ": [bindings] keysTabSwitch =", ps->o.bindings_keysTabSwitch);
+    check_keysyms(ps->o.config_path, ": [bindings] keysPivotSwitch =", ps->o.bindings_keysPivotSwitch);
 
 	if (!parse_cliop(ps, config_get(config, "bindings", "miwMouse1", "focus"), &ps->o.bindings_miwMouse[1])
 			|| !parse_cliop(ps, config_get(config, "bindings", "miwMouse2", "close-ewmh"), &ps->o.bindings_miwMouse[2])
@@ -2002,7 +2004,8 @@ main_end:
 			free(ps->o.bindings_keysNext);
 			free(ps->o.bindings_keysCancel);
 			free(ps->o.bindings_keysSelect);
-			free(ps->o.bindings_keysPivot);
+			free(ps->o.bindings_keysTabSwitch);
+			free(ps->o.bindings_keysPivotSwitch);
 		}
 
 		if (ps->fd_pipe >= 0)
