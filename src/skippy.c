@@ -770,12 +770,6 @@ skippy_activate(MainWin *mw, enum layoutmode layout)
 		mw->xin_active = 0;
 #endif /* CFG_XINERAMA */
 
-	// Map the main window and run our event loop
-	if (ps->o.lazyTrans) {
-		mainwin_map(mw);
-		XFlush(ps->dpy);
-	}
-
 	mw->client_to_focus = NULL;
 
 	daemon_count_clients(mw);
@@ -964,6 +958,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 			// animation!
 			if (mw && animating) {
 				int timeslice = time_in_millis() - first_animated;
+				if (ps->o.lazyTrans && !mw->mapped)
+					mainwin_map(mw);
 				if (layout != LAYOUTMODE_SWITCH
 						&& timeslice < ps->o.animationDuration
 						&& timeslice + first_animated >=
@@ -972,7 +968,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 						((float)timeslice)/(float)ps->o.animationDuration);
 					last_rendered = time_in_millis();
 
-					/* Map the main window and run our event loop */
 					if (!ps->o.lazyTrans && !mw->mapped)
 						mainwin_map(mw);
 					XFlush(ps->dpy);
@@ -989,7 +984,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 						}
 					}
 
-					/* Map the main window and run our event loop */
 					if (!ps->o.lazyTrans && !mw->mapped)
 						mainwin_map(mw);
 					XFlush(ps->dpy);
