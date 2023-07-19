@@ -954,191 +954,189 @@ mainloop(session_t *ps, bool activate_on_start) {
 		if (activate_on_start && !mw)
 			return;
 
-		{
-			// animation!
-			if (mw && animating) {
-				int timeslice = time_in_millis() - first_animated;
-				if (ps->o.lazyTrans && !mw->mapped)
+		// animation!
+		if (mw && animating) {
+			int timeslice = time_in_millis() - first_animated;
+			if (ps->o.lazyTrans && !mw->mapped)
+				mainwin_map(mw);
+			if (layout != LAYOUTMODE_SWITCH
+					&& timeslice < ps->o.animationDuration
+					&& timeslice + first_animated >=
+					last_rendered + (1000.0 / 60.0)) {
+				anime(ps->mainwin, ps->mainwin->clients,
+					((float)timeslice)/(float)ps->o.animationDuration);
+				last_rendered = time_in_millis();
+
+				if (!ps->o.lazyTrans && !mw->mapped)
 					mainwin_map(mw);
-				if (layout != LAYOUTMODE_SWITCH
-						&& timeslice < ps->o.animationDuration
-						&& timeslice + first_animated >=
-						last_rendered + (1000.0 / 60.0)) {
-					anime(ps->mainwin, ps->mainwin->clients,
-						((float)timeslice)/(float)ps->o.animationDuration);
-					last_rendered = time_in_millis();
-
-					if (!ps->o.lazyTrans && !mw->mapped)
-						mainwin_map(mw);
-					XFlush(ps->dpy);
-				}
-				else if (layout == LAYOUTMODE_SWITCH
-						|| timeslice >= ps->o.animationDuration) {
-					anime(ps->mainwin, ps->mainwin->clients, 1);
-					animating = false;
-					last_rendered = time_in_millis();
-
-					if (layout == LAYOUTMODE_PAGING) {
-						foreach_dlist (mw->dminis) {
-							desktopwin_map(((ClientWin *) iter->data));
-						}
-					}
-
-					if (!ps->o.lazyTrans && !mw->mapped)
-						mainwin_map(mw);
-					XFlush(ps->dpy);
-
-					focus_miniw_adv(ps, mw->client_to_focus,
-							ps->o.movePointer);
-				}
-
-				continue; // while animating, do not allow user actions
+				XFlush(ps->dpy);
 			}
-
-			// Process X events
-			int num_events = 0;
-			XEvent ev = { };
-			while ((num_events = XEventsQueued(ps->dpy, QueuedAfterReading)))
-			{
-				XNextEvent(ps->dpy, &ev);
-
-#ifdef DEBUG_EVENTS
-				ev_dump(ps, mw, &ev);
-#endif
-				Window wid = ev_window(ps, &ev);
-
-				if (mw && MotionNotify == ev.type)
-				{
-					// when mouse move within a client window, focus on it
-					if (wid) {
-						dlist *iter = mw->clientondesktop;
-						if (layout == LAYOUTMODE_PAGING)
-							iter = mw->dminis;
-						for (; iter; iter = iter->next) {
-							ClientWin *cw = (ClientWin *) iter->data;
-							if (cw->mini.window == wid) {
-								if (!(POLLIN & r_fd[1].revents)) {
-									die = clientwin_handle(cw, &ev, layout);
-								}
-							}
-						}
-					}
-
-					// Speed up responsiveness when the user is moving the mouse around
-					// The queue gets filled up with consquetive MotionNotify events
-					// discard all except the last MotionNotify event in a contiguous block of MotionNotify events
-
-					XEvent ev_next = { };
-					while(num_events > 0)
-					{
-						XPeekEvent(ps->dpy, &ev_next);
-
-						if(ev_next.type != MotionNotify)
-							break;
-
-						XNextEvent(ps->dpy, &ev);
-						wid = ev_window(ps, &ev);
-
-						num_events--;
-					}
-				}
-				else if (mw && ev.type == DestroyNotify) {
-					printfdf(false, "(): else if (ev.type == DestroyNotify) {");
-					daemon_count_clients(ps->mainwin);
-					if (!mw->clientondesktop) {
-						printfdf(false, "(): Last client window destroyed/unmapped, "
-								"exiting.");
-						die = true;
-						mw->client_to_focus = NULL;
-					}
-				}
-				else if (ev.type == MapNotify || ev.type == UnmapNotify) {
-					printfdf(false, "(): else if (ev.type == MapNotify || ev.type == UnmapNotify) {");
-					daemon_count_clients(ps->mainwin);
-					dlist *iter = (wid ? dlist_find(ps->mainwin->clients, clientwin_cmp_func, (void *) wid): NULL);
-					if (iter) {
-						ClientWin *cw = (ClientWin *) iter->data;
-						clientwin_update(cw);
-						clientwin_update2(cw);
-					}
-				}
-				else if (mw && (ps->xinfo.damage_ev_base + XDamageNotify == ev.type)) {
-					printfdf(false, "(): else if (ev.type == XDamageNotify) {");
-					pending_damage = true;
-					dlist *iter = dlist_find(ps->mainwin->clients,
-							clientwin_cmp_func, (void *) wid);
-					if (iter) {
-						((ClientWin *)iter->data)->damaged = true;
-					}
-					//iter = dlist_find(ps->mainwin->dminis,
-							//clientwin_cmp_func, (void *) wid);
-					//if (iter) {
-						//((ClientWin *)iter->data)->damaged = true;
-					//}
-				}
-				else if (mw && wid == mw->window)
-					die = mainwin_handle(mw, &ev, layout);
-				else if (mw && PropertyNotify == ev.type) {
-					printfdf(false, "(): else if (ev.type == PropertyNotify) {");
-
-					if (!ps->o.background &&
-							(ESETROOT_PMAP_ID == ev.xproperty.atom
-							 || _XROOTPMAP_ID == ev.xproperty.atom)) {
-
-						mainwin_update_background(mw);
-						REDUCE(clientwin_render((ClientWin *)iter->data), mw->clientondesktop);
-					}
-				}
-				else if (mw && mw->tooltip && wid == mw->tooltip->window)
-					tooltip_handle(mw->tooltip, &ev);
-				else if (mw && wid) {
-					dlist *iter = mw->clientondesktop;
-					if (layout == LAYOUTMODE_PAGING)
-						iter = mw->dminis;
-					for (; iter; iter = iter->next) {
-						ClientWin *cw = (ClientWin *) iter->data;
-						if (cw->mini.window == wid) {
-							if (!(POLLIN & r_fd[1].revents)
-									&& ((layout != LAYOUTMODE_PAGING)
-									|| (ev.type != Expose
-									&& ev.type != GraphicsExpose
-									&& ev.type != EnterNotify
-									&& ev.type != LeaveNotify))) {
-								die = clientwin_handle(cw, &ev, layout);
-								if (layout == LAYOUTMODE_PAGING
-									&& ev.type != MotionNotify){
-									desktopwin_map(cw);}
-							}
-							break;
-						}
-					}
-				}
-			}
-
-			// Do delayed painting if it's active
-			if (mw && pending_damage && !die) {
-				printfdf(false, "(): delayed painting");
-				pending_damage = false;
-				foreach_dlist(mw->clientondesktop) {
-					if (((ClientWin *) iter->data)->damaged)
-						clientwin_repair(iter->data);
-				}
+			else if (layout == LAYOUTMODE_SWITCH
+					|| timeslice >= ps->o.animationDuration) {
+				anime(ps->mainwin, ps->mainwin->clients, 1);
+				animating = false;
+				last_rendered = time_in_millis();
 
 				if (layout == LAYOUTMODE_PAGING) {
 					foreach_dlist (mw->dminis) {
 						desktopwin_map(((ClientWin *) iter->data));
 					}
 				}
-				last_rendered = time_in_millis();
+
+				if (!ps->o.lazyTrans && !mw->mapped)
+					mainwin_map(mw);
+				XFlush(ps->dpy);
+
+				focus_miniw_adv(ps, mw->client_to_focus,
+						ps->o.movePointer);
 			}
 
-			// Discards all events so that poll() won't constantly hit data to read
-			//XSync(ps->dpy, True);
-			//assert(!XEventsQueued(ps->dpy, QueuedAfterReading));
-
-			last_rendered = time_in_millis();
-			XFlush(ps->dpy);
+			continue; // while animating, do not allow user actions
 		}
+
+		// Process X events
+		int num_events = 0;
+		XEvent ev = { };
+		while ((num_events = XEventsQueued(ps->dpy, QueuedAfterReading)))
+		{
+			XNextEvent(ps->dpy, &ev);
+
+#ifdef DEBUG_EVENTS
+			ev_dump(ps, mw, &ev);
+#endif
+			Window wid = ev_window(ps, &ev);
+
+			if (mw && MotionNotify == ev.type)
+			{
+				// when mouse move within a client window, focus on it
+				if (wid) {
+					dlist *iter = mw->clientondesktop;
+					if (layout == LAYOUTMODE_PAGING)
+						iter = mw->dminis;
+					for (; iter; iter = iter->next) {
+						ClientWin *cw = (ClientWin *) iter->data;
+						if (cw->mini.window == wid) {
+							if (!(POLLIN & r_fd[1].revents)) {
+								die = clientwin_handle(cw, &ev, layout);
+							}
+						}
+					}
+				}
+
+				// Speed up responsiveness when the user is moving the mouse around
+				// The queue gets filled up with consquetive MotionNotify events
+				// discard all except the last MotionNotify event in a contiguous block of MotionNotify events
+
+				XEvent ev_next = { };
+				while(num_events > 0)
+				{
+					XPeekEvent(ps->dpy, &ev_next);
+
+					if(ev_next.type != MotionNotify)
+						break;
+
+					XNextEvent(ps->dpy, &ev);
+					wid = ev_window(ps, &ev);
+
+					num_events--;
+				}
+			}
+			else if (mw && ev.type == DestroyNotify) {
+				printfdf(false, "(): else if (ev.type == DestroyNotify) {");
+				daemon_count_clients(ps->mainwin);
+				if (!mw->clientondesktop) {
+					printfdf(false, "(): Last client window destroyed/unmapped, "
+							"exiting.");
+					die = true;
+					mw->client_to_focus = NULL;
+				}
+			}
+			else if (ev.type == MapNotify || ev.type == UnmapNotify) {
+				printfdf(false, "(): else if (ev.type == MapNotify || ev.type == UnmapNotify) {");
+				daemon_count_clients(ps->mainwin);
+				dlist *iter = (wid ? dlist_find(ps->mainwin->clients, clientwin_cmp_func, (void *) wid): NULL);
+				if (iter) {
+					ClientWin *cw = (ClientWin *) iter->data;
+					clientwin_update(cw);
+					clientwin_update2(cw);
+				}
+			}
+			else if (mw && (ps->xinfo.damage_ev_base + XDamageNotify == ev.type)) {
+				printfdf(false, "(): else if (ev.type == XDamageNotify) {");
+				pending_damage = true;
+				dlist *iter = dlist_find(ps->mainwin->clients,
+						clientwin_cmp_func, (void *) wid);
+				if (iter) {
+					((ClientWin *)iter->data)->damaged = true;
+				}
+				//iter = dlist_find(ps->mainwin->dminis,
+						//clientwin_cmp_func, (void *) wid);
+				//if (iter) {
+					//((ClientWin *)iter->data)->damaged = true;
+				//}
+			}
+			else if (mw && wid == mw->window)
+				die = mainwin_handle(mw, &ev, layout);
+			else if (mw && PropertyNotify == ev.type) {
+				printfdf(false, "(): else if (ev.type == PropertyNotify) {");
+
+				if (!ps->o.background &&
+						(ESETROOT_PMAP_ID == ev.xproperty.atom
+						 || _XROOTPMAP_ID == ev.xproperty.atom)) {
+
+					mainwin_update_background(mw);
+					REDUCE(clientwin_render((ClientWin *)iter->data), mw->clientondesktop);
+				}
+			}
+			else if (mw && mw->tooltip && wid == mw->tooltip->window)
+				tooltip_handle(mw->tooltip, &ev);
+			else if (mw && wid) {
+				dlist *iter = mw->clientondesktop;
+				if (layout == LAYOUTMODE_PAGING)
+					iter = mw->dminis;
+				for (; iter; iter = iter->next) {
+					ClientWin *cw = (ClientWin *) iter->data;
+					if (cw->mini.window == wid) {
+						if (!(POLLIN & r_fd[1].revents)
+								&& ((layout != LAYOUTMODE_PAGING)
+								|| (ev.type != Expose
+								&& ev.type != GraphicsExpose
+								&& ev.type != EnterNotify
+								&& ev.type != LeaveNotify))) {
+							die = clientwin_handle(cw, &ev, layout);
+							if (layout == LAYOUTMODE_PAGING
+								&& ev.type != MotionNotify){
+								desktopwin_map(cw);}
+						}
+						break;
+					}
+				}
+			}
+		}
+
+		// Do delayed painting if it's active
+		if (mw && pending_damage && !die) {
+			printfdf(false, "(): delayed painting");
+			pending_damage = false;
+			foreach_dlist(mw->clientondesktop) {
+				if (((ClientWin *) iter->data)->damaged)
+					clientwin_repair(iter->data);
+			}
+
+			if (layout == LAYOUTMODE_PAGING) {
+				foreach_dlist (mw->dminis) {
+					desktopwin_map(((ClientWin *) iter->data));
+				}
+			}
+			last_rendered = time_in_millis();
+		}
+
+		// Discards all events so that poll() won't constantly hit data to read
+		//XSync(ps->dpy, True);
+		//assert(!XEventsQueued(ps->dpy, QueuedAfterReading));
+
+		last_rendered = time_in_millis();
+		XFlush(ps->dpy);
 
 		// Poll for events
 		int timeout = ps->mainwin->poll_time;
