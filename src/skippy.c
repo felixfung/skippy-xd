@@ -954,6 +954,27 @@ mainloop(session_t *ps, bool activate_on_start) {
 		if (activate_on_start && !mw)
 			return;
 
+		// poll whether pivoting key is being pressed
+		// if not, then die
+		// the placement of this code allows MainWin not to map
+		// so that previews may not show for switch
+		// when the pivot key is held for only short time
+		if (mw)
+		{
+			bool pivoting = false;
+			char keys[32];
+			XQueryKeymap(ps->dpy, keys);
+
+			for (int i=0; mw->keycodes_PivotSwitch[i] != 0x00; i++) {
+				int slot = (mw->keycodes_PivotSwitch[i] - 0) / 8;
+				int mask = 1 << mw->keycodes_PivotSwitch[i];
+				pivoting = pivoting || (keys[slot] & mask);
+			}
+
+			if (mw && !pivoting && layout == LAYOUTMODE_SWITCH)
+				die = true;
+		}
+
 		// animation!
 		if (mw && animating) {
 			int timeslice = time_in_millis() - first_animated;
