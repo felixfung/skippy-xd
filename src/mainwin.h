@@ -73,7 +73,6 @@ struct _mainwin_t {
 	KeyCode *keycodes_Cancel;
 	KeyCode *keycodes_Select;
 
-	KeyCode *keycodes_TabSwitch;
 	KeyCode *keycodes_PivotSwitch;
 
 	bool mapped;

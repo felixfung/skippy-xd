@@ -250,7 +250,6 @@ typedef struct {
 	char *bindings_keysNext;
 	char *bindings_keysCancel;
 	char *bindings_keysSelect;
-	char *bindings_keysTabSwitch;
 	char *bindings_keysPivotSwitch;
 } options_t;
 

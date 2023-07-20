@@ -139,7 +139,6 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keys_str_syms(ps->o.bindings_keysNext, &mw->keysyms_Next);
 	keys_str_syms(ps->o.bindings_keysCancel, &mw->keysyms_Cancel);
 	keys_str_syms(ps->o.bindings_keysSelect, &mw->keysyms_Select);
-	keys_str_syms(ps->o.bindings_keysTabSwitch, &mw->keysyms_TabSwitch);
 	keys_str_syms(ps->o.bindings_keysPivotSwitch, &mw->keysyms_PivotSwitch);
 
 	// convert the arrays of KeySyms into arrays of KeyCodes, for this specific Display
@@ -151,7 +150,6 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keysyms_arr_keycodes(dpy, mw->keysyms_Next, &mw->keycodes_Next);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Cancel, &mw->keycodes_Cancel);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Select, &mw->keycodes_Select);
-	keysyms_arr_keycodes(dpy, mw->keysyms_TabSwitch, &mw->keycodes_TabSwitch);
 	keysyms_arr_keycodes(dpy, mw->keysyms_PivotSwitch, &mw->keycodes_PivotSwitch);
 
 	// we check all possible pairs, one pair at a time. This is in a specific order, to give a more helpful error msg
@@ -448,7 +446,6 @@ mainwin_destroy(MainWin *mw) {
 	free(mw->keysyms_Next);
 	free(mw->keysyms_Cancel);
 	free(mw->keysyms_Select);
-	free(mw->keysyms_TabSwitch);
 	free(mw->keysyms_PivotSwitch);
 
 	free(mw->keycodes_Up);
@@ -459,7 +456,6 @@ mainwin_destroy(MainWin *mw) {
 	free(mw->keycodes_Next);
 	free(mw->keycodes_Cancel);
 	free(mw->keycodes_Select);
-	free(mw->keycodes_TabSwitch);
 	free(mw->keycodes_PivotSwitch);
 
 	free(mw);

@@ -152,5 +152,4 @@ keysCancel = Escape BackSpace x q
 keysNext = n f
 keysPrev = p b
 
-keysTabSwitch = Tab
 keysPivotSwitch = Alt
