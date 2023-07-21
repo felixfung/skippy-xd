@@ -67,6 +67,9 @@ lazyTrans = false
 # Move the mouse cursor when skippy is activated
 movePointer = false
 
+# Wait time before displaying switch previews
+switchWaitDuration = 100
+
 # Set = 0 to switch off animations
 # for switch, there is never animation
 animationDuration = 200

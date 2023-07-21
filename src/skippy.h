@@ -200,6 +200,7 @@ typedef struct {
 	int clientList;
 	double updateFreq;
 	int animationDuration;;
+	int switchWaitDuration;
 	bool lazyTrans;
 	bool includeFrame;
 	char *pipePath;
@@ -264,6 +265,7 @@ typedef struct {
 	.clientList = 0, \
 	.updateFreq = 60.0, \
 	.animationDuration = 200, \
+	.switchWaitDuration = 100, \
 	.lazyTrans = false, \
 	.includeFrame = false, \
 	.pipePath = NULL, \

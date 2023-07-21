@@ -992,7 +992,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 					mainwin_map(mw);
 				XFlush(ps->dpy);
 			}
-			else if (layout == LAYOUTMODE_SWITCH
+			else if ((layout == LAYOUTMODE_SWITCH
+						&& timeslice >= ps->o.switchWaitDuration)
 					|| timeslice >= ps->o.animationDuration) {
 				anime(ps->mainwin, ps->mainwin->clients, 1);
 				animating = false;
@@ -1768,6 +1769,7 @@ load_config_file(session_t *ps)
 			ps->o.clientList = 2;
 	}
     config_get_double_wrap(config, "general", "updateFreq", &ps->o.updateFreq, -1000.0, 1000.0);
+    config_get_int_wrap(config, "general", "switchWaitDuration", &ps->o.switchWaitDuration, 0, 2000);
     config_get_int_wrap(config, "general", "animationDuration", &ps->o.animationDuration, 0, 2000);
     config_get_bool_wrap(config, "general", "lazyTrans", &ps->o.lazyTrans);
     config_get_bool_wrap(config, "general", "includeFrame", &ps->o.includeFrame);
