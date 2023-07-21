@@ -67,6 +67,9 @@ lazyTrans = false
 # Move the mouse cursor when skippy is activated
 movePointer = false
 
+# Wait time before displaying switch previews
+switchWaitDuration = 100
+
 # Set = 0 to switch off animations
 # for switch, there is never animation
 animationDuration = 200
@@ -135,20 +138,21 @@ textShadow = black
 font = fixed-11:weight=bold
 
 [bindings]
+
 miwMouse1 = focus
 miwMouse2 = close-ewmh
 miwMouse3 = iconify
 miwMouse4 = keysNext
 miwMouse5 = keysPrev
+
 keysUp = Up w
 keysDown = Down s
 keysLeft = Left a
 keysRight = Right d
+
+keysSelect = Return space
+keysCancel = Escape BackSpace x q
+keysNext = n f
 keysPrev = p b
-keysNext = Tab n f
-keysExitCancelOnPress = Escape BackSpace x q
-keysExitCancelOnRelease =
-keysExitSelectOnPress = Return space
-keysExitSelectOnRelease = Super_L Super_R Alt_L Alt_R ISO_Level3_Shift
-keysReverseDirection = Tab
-modifierKeyMasksReverseDirection = ShiftMask ControlMask
+
+keysPivotSwitch = Alt_L

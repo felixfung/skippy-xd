@@ -770,12 +770,6 @@ skippy_activate(MainWin *mw, enum layoutmode layout)
 		mw->xin_active = 0;
 #endif /* CFG_XINERAMA */
 
-	// Map the main window and run our event loop
-	if (ps->o.lazyTrans) {
-		mainwin_map(mw);
-		XFlush(ps->dpy);
-	}
-
 	mw->client_to_focus = NULL;
 
 	daemon_count_clients(mw);
@@ -960,191 +954,211 @@ mainloop(session_t *ps, bool activate_on_start) {
 		if (activate_on_start && !mw)
 			return;
 
+		// poll whether pivoting key is being pressed
+		// if not, then die
+		// the placement of this code allows MainWin not to map
+		// so that previews may not show for switch
+		// when the pivot key is held for only short time
+		if (mw)
 		{
-			// animation!
-			if (mw && animating) {
-				int timeslice = time_in_millis() - first_animated;
-				if (layout != LAYOUTMODE_SWITCH
-						&& timeslice < ps->o.animationDuration
-						&& timeslice + first_animated >=
-						last_rendered + (1000.0 / 60.0)) {
-					anime(ps->mainwin, ps->mainwin->clients,
-						((float)timeslice)/(float)ps->o.animationDuration);
-					last_rendered = time_in_millis();
+			bool pivoting = false;
+			char keys[32];
+			XQueryKeymap(ps->dpy, keys);
 
-					/* Map the main window and run our event loop */
-					if (!ps->o.lazyTrans && !mw->mapped)
-						mainwin_map(mw);
-					XFlush(ps->dpy);
-				}
-				else if (layout == LAYOUTMODE_SWITCH
-						|| timeslice >= ps->o.animationDuration) {
-					anime(ps->mainwin, ps->mainwin->clients, 1);
-					animating = false;
-					last_rendered = time_in_millis();
-
-					if (layout == LAYOUTMODE_PAGING) {
-						foreach_dlist (mw->dminis) {
-							desktopwin_map(((ClientWin *) iter->data));
-						}
-					}
-
-					/* Map the main window and run our event loop */
-					if (!ps->o.lazyTrans && !mw->mapped)
-						mainwin_map(mw);
-					XFlush(ps->dpy);
-
-					focus_miniw_adv(ps, mw->client_to_focus,
-							ps->o.movePointer);
-				}
-
-				continue; // while animating, do not allow user actions
+			for (int i=0; mw->keycodes_PivotSwitch[i] != 0x00; i++) {
+				int slot = (mw->keycodes_PivotSwitch[i] - 0) / 8;
+				int mask = 1 << mw->keycodes_PivotSwitch[i];
+				pivoting = pivoting || (keys[slot] & mask);
 			}
 
-			// Process X events
-			int num_events = 0;
-			XEvent ev = { };
-			while ((num_events = XEventsQueued(ps->dpy, QueuedAfterReading)))
-			{
-				XNextEvent(ps->dpy, &ev);
+			if (mw && !pivoting && layout == LAYOUTMODE_SWITCH)
+				die = true;
+		}
 
-#ifdef DEBUG_EVENTS
-				ev_dump(ps, mw, &ev);
-#endif
-				Window wid = ev_window(ps, &ev);
+		// animation!
+		if (mw && animating) {
+			int timeslice = time_in_millis() - first_animated;
+			if (ps->o.lazyTrans && !mw->mapped)
+				mainwin_map(mw);
+			if (layout != LAYOUTMODE_SWITCH
+					&& timeslice < ps->o.animationDuration
+					&& timeslice + first_animated >=
+					last_rendered + (1000.0 / 60.0)) {
+				anime(ps->mainwin, ps->mainwin->clients,
+					((float)timeslice)/(float)ps->o.animationDuration);
+				last_rendered = time_in_millis();
 
-				if (mw && MotionNotify == ev.type)
-				{
-					// when mouse move within a client window, focus on it
-					if (wid) {
-						dlist *iter = mw->clientondesktop;
-						if (layout == LAYOUTMODE_PAGING)
-							iter = mw->dminis;
-						for (; iter; iter = iter->next) {
-							ClientWin *cw = (ClientWin *) iter->data;
-							if (cw->mini.window == wid) {
-								if (!(POLLIN & r_fd[1].revents)) {
-									die = clientwin_handle(cw, &ev);
-								}
-							}
-						}
-					}
-
-					// Speed up responsiveness when the user is moving the mouse around
-					// The queue gets filled up with consquetive MotionNotify events
-					// discard all except the last MotionNotify event in a contiguous block of MotionNotify events
-
-					XEvent ev_next = { };
-					while(num_events > 0)
-					{
-						XPeekEvent(ps->dpy, &ev_next);
-
-						if(ev_next.type != MotionNotify)
-							break;
-
-						XNextEvent(ps->dpy, &ev);
-						wid = ev_window(ps, &ev);
-
-						num_events--;
-					}
-				}
-				else if (mw && ev.type == DestroyNotify) {
-					printfdf(false, "(): else if (ev.type == DestroyNotify) {");
-					daemon_count_clients(ps->mainwin);
-					if (!mw->clientondesktop) {
-						printfdf(false, "(): Last client window destroyed/unmapped, "
-								"exiting.");
-						die = true;
-						mw->client_to_focus = NULL;
-					}
-				}
-				else if (ev.type == MapNotify || ev.type == UnmapNotify) {
-					printfdf(false, "(): else if (ev.type == MapNotify || ev.type == UnmapNotify) {");
-					daemon_count_clients(ps->mainwin);
-					dlist *iter = (wid ? dlist_find(ps->mainwin->clients, clientwin_cmp_func, (void *) wid): NULL);
-					if (iter) {
-						ClientWin *cw = (ClientWin *) iter->data;
-						clientwin_update(cw);
-						clientwin_update2(cw);
-					}
-				}
-				else if (mw && (ps->xinfo.damage_ev_base + XDamageNotify == ev.type)) {
-					printfdf(false, "(): else if (ev.type == XDamageNotify) {");
-					pending_damage = true;
-					dlist *iter = dlist_find(ps->mainwin->clients,
-							clientwin_cmp_func, (void *) wid);
-					if (iter) {
-						((ClientWin *)iter->data)->damaged = true;
-					}
-					//iter = dlist_find(ps->mainwin->dminis,
-							//clientwin_cmp_func, (void *) wid);
-					//if (iter) {
-						//((ClientWin *)iter->data)->damaged = true;
-					//}
-				}
-				else if (mw && wid == mw->window)
-					die = mainwin_handle(mw, &ev);
-				else if (mw && PropertyNotify == ev.type) {
-					printfdf(false, "(): else if (ev.type == PropertyNotify) {");
-
-					if (!ps->o.background &&
-							(ESETROOT_PMAP_ID == ev.xproperty.atom
-							 || _XROOTPMAP_ID == ev.xproperty.atom)) {
-
-						mainwin_update_background(mw);
-						REDUCE(clientwin_render((ClientWin *)iter->data), mw->clientondesktop);
-					}
-				}
-				else if (mw && mw->tooltip && wid == mw->tooltip->window)
-					tooltip_handle(mw->tooltip, &ev);
-				else if (mw && wid) {
-					dlist *iter = mw->clientondesktop;
-					if (layout == LAYOUTMODE_PAGING)
-						iter = mw->dminis;
-					for (; iter; iter = iter->next) {
-						ClientWin *cw = (ClientWin *) iter->data;
-						if (cw->mini.window == wid) {
-							if (!(POLLIN & r_fd[1].revents)
-									&& ((layout != LAYOUTMODE_PAGING)
-									|| (ev.type != Expose
-									&& ev.type != GraphicsExpose
-									&& ev.type != EnterNotify
-									&& ev.type != LeaveNotify))) {
-								die = clientwin_handle(cw, &ev);
-								if (layout == LAYOUTMODE_PAGING
-									&& ev.type != MotionNotify){
-									desktopwin_map(cw);}
-							}
-							break;
-						}
-					}
-				}
+				if (!ps->o.lazyTrans && !mw->mapped)
+					mainwin_map(mw);
+				XFlush(ps->dpy);
 			}
-
-			// Do delayed painting if it's active
-			if (mw && pending_damage && !die) {
-				printfdf(false, "(): delayed painting");
-				pending_damage = false;
-				foreach_dlist(mw->clientondesktop) {
-					if (((ClientWin *) iter->data)->damaged)
-						clientwin_repair(iter->data);
-				}
+			else if ((layout == LAYOUTMODE_SWITCH
+						&& timeslice >= ps->o.switchWaitDuration)
+					|| timeslice >= ps->o.animationDuration) {
+				anime(ps->mainwin, ps->mainwin->clients, 1);
+				animating = false;
+				last_rendered = time_in_millis();
 
 				if (layout == LAYOUTMODE_PAGING) {
 					foreach_dlist (mw->dminis) {
 						desktopwin_map(((ClientWin *) iter->data));
 					}
 				}
-				last_rendered = time_in_millis();
+
+				if (!ps->o.lazyTrans && !mw->mapped)
+					mainwin_map(mw);
+				XFlush(ps->dpy);
+
+				focus_miniw_adv(ps, mw->client_to_focus,
+						ps->o.movePointer);
 			}
 
-			// Discards all events so that poll() won't constantly hit data to read
-			//XSync(ps->dpy, True);
-			//assert(!XEventsQueued(ps->dpy, QueuedAfterReading));
-
-			last_rendered = time_in_millis();
-			XFlush(ps->dpy);
+			continue; // while animating, do not allow user actions
 		}
+
+		// Process X events
+		int num_events = 0;
+		XEvent ev = { };
+		while ((num_events = XEventsQueued(ps->dpy, QueuedAfterReading)))
+		{
+			XNextEvent(ps->dpy, &ev);
+
+#ifdef DEBUG_EVENTS
+			ev_dump(ps, mw, &ev);
+#endif
+			Window wid = ev_window(ps, &ev);
+
+			if (mw && MotionNotify == ev.type)
+			{
+				// when mouse move within a client window, focus on it
+				if (wid) {
+					dlist *iter = mw->clientondesktop;
+					if (layout == LAYOUTMODE_PAGING)
+						iter = mw->dminis;
+					for (; iter; iter = iter->next) {
+						ClientWin *cw = (ClientWin *) iter->data;
+						if (cw->mini.window == wid) {
+							if (!(POLLIN & r_fd[1].revents)) {
+								die = clientwin_handle(cw, &ev);
+							}
+						}
+					}
+				}
+
+				// Speed up responsiveness when the user is moving the mouse around
+				// The queue gets filled up with consquetive MotionNotify events
+				// discard all except the last MotionNotify event in a contiguous block of MotionNotify events
+
+				XEvent ev_next = { };
+				while(num_events > 0)
+				{
+					XPeekEvent(ps->dpy, &ev_next);
+
+					if(ev_next.type != MotionNotify)
+						break;
+
+					XNextEvent(ps->dpy, &ev);
+					wid = ev_window(ps, &ev);
+
+					num_events--;
+				}
+			}
+			else if (mw && ev.type == DestroyNotify) {
+				printfdf(false, "(): else if (ev.type == DestroyNotify) {");
+				daemon_count_clients(ps->mainwin);
+				if (!mw->clientondesktop) {
+					printfdf(false, "(): Last client window destroyed/unmapped, "
+							"exiting.");
+					die = true;
+					mw->client_to_focus = NULL;
+				}
+			}
+			else if (ev.type == MapNotify || ev.type == UnmapNotify) {
+				printfdf(false, "(): else if (ev.type == MapNotify || ev.type == UnmapNotify) {");
+				daemon_count_clients(ps->mainwin);
+				dlist *iter = (wid ? dlist_find(ps->mainwin->clients, clientwin_cmp_func, (void *) wid): NULL);
+				if (iter) {
+					ClientWin *cw = (ClientWin *) iter->data;
+					clientwin_update(cw);
+					clientwin_update2(cw);
+				}
+			}
+			else if (mw && (ps->xinfo.damage_ev_base + XDamageNotify == ev.type)) {
+				printfdf(false, "(): else if (ev.type == XDamageNotify) {");
+				pending_damage = true;
+				dlist *iter = dlist_find(ps->mainwin->clients,
+						clientwin_cmp_func, (void *) wid);
+				if (iter) {
+					((ClientWin *)iter->data)->damaged = true;
+				}
+				//iter = dlist_find(ps->mainwin->dminis,
+						//clientwin_cmp_func, (void *) wid);
+				//if (iter) {
+					//((ClientWin *)iter->data)->damaged = true;
+				//}
+			}
+			else if (mw && wid == mw->window)
+				die = mainwin_handle(mw, &ev);
+			else if (mw && PropertyNotify == ev.type) {
+				printfdf(false, "(): else if (ev.type == PropertyNotify) {");
+
+				if (!ps->o.background &&
+						(ESETROOT_PMAP_ID == ev.xproperty.atom
+						 || _XROOTPMAP_ID == ev.xproperty.atom)) {
+
+					mainwin_update_background(mw);
+					REDUCE(clientwin_render((ClientWin *)iter->data), mw->clientondesktop);
+				}
+			}
+			else if (mw && mw->tooltip && wid == mw->tooltip->window)
+				tooltip_handle(mw->tooltip, &ev);
+			else if (mw && wid) {
+				dlist *iter = mw->clientondesktop;
+				if (layout == LAYOUTMODE_PAGING)
+					iter = mw->dminis;
+				for (; iter; iter = iter->next) {
+					ClientWin *cw = (ClientWin *) iter->data;
+					if (cw->mini.window == wid) {
+						if (!(POLLIN & r_fd[1].revents)
+								&& ((layout != LAYOUTMODE_PAGING)
+								|| (ev.type != Expose
+								&& ev.type != GraphicsExpose
+								&& ev.type != EnterNotify
+								&& ev.type != LeaveNotify))) {
+							die = clientwin_handle(cw, &ev);
+							if (layout == LAYOUTMODE_PAGING
+								&& ev.type != MotionNotify){
+								desktopwin_map(cw);}
+						}
+						break;
+					}
+				}
+			}
+		}
+
+		// Do delayed painting if it's active
+		if (mw && pending_damage && !die) {
+			printfdf(false, "(): delayed painting");
+			pending_damage = false;
+			foreach_dlist(mw->clientondesktop) {
+				if (((ClientWin *) iter->data)->damaged)
+					clientwin_repair(iter->data);
+			}
+
+			if (layout == LAYOUTMODE_PAGING) {
+				foreach_dlist (mw->dminis) {
+					desktopwin_map(((ClientWin *) iter->data));
+				}
+			}
+			last_rendered = time_in_millis();
+		}
+
+		// Discards all events so that poll() won't constantly hit data to read
+		//XSync(ps->dpy, True);
+		//assert(!XEventsQueued(ps->dpy, QueuedAfterReading));
+
+		last_rendered = time_in_millis();
+		XFlush(ps->dpy);
 
 		// Poll for events
 		int timeout = ps->mainwin->poll_time;
@@ -1701,15 +1715,12 @@ load_config_file(session_t *ps)
     ps->o.bindings_keysUp = mstrdup(config_get(config, "bindings", "keysUp", "Up w"));
     ps->o.bindings_keysDown = mstrdup(config_get(config, "bindings", "keysDown", "Down s"));
     ps->o.bindings_keysLeft = mstrdup(config_get(config, "bindings", "keysLeft", "Left a"));
-    ps->o.bindings_keysRight = mstrdup(config_get(config, "bindings", "keysRight", "Right Tab d"));
+    ps->o.bindings_keysRight = mstrdup(config_get(config, "bindings", "keysRight", "Right d"));
     ps->o.bindings_keysPrev = mstrdup(config_get(config, "bindings", "keysPrev", "p b"));
     ps->o.bindings_keysNext = mstrdup(config_get(config, "bindings", "keysNext", "n f"));
-    ps->o.bindings_keysExitCancelOnPress = mstrdup(config_get(config, "bindings", "keysExitCancelOnPress", "Escape BackSpace x q"));
-    ps->o.bindings_keysExitCancelOnRelease = mstrdup(config_get(config, "bindings", "keysExitCancelOnRelease", ""));
-    ps->o.bindings_keysExitSelectOnPress = mstrdup(config_get(config, "bindings", "keysExitSelectOnPress", "Return space"));
-    ps->o.bindings_keysExitSelectOnRelease = mstrdup(config_get(config, "bindings", "keysExitSelectOnRelease", "Super_L Super_R Alt_L Alt_R ISO_Level3_Shift"));
-    ps->o.bindings_keysReverseDirection = mstrdup(config_get(config, "bindings", "keysReverseDirection", "Tab"));
-    ps->o.bindings_modifierKeyMasksReverseDirection = mstrdup(config_get(config, "bindings", "modifierKeyMasksReverseDirection", "ShiftMask ControlMask"));
+    ps->o.bindings_keysCancel = mstrdup(config_get(config, "bindings", "keysCancel", "Escape BackSpace x q"));
+    ps->o.bindings_keysSelect = mstrdup(config_get(config, "bindings", "keysSelect", "Return space"));
+    ps->o.bindings_keysPivotSwitch = mstrdup(config_get(config, "bindings", "keysPivotSwitch", "Alt_L"));
 
     // print an error message for any key bindings that aren't recognized
     check_keysyms(ps->o.config_path, ": [bindings] keysUp =", ps->o.bindings_keysUp);
@@ -1718,12 +1729,9 @@ load_config_file(session_t *ps)
     check_keysyms(ps->o.config_path, ": [bindings] keysRight =", ps->o.bindings_keysRight);
     check_keysyms(ps->o.config_path, ": [bindings] keysPrev =", ps->o.bindings_keysPrev);
     check_keysyms(ps->o.config_path, ": [bindings] keysNext =", ps->o.bindings_keysNext);
-    check_keysyms(ps->o.config_path, ": [bindings] keysExitCancelOnPress =", ps->o.bindings_keysExitCancelOnPress);
-    check_keysyms(ps->o.config_path, ": [bindings] keysExitCancelOnRelease =", ps->o.bindings_keysExitCancelOnRelease);
-    check_keysyms(ps->o.config_path, ": [bindings] keysExitSelectOnPress =", ps->o.bindings_keysExitSelectOnPress);
-    check_keysyms(ps->o.config_path, ": [bindings] keysExitSelectOnRelease =", ps->o.bindings_keysExitSelectOnRelease);
-    check_keysyms(ps->o.config_path, ": [bindings] keysReverseDirection =", ps->o.bindings_keysReverseDirection);
-    check_modmasks(ps->o.config_path, ": [bindings] modifierKeyMasksReverseDirection =", ps->o.bindings_modifierKeyMasksReverseDirection);
+    check_keysyms(ps->o.config_path, ": [bindings] keysCancel =", ps->o.bindings_keysCancel);
+    check_keysyms(ps->o.config_path, ": [bindings] keysSelect =", ps->o.bindings_keysSelect);
+    check_keysyms(ps->o.config_path, ": [bindings] keysPivotSwitch =", ps->o.bindings_keysPivotSwitch);
 
 	if (!parse_cliop(ps, config_get(config, "bindings", "miwMouse1", "focus"), &ps->o.bindings_miwMouse[1])
 			|| !parse_cliop(ps, config_get(config, "bindings", "miwMouse2", "close-ewmh"), &ps->o.bindings_miwMouse[2])
@@ -1761,6 +1769,7 @@ load_config_file(session_t *ps)
 			ps->o.clientList = 2;
 	}
     config_get_double_wrap(config, "general", "updateFreq", &ps->o.updateFreq, -1000.0, 1000.0);
+    config_get_int_wrap(config, "general", "switchWaitDuration", &ps->o.switchWaitDuration, 0, 2000);
     config_get_int_wrap(config, "general", "animationDuration", &ps->o.animationDuration, 0, 2000);
     config_get_bool_wrap(config, "general", "lazyTrans", &ps->o.lazyTrans);
     config_get_bool_wrap(config, "general", "includeFrame", &ps->o.includeFrame);
@@ -2006,12 +2015,9 @@ main_end:
 			free(ps->o.bindings_keysRight);
 			free(ps->o.bindings_keysPrev);
 			free(ps->o.bindings_keysNext);
-			free(ps->o.bindings_keysExitCancelOnPress);
-			free(ps->o.bindings_keysExitCancelOnRelease);
-			free(ps->o.bindings_keysExitSelectOnPress);
-			free(ps->o.bindings_keysExitSelectOnRelease);
-			free(ps->o.bindings_keysReverseDirection);
-			free(ps->o.bindings_modifierKeyMasksReverseDirection);
+			free(ps->o.bindings_keysCancel);
+			free(ps->o.bindings_keysSelect);
+			free(ps->o.bindings_keysPivotSwitch);
 		}
 
 		if (ps->fd_pipe >= 0)

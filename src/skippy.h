@@ -200,6 +200,7 @@ typedef struct {
 	int clientList;
 	double updateFreq;
 	int animationDuration;;
+	int switchWaitDuration;
 	bool lazyTrans;
 	bool includeFrame;
 	char *pipePath;
@@ -248,12 +249,9 @@ typedef struct {
 	char *bindings_keysRight;
 	char *bindings_keysPrev;
 	char *bindings_keysNext;
-	char *bindings_keysExitCancelOnPress;
-	char *bindings_keysExitCancelOnRelease;
-	char *bindings_keysExitSelectOnPress;
-	char *bindings_keysExitSelectOnRelease;
-	char *bindings_keysReverseDirection;
-	char *bindings_modifierKeyMasksReverseDirection;
+	char *bindings_keysCancel;
+	char *bindings_keysSelect;
+	char *bindings_keysPivotSwitch;
 } options_t;
 
 #define OPTIONST_INIT { \
@@ -267,6 +265,7 @@ typedef struct {
 	.clientList = 0, \
 	.updateFreq = 60.0, \
 	.animationDuration = 200, \
+	.switchWaitDuration = 100, \
 	.lazyTrans = false, \
 	.includeFrame = false, \
 	.pipePath = NULL, \
