@@ -61,7 +61,6 @@ struct _mainwin_t {
 	KeySym *keysyms_Next;
 	KeySym *keysyms_Cancel;
 	KeySym *keysyms_Select;
-	KeySym *keysyms_TabSwitch;
 	KeySym *keysyms_PivotSwitch;
 
 	KeyCode *keycodes_Up;
@@ -72,7 +71,6 @@ struct _mainwin_t {
 	KeyCode *keycodes_Next;
 	KeyCode *keycodes_Cancel;
 	KeyCode *keycodes_Select;
-
 	KeyCode *keycodes_PivotSwitch;
 
 	bool mapped;

@@ -960,14 +960,14 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// the placement of this code allows MainWin not to map
 		// so that previews may not show for switch
 		// when the pivot key is held for only short time
-		if (mw)
+		if (mw && mw->keycodes_PivotSwitch)
 		{
 			bool pivoting = false;
 			char keys[32];
 			XQueryKeymap(ps->dpy, keys);
 
 			for (int i=0; mw->keycodes_PivotSwitch[i] != 0x00; i++) {
-				int slot = (mw->keycodes_PivotSwitch[i] - 0) / 8;
+				int slot = mw->keycodes_PivotSwitch[i] / 8;
 				int mask = 1 << mw->keycodes_PivotSwitch[i];
 				pivoting = pivoting || (keys[slot] & mask);
 			}
