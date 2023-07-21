@@ -1,5 +1,11 @@
 Skippy-XD changelog
 
+0.7.1 -- "Juggernaut" (21 July 2023) ~/felixfung
+ - Multimonitor bugs fixed
+ - Improved paging tinting (no more lag)
+ - Hugely improved boxy layout
+ - Switch is perfected with delayed preview display and key binding
+
 0.7.0 -- "Popsicle" (23 Jun 2023) ~/felixfung
  - New paging mode
  - New command line parameters
