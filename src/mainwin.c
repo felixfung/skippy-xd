@@ -201,9 +201,8 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 
 	if(! XParseColor(ps->dpy, mw->colormap, ps->o.highlight_tint, &exact_color))
 	{
-		printfef(true, "(): Couldn't look up color '%s', reverting to #101020", ps->o.highlight_tint);
-		mw->highlightTint.red = mw->highlightTint.green = 0x10;
-		mw->highlightTint.blue = 0x20;
+		printfef(true, "(): Couldn't look up color '%s', reverting to #444444", ps->o.highlight_tint);
+		mw->highlightTint.red = mw->highlightTint.green = mw->highlightTint.blue = 0x44;
 	}
 	else
 	{
