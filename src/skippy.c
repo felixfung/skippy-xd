@@ -853,6 +853,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 			layout = LAYOUTMODE_PAGING;
 			break;
 		default:
+			ps->o.mode = PROGMODE_EXPOSE;
 			layout = LAYOUTMODE_EXPOSE;
 			break;
 	}
