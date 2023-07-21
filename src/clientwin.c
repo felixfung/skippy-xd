@@ -617,7 +617,7 @@ clientwin_tooltip(ClientWin *cw, XEvent *ev) {
 }
 
 int
-clientwin_handle(ClientWin *cw, XEvent *ev, enum layoutmode layout) {
+clientwin_handle(ClientWin *cw, XEvent *ev) {
 	if (! cw)
 		return 1;
 
