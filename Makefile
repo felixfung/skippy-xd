@@ -100,8 +100,6 @@ else
 	install -m 644 skippy-xd.sample.rc "${DESTDIR}/etc/xdg/skippy-xd.sample.rc"
 endif
 
-	install -m 755 skippy-xd-runner "${DESTDIR}${BINDIR}/"
-
 uninstall:
 	# Should configuration file be removed?
 	rm -f $(foreach bin,$(BINS),"${DESTDIR}${BINDIR}/$(bin)")
