@@ -155,4 +155,4 @@ keysCancel = Escape BackSpace x q
 keysNext = n f
 keysPrev = p b
 
-keysPivotSwitch = Alt
+keysPivotSwitch = Alt_L
