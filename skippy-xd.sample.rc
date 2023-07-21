@@ -105,8 +105,8 @@ cornerRadius = 5
 # Icon visual parameters
 preferredIconSize = 48
 showIconsOnThumbnails = true
-iconFillSpec = orig mid mid #00FFFF
-fillSpec = orig mid mid #FFFFFF
+iconFillSpec = orig mid mid #333333
+fillSpec = orig mid mid #333333
 
 [xinerama]
 showAll = true
@@ -114,17 +114,17 @@ showAll = true
 [normal]
 tint = black
 tintOpacity = 0
-opacity = 200
+opacity = 255
 
 [highlight]
-tint = #101020
-tintOpacity = 64
+tint = #444444
+tintOpacity = 50
 opacity = 255
 
 [shadow]
 tint = #040404
 tintOpacity = 0
-opacity = 128
+opacity = 160
 
 [tooltip]
 show = true
