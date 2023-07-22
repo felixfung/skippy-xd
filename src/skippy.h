@@ -284,13 +284,13 @@ typedef struct {
 	.xinerama_showAll = true, \
 	.normal_tint = NULL, \
 	.normal_tintOpacity = 0, \
-	.normal_opacity = 200, \
+	.normal_opacity = 255, \
 	.highlight_tint = NULL, \
-	.highlight_tintOpacity = 64, \
+	.highlight_tintOpacity = 50, \
 	.highlight_opacity = 255, \
 	.shadow_tint = NULL, \
 	.shadow_tintOpacity = 0, \
-	.shadow_opacity = 128, \
+	.shadow_opacity = 160, \
 	.tooltip_show = true, \
 	.tooltip_offsetX = 0, \
 	.tooltip_offsetY = 20, \
