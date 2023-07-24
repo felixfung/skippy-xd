@@ -799,7 +799,7 @@ skippy_activate(MainWin *mw, enum layoutmode layout)
 		ClientWin *cw = iter->data;
 		cw->x *= mw->multiplier;
 		cw->y *= mw->multiplier;
-		if (mw->ps->o.lazyTrans)
+		if (!mw->ps->o.pseudoTrans)
 		{
 			cw->x += cw->mainwin->x;
 			cw->y += cw->mainwin->y;
@@ -979,7 +979,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// animation!
 		if (mw && animating) {
 			int timeslice = time_in_millis() - first_animated;
-			if (ps->o.lazyTrans && !mw->mapped)
+			if (!ps->o.pseudoTrans && !mw->mapped)
 				mainwin_map(mw);
 			if (layout != LAYOUTMODE_SWITCH
 					&& timeslice < ps->o.animationDuration
@@ -989,7 +989,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					((float)timeslice)/(float)ps->o.animationDuration);
 				last_rendered = time_in_millis();
 
-				if (!ps->o.lazyTrans && !mw->mapped)
+				if (ps->o.pseudoTrans && !mw->mapped)
 					mainwin_map(mw);
 				XFlush(ps->dpy);
 			}
@@ -1006,7 +1006,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					}
 				}
 
-				if (!ps->o.lazyTrans && !mw->mapped)
+				if (ps->o.pseudoTrans && !mw->mapped)
 					mainwin_map(mw);
 				XFlush(ps->dpy);
 
@@ -1772,7 +1772,7 @@ load_config_file(session_t *ps)
     config_get_double_wrap(config, "general", "updateFreq", &ps->o.updateFreq, -1000.0, 1000.0);
     config_get_int_wrap(config, "general", "switchWaitDuration", &ps->o.switchWaitDuration, 0, 2000);
     config_get_int_wrap(config, "general", "animationDuration", &ps->o.animationDuration, 0, 2000);
-    config_get_bool_wrap(config, "general", "lazyTrans", &ps->o.lazyTrans);
+    config_get_bool_wrap(config, "general", "pseudoTrans", &ps->o.pseudoTrans);
     config_get_bool_wrap(config, "general", "includeFrame", &ps->o.includeFrame);
     config_get_bool_wrap(config, "general", "allowUpscale", &ps->o.allowUpscale);
 	config_get_int_wrap(config, "general", "cornerRadius", &ps->o.cornerRadius, 0, INT_MAX);

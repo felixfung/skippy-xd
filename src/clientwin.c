@@ -112,10 +112,10 @@ clientwin_create(MainWin *mw, Window client) {
 			.event_mask = ButtonPressMask | ButtonReleaseMask | KeyPressMask
 				| KeyReleaseMask | EnterWindowMask | LeaveWindowMask
 				| PointerMotionMask | ExposureMask | FocusChangeMask,
-			.override_redirect = ps->o.lazyTrans,
+			.override_redirect = !ps->o.pseudoTrans,
 		};
 		cw->mini.window = XCreateWindow(ps->dpy,
-				(ps->o.lazyTrans ? ps->root : mw->window), 0, 0, 1, 1, 0,
+				(ps->o.pseudoTrans ? mw->window : ps->root), 0, 0, 1, 1, 0,
 				mw->depth, InputOutput, mw->visual,
 				CWColormap | CWBackPixel | CWBorderPixel | CWEventMask | CWOverrideRedirect, &sattr);
 	}
@@ -383,7 +383,7 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 		else if (cw->zombie)
 			mask = cw->mainwin->shadowPicture;
 
-		if (ps->o.lazyTrans) {
+		if (!ps->o.pseudoTrans) {
 			XRenderComposite(ps->dpy, PictOpSrc, source, mask,
 					cw->destination, s_x, s_y, 0, 0, s_x, s_y, s_w, s_h);
 		}

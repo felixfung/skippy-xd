@@ -80,7 +80,7 @@ mainwin_create(session_t *ps) {
 	mw->width = rootattr.width;
 	mw->height = rootattr.height;
 
-	if (ps->o.lazyTrans) {
+	if (!ps->o.pseudoTrans) {
 		mw->depth  = 32;
 		mw->visual = ps->argb_visual;
 		if (!mw->visual) {
