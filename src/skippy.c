@@ -758,8 +758,8 @@ desktopwin_map(ClientWin *cw)
 	
 	clientwin_render(cw);
 
-    XMapWindow(ps->dpy, cw->mini.window);
-    XRaiseWindow(ps->dpy, cw->mini.window);
+	XMapWindow(ps->dpy, cw->mini.window);
+	XRaiseWindow(ps->dpy, cw->mini.window);
 }
 
 static bool
