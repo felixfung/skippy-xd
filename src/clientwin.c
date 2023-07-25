@@ -97,7 +97,7 @@ clientwin_create(MainWin *mw, Window client) {
 	cw->shadow = None;
 	cw->pixmap = None;
 	cw->cpixmap = None;
-
+cw->mapped = false;
 	if (ps->o.includeFrame)
 		cw->src.window = wm_find_frame(ps, client);
 	if (!cw->src.window)
@@ -250,6 +250,19 @@ clientwin_update(ClientWin *cw) {
 }
 
 static inline bool
+clientwin_update2_desktop(session_t *ps, MainWin *mw, ClientWin *cw) {
+	if (cw->pict_filled)
+		free_pictw(ps, &cw->pict_filled);
+	cw->pict_filled = simg_postprocess(ps,
+			clone_pictw(ps, ps->o.fillSpec.img),
+			ps->o.fillSpec.mode,
+			1, 1,
+			ps->o.fillSpec.alg, ps->o.fillSpec.valg,
+			&ps->o.fillSpec.c);
+	return cw->pict_filled;
+}
+
+static inline bool
 clientwin_update2_filled(session_t *ps, MainWin *mw, ClientWin *cw) {
 	if (cw->pict_filled)
 		free_pictw(ps, &cw->pict_filled);
@@ -284,6 +297,8 @@ clientwin_update2(ClientWin *cw) {
 
 	switch (cw->mode) {
 		case CLIDISP_DESKTOP:
+			if (!ps->o.pseudoTrans)
+				clientwin_update2_desktop(ps, mw, cw);
 			break;
 		case CLIDISP_NONE:
 			break;

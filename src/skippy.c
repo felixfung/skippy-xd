@@ -654,6 +654,7 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 			if (!cw) return false;
 
 			cw->slots = desktop_idx;
+			cw->mode = CLIDISP_DESKTOP;
 
 			{
 				static const char *PREFIX = "virtual desktop ";
@@ -665,7 +666,6 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 			}
 
 			cw->zombie = false;
-			cw->mode = CLIDISP_DESKTOP;
 
 			cw->x = cw->src.x = (i * (desktop_width + mw->distance)) * mw->multiplier;
 			cw->y = cw->src.y = (j * (desktop_height + mw->distance)) * mw->multiplier;
@@ -713,14 +713,23 @@ desktopwin_map(ClientWin *cw)
 	free_damage(ps, &cw->damage);
 	free_pixmap(ps, &cw->pixmap);
 
-	XUnmapWindow(ps->dpy, cw->mini.window);
+	if (ps->o.pseudoTrans && cw->mapped){
+		XUnmapWindow(ps->dpy, cw->mini.window);
+		cw->mapped = false;
+	}
 
 	XRenderPictureAttributes pa = { };
 
 	if (cw->origin)
 		free_picture(ps, &cw->origin);
-	cw->origin = XRenderCreatePicture(ps->dpy,
-			mw->window, mw->format, CPSubwindowMode, &pa);
+	if (ps->o.pseudoTrans) {
+		cw->origin = XRenderCreatePicture(ps->dpy,
+				mw->window, mw->format, CPSubwindowMode, &pa);
+	}
+	else {
+		cw->origin = cw->pict_filled->pict;
+		//XSetWindowBackgroundPixmap(ps->dpy, cw->mini.window, None);
+	}
 	XRenderSetPictureFilter(ps->dpy, cw->origin, FilterBest, 0, 0);
 
 	{
@@ -751,8 +760,11 @@ desktopwin_map(ClientWin *cw)
 	
 	clientwin_render(cw);
 
-	XMapWindow(ps->dpy, cw->mini.window);
-	XRaiseWindow(ps->dpy, cw->mini.window);
+	if (!cw->mapped){
+		XMapWindow(ps->dpy, cw->mini.window);
+		XRaiseWindow(ps->dpy, cw->mini.window);
+		cw->mapped = true;
+	}
 }
 
 static bool
@@ -1002,6 +1014,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 				if (layout == LAYOUTMODE_PAGING) {
 					foreach_dlist (mw->dminis) {
+						clientwin_update2(iter->data);
 						desktopwin_map(((ClientWin *) iter->data));
 					}
 				}
@@ -1128,8 +1141,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 								&& ev.type != LeaveNotify))) {
 							die = clientwin_handle(cw, &ev);
 							if (layout == LAYOUTMODE_PAGING
-								&& ev.type != MotionNotify){
-								desktopwin_map(cw);}
+									&& ev.type != MotionNotify)
+								desktopwin_map(cw);
 						}
 						break;
 					}
@@ -1148,6 +1161,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 			if (layout == LAYOUTMODE_PAGING) {
 				foreach_dlist (mw->dminis) {
+					clientwin_update2(iter->data);
 					desktopwin_map(((ClientWin *) iter->data));
 				}
 			}

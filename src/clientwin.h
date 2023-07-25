@@ -51,7 +51,7 @@ struct _clientwin_t {
 	bool focused;
 
 	bool damaged;
-
+bool mapped;
 	bool zombie;
 	/* XserverRegion repair; */
 	
