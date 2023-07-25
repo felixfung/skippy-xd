@@ -986,12 +986,13 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// animation!
 		if (mw && animating) {
 			int timeslice = time_in_millis() - first_animated;
-			if (!ps->o.pseudoTrans && !mw->mapped)
-				mainwin_map(mw);
 			if (layout != LAYOUTMODE_SWITCH
 					&& timeslice < ps->o.animationDuration
 					&& timeslice + first_animated >=
 					last_rendered + (1000.0 / 60.0)) {
+				if (!ps->o.pseudoTrans && !mw->mapped)
+					mainwin_map(mw);
+
 				anime(ps->mainwin, ps->mainwin->clients,
 					((float)timeslice)/(float)ps->o.animationDuration);
 				last_rendered = time_in_millis();
@@ -1002,7 +1003,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 			}
 			else if ((layout == LAYOUTMODE_SWITCH
 						&& timeslice >= ps->o.switchWaitDuration)
-					|| timeslice >= ps->o.animationDuration) {
+						|| timeslice >= ps->o.animationDuration) {
+				if (!ps->o.pseudoTrans && !mw->mapped)
+					mainwin_map(mw);
+
 				anime(ps->mainwin, ps->mainwin->clients, 1);
 				animating = false;
 				last_rendered = time_in_millis();
@@ -1184,7 +1188,11 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// not great solution at all...
 		if (mw && layout == LAYOUTMODE_PAGING)
 		{
-			if (time_in_millis() - paging_last_forced_update > 10) {
+			const int pseudoTransRefreshRate = 10;
+			const int transRefreshRate = 1;
+			int refreshRate = ps->o.pseudoTrans ?
+				pseudoTransRefreshRate : transRefreshRate;
+			if (time_in_millis() - paging_last_forced_update > refreshRate) {
 				pending_damage = true;
 				paging_last_forced_update = time_in_millis();
 			}
