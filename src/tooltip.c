@@ -208,7 +208,7 @@ tooltip_move(Tooltip *tt, int mouse_x, int mouse_y, ClientWin *cw) {
 	int x = ps->o.tooltip_offsetX,
 		y = ps->o.tooltip_offsetY;
 
-	if (!ps->o.lazyTrans) {
+	if (ps->o.pseudoTrans) {
 		x += cw->mainwin->x;
 		y += cw->mainwin->y;
 	}

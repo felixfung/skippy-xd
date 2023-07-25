@@ -112,10 +112,10 @@ clientwin_create(MainWin *mw, Window client) {
 			.event_mask = ButtonPressMask | ButtonReleaseMask | KeyPressMask
 				| KeyReleaseMask | EnterWindowMask | LeaveWindowMask
 				| PointerMotionMask | ExposureMask | FocusChangeMask,
-			.override_redirect = ps->o.lazyTrans,
+			.override_redirect = !ps->o.pseudoTrans,
 		};
 		cw->mini.window = XCreateWindow(ps->dpy,
-				(ps->o.lazyTrans ? ps->root : mw->window), 0, 0, 1, 1, 0,
+				(ps->o.pseudoTrans ? mw->window : ps->root), 0, 0, 1, 1, 0,
 				mw->depth, InputOutput, mw->visual,
 				CWColormap | CWBackPixel | CWBorderPixel | CWEventMask | CWOverrideRedirect, &sattr);
 	}
@@ -250,6 +250,19 @@ clientwin_update(ClientWin *cw) {
 }
 
 static inline bool
+clientwin_update2_desktop(session_t *ps, MainWin *mw, ClientWin *cw) {
+	if (cw->pict_filled)
+		free_pictw(ps, &cw->pict_filled);
+	cw->pict_filled = simg_postprocess(ps,
+			clone_pictw(ps, ps->o.fillSpec.img),
+			ps->o.fillSpec.mode,
+			1, 1,
+			ps->o.fillSpec.alg, ps->o.fillSpec.valg,
+			&ps->o.fillSpec.c);
+	return cw->pict_filled;
+}
+
+static inline bool
 clientwin_update2_filled(session_t *ps, MainWin *mw, ClientWin *cw) {
 	if (cw->pict_filled)
 		free_pictw(ps, &cw->pict_filled);
@@ -284,6 +297,8 @@ clientwin_update2(ClientWin *cw) {
 
 	switch (cw->mode) {
 		case CLIDISP_DESKTOP:
+			if (!ps->o.pseudoTrans)
+				clientwin_update2_desktop(ps, mw, cw);
 			break;
 		case CLIDISP_NONE:
 			break;
@@ -383,7 +398,7 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 		else if (cw->zombie)
 			mask = cw->mainwin->shadowPicture;
 
-		if (ps->o.lazyTrans) {
+		if (!ps->o.pseudoTrans) {
 			XRenderComposite(ps->dpy, PictOpSrc, source, mask,
 					cw->destination, s_x, s_y, 0, 0, s_x, s_y, s_w, s_h);
 		}

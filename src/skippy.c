@@ -654,6 +654,7 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 			if (!cw) return false;
 
 			cw->slots = desktop_idx;
+			cw->mode = CLIDISP_DESKTOP;
 
 			{
 				static const char *PREFIX = "virtual desktop ";
@@ -665,7 +666,6 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 			}
 
 			cw->zombie = false;
-			cw->mode = CLIDISP_DESKTOP;
 
 			cw->x = cw->src.x = (i * (desktop_width + mw->distance)) * mw->multiplier;
 			cw->y = cw->src.y = (j * (desktop_height + mw->distance)) * mw->multiplier;
@@ -713,14 +713,21 @@ desktopwin_map(ClientWin *cw)
 	free_damage(ps, &cw->damage);
 	free_pixmap(ps, &cw->pixmap);
 
-	XUnmapWindow(ps->dpy, cw->mini.window);
+	if (ps->o.pseudoTrans)
+		XUnmapWindow(ps->dpy, cw->mini.window);
 
 	XRenderPictureAttributes pa = { };
 
 	if (cw->origin)
 		free_picture(ps, &cw->origin);
-	cw->origin = XRenderCreatePicture(ps->dpy,
-			mw->window, mw->format, CPSubwindowMode, &pa);
+	if (ps->o.pseudoTrans) {
+		cw->origin = XRenderCreatePicture(ps->dpy,
+				mw->window, mw->format, CPSubwindowMode, &pa);
+	}
+	else {
+		cw->origin = cw->pict_filled->pict;
+		//XSetWindowBackgroundPixmap(ps->dpy, cw->mini.window, None);
+	}
 	XRenderSetPictureFilter(ps->dpy, cw->origin, FilterBest, 0, 0);
 
 	{
@@ -799,7 +806,7 @@ skippy_activate(MainWin *mw, enum layoutmode layout)
 		ClientWin *cw = iter->data;
 		cw->x *= mw->multiplier;
 		cw->y *= mw->multiplier;
-		if (mw->ps->o.lazyTrans)
+		if (!mw->ps->o.pseudoTrans)
 		{
 			cw->x += cw->mainwin->x;
 			cw->y += cw->mainwin->y;
@@ -979,7 +986,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// animation!
 		if (mw && animating) {
 			int timeslice = time_in_millis() - first_animated;
-			if (ps->o.lazyTrans && !mw->mapped)
+			if (!ps->o.pseudoTrans && !mw->mapped)
 				mainwin_map(mw);
 			if (layout != LAYOUTMODE_SWITCH
 					&& timeslice < ps->o.animationDuration
@@ -989,7 +996,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					((float)timeslice)/(float)ps->o.animationDuration);
 				last_rendered = time_in_millis();
 
-				if (!ps->o.lazyTrans && !mw->mapped)
+				if (ps->o.pseudoTrans && !mw->mapped)
 					mainwin_map(mw);
 				XFlush(ps->dpy);
 			}
@@ -1002,11 +1009,12 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 				if (layout == LAYOUTMODE_PAGING) {
 					foreach_dlist (mw->dminis) {
+						clientwin_update2(iter->data);
 						desktopwin_map(((ClientWin *) iter->data));
 					}
 				}
 
-				if (!ps->o.lazyTrans && !mw->mapped)
+				if (ps->o.pseudoTrans && !mw->mapped)
 					mainwin_map(mw);
 				XFlush(ps->dpy);
 
@@ -1128,8 +1136,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 								&& ev.type != LeaveNotify))) {
 							die = clientwin_handle(cw, &ev);
 							if (layout == LAYOUTMODE_PAGING
-								&& ev.type != MotionNotify){
-								desktopwin_map(cw);}
+									&& ev.type != MotionNotify)
+								desktopwin_map(cw);
 						}
 						break;
 					}
@@ -1148,6 +1156,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 			if (layout == LAYOUTMODE_PAGING) {
 				foreach_dlist (mw->dminis) {
+					clientwin_update2(iter->data);
 					desktopwin_map(((ClientWin *) iter->data));
 				}
 			}
@@ -1772,7 +1781,7 @@ load_config_file(session_t *ps)
     config_get_double_wrap(config, "general", "updateFreq", &ps->o.updateFreq, -1000.0, 1000.0);
     config_get_int_wrap(config, "general", "switchWaitDuration", &ps->o.switchWaitDuration, 0, 2000);
     config_get_int_wrap(config, "general", "animationDuration", &ps->o.animationDuration, 0, 2000);
-    config_get_bool_wrap(config, "general", "lazyTrans", &ps->o.lazyTrans);
+    config_get_bool_wrap(config, "general", "pseudoTrans", &ps->o.pseudoTrans);
     config_get_bool_wrap(config, "general", "includeFrame", &ps->o.includeFrame);
     config_get_bool_wrap(config, "general", "allowUpscale", &ps->o.allowUpscale);
 	config_get_int_wrap(config, "general", "cornerRadius", &ps->o.cornerRadius, 0, INT_MAX);
