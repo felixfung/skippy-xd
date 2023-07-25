@@ -97,7 +97,7 @@ clientwin_create(MainWin *mw, Window client) {
 	cw->shadow = None;
 	cw->pixmap = None;
 	cw->cpixmap = None;
-cw->mapped = false;
+
 	if (ps->o.includeFrame)
 		cw->src.window = wm_find_frame(ps, client);
 	if (!cw->src.window)

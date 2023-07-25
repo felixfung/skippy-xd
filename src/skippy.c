@@ -713,10 +713,8 @@ desktopwin_map(ClientWin *cw)
 	free_damage(ps, &cw->damage);
 	free_pixmap(ps, &cw->pixmap);
 
-	if (ps->o.pseudoTrans && cw->mapped){
+	if (ps->o.pseudoTrans)
 		XUnmapWindow(ps->dpy, cw->mini.window);
-		cw->mapped = false;
-	}
 
 	XRenderPictureAttributes pa = { };
 
@@ -760,11 +758,8 @@ desktopwin_map(ClientWin *cw)
 	
 	clientwin_render(cw);
 
-	if (!cw->mapped){
-		XMapWindow(ps->dpy, cw->mini.window);
-		XRaiseWindow(ps->dpy, cw->mini.window);
-		cw->mapped = true;
-	}
+    XMapWindow(ps->dpy, cw->mini.window);
+    XRaiseWindow(ps->dpy, cw->mini.window);
 }
 
 static bool
