@@ -672,6 +672,12 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 			cw->src.width = desktop_width;
 			cw->src.height = desktop_height;
 
+			if (!mw->ps->o.pseudoTrans)
+			{
+				cw->x += cw->mainwin->x;
+				cw->y += cw->mainwin->y;
+			}
+
 			clientwin_move(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
 
 			if (!mw->dminis)
