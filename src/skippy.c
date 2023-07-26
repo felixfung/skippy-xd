@@ -469,54 +469,25 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 	else
 		dlist_reverse(mw->focuslist);
 
-	// Get the currently focused window and select which mini-window to focus
 	dlist *iter = dlist_find(mw->focuslist, clientwin_cmp_func, (void *) leader);
 
-	// remember what was the currently focused window (before this activation of skippy)
-	if (iter)
+	if (iter) {
 		mw->client_to_focus_on_cancel = (ClientWin *) iter->data;
-	else
-		mw->client_to_focus_on_cancel = NULL;
-
-	// check if the user specified --prev or --next on the cmdline
-	if(ps->o.focus_initial && iter)
-	{
-
-		// ps->mainwin->ignore_next_refocus = 1;
-		// ps->mainwin->ignore_next_refocus = 2;
-		// ps->mainwin->ignore_next_refocus = 4;
-
-		if(ps->o.focus_initial == FI_PREV)
+		if (ps->o.focus_initial != 0 && iter)
 		{
-			// here, mw->focuslist is the first (dlist*) item in the list
-			if (iter == mw->focuslist)
-				iter = dlist_last(mw->focuslist);
-			else
-			{
-				dlist *i = mw->focuslist;
-				for (; i != NULL; i = i->next)
-					if (i->next && i->next == iter)
-						break;
-				iter = i;
-			}
+			if (ps->o.focus_initial < 0)
+				ps->o.focus_initial = ps->o.focus_initial % dlist_len(mw->focuslist);
+
+			mw->focuslist = dlist_cycle(mw->focuslist, ps->o.focus_initial);
 		}
-		else if(ps->o.focus_initial == FI_NEXT)
-			iter = iter->next;
-
-	}
-
-	// then clear this flag, so daemon not remember on its next activation
-	ps->o.focus_initial = 0;
-
-	if (!iter) {
-		dlist * first = dlist_first(mw->focuslist);
-		mw->client_to_focus = first->data;
-		mw->client_to_focus_on_cancel = NULL;
 	}
 	else {
-		mw->client_to_focus = (ClientWin *) iter->data;
-		mw->client_to_focus->focused = 1;
+		mw->client_to_focus_on_cancel = NULL;
 	}
+
+	dlist *first = dlist_first(mw->focuslist);
+	mw->client_to_focus = first->data;
+	mw->client_to_focus->focused = 1;
 }
 
 static bool
@@ -985,8 +956,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 				pivoting = pivoting || (keys[slot] & mask);
 			}
 
-			if (mw && !pivoting && layout == LAYOUTMODE_SWITCH)
+			if (mw && !pivoting && layout == LAYOUTMODE_SWITCH) {
 				die = true;
+				ps->o.focus_initial = 0;
+			}
 		}
 
 		// animation!
@@ -1008,8 +981,9 @@ mainloop(session_t *ps, bool activate_on_start) {
 				XFlush(ps->dpy);
 			}
 			else if ((layout == LAYOUTMODE_SWITCH
-						&& timeslice >= ps->o.switchWaitDuration)
-						|| timeslice >= ps->o.animationDuration) {
+						&& timeslice >= ps->o.switchWaitDuration) ||
+					(layout != LAYOUTMODE_SWITCH
+						&& timeslice >= ps->o.animationDuration)) {
 				if (!ps->o.pseudoTrans && !mw->mapped)
 					mainwin_map(mw);
 
@@ -1253,7 +1227,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 						}
 
 						printfdf(false, "(): skippy activating, mode=%d", layout);
-						if (mw)
+						if (mw && mw->mapped)
 						{
 							printfdf(false, "(): if (ps->mainwin->mapped)");
 							fflush(stdout);fflush(stderr);
@@ -1284,9 +1258,9 @@ mainloop(session_t *ps, bool activate_on_start) {
 							printfdf(false, "(): activate = true;");
 							animating = activate = true;
 							if (piped_input == PIPECMD_SWITCH)
-								ps->o.focus_initial = FI_NEXT;
+								ps->o.focus_initial = +1;
 							else if (piped_input == PIPECMD_SWITCH_PREV)
-								ps->o.focus_initial = FI_PREV;
+								ps->o.focus_initial = -1;
 						}
 						break;
 					case PIPECMD_EXIT_DAEMON:
