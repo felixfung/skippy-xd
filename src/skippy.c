@@ -473,6 +473,8 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 
 	if (iter) {
 		mw->client_to_focus_on_cancel = (ClientWin *) iter->data;
+		mw->focuslist = dlist_cycle(mw->focuslist,
+				dlist_index_of(mw->focuslist, iter));
 		if (ps->o.focus_initial != 0 && iter)
 		{
 			if (ps->o.focus_initial < 0)
