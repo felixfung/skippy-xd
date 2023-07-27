@@ -473,6 +473,8 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 
 	if (iter) {
 		mw->client_to_focus_on_cancel = (ClientWin *) iter->data;
+		mw->focuslist = dlist_cycle(mw->focuslist,
+				dlist_index_of(mw->focuslist, iter));
 		if (ps->o.focus_initial != 0 && iter)
 		{
 			if (ps->o.focus_initial < 0)
@@ -1220,10 +1222,12 @@ mainloop(session_t *ps, bool activate_on_start) {
 						else if (piped_input == PIPECMD_EXPOSE) {
 							ps->o.mode = PROGMODE_EXPOSE;
 							layout = LAYOUTMODE_EXPOSE;
+							ps->o.focus_initial = 0;
 						}
 						else /* if (piped_input == PIPECMD_PAGING) */ {
 							ps->o.mode = PROGMODE_PAGING;
 							layout = LAYOUTMODE_PAGING;
+							ps->o.focus_initial = 0;
 						}
 
 						printfdf(false, "(): skippy activating, mode=%d", layout);
