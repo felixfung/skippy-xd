@@ -650,47 +650,51 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 		if (debuglog) fputs("\n", stdout);
 
 		if (arr_keycodes_includes(cw->mainwin->keycodes_Up, evk->keycode))
-		{
 			focus_up(cw->mainwin->client_to_focus);
-		}
-
 		else if (arr_keycodes_includes(cw->mainwin->keycodes_Down, evk->keycode))
-		{
 			focus_down(cw->mainwin->client_to_focus);
-		}
-
 		else if (arr_keycodes_includes(cw->mainwin->keycodes_Left, evk->keycode))
-		{
 			focus_left(cw->mainwin->client_to_focus);
-		}
-
 		else if (arr_keycodes_includes(cw->mainwin->keycodes_Right, evk->keycode))
-		{
 			focus_right(cw->mainwin->client_to_focus);
-		}
-
 		else if (arr_keycodes_includes(cw->mainwin->keycodes_Prev, evk->keycode))
-		{
 			focus_miniw_prev(ps, cw->mainwin->client_to_focus);
-		}
-
 		else if (arr_keycodes_includes(cw->mainwin->keycodes_Next, evk->keycode))
-		{
 			focus_miniw_next(ps, cw->mainwin->client_to_focus);
-		}
-
 		else if (arr_keycodes_includes(cw->mainwin->keycodes_Cancel, evk->keycode))
 		{
 			mw->refocus = true;
 			return 1;
 		}
-
 		else if (arr_keycodes_includes(cw->mainwin->keycodes_Select, evk->keycode))
 		{
 			mw->client_to_focus = cw->mainwin->client_to_focus;
 			return 1;
 		}
+		cw->mainwin->pressed_key = true;
 	}
+
+	else if (ev->type == KeyRelease) {
+		printfdf(false, "(): else if (ev->type == KeyRelease) {");
+		printfdf(false, "(): keycode: %d:", evk->keycode);
+
+		if (cw->mainwin->pressed_key) {
+			if (arr_keycodes_includes(cw->mainwin->keycodes_Iconify, evk->keycode)) {
+				clientwin_action(mw->client_to_focus, CLIENTOP_ICONIFY);
+				focus_miniw_next(ps, cw->mainwin->client_to_focus);
+			}
+			else if (arr_keycodes_includes(cw->mainwin->keycodes_Shade, evk->keycode)) {
+				clientwin_action(mw->client_to_focus, CLIENTOP_SHADE_EWMH);
+				focus_miniw_next(ps, cw->mainwin->client_to_focus);
+			}
+			else if (arr_keycodes_includes(cw->mainwin->keycodes_Close, evk->keycode)) {
+				clientwin_action(mw->client_to_focus, CLIENTOP_CLOSE_EWMH);
+				focus_miniw_next(ps, cw->mainwin->client_to_focus);
+			}
+		}
+		else
+			printfdf(false, "(): KeyRelease %u ignored.", evk->keycode);
+    }
 
 	else if (ev->type == ButtonPress) {
 		cw->mainwin->pressed_mouse = true;
