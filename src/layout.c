@@ -310,8 +310,8 @@ for (int max_iterations=0; recalculate && max_iterations<100; max_iterations++)
 		int slotxx = slotx + ceil((float) cw->src.width / (float) slot_width);
 		int slotyy = sloty + ceil((float) cw->src.height / (float) slot_height);
 
-		//printfdf("(): window %p coord: (%d,%d) (%d,%d)", cw, cw->x, cw->y, cw->src.width, cw->src.height);
-		//printfdf("(): window %p slot: (%d,%d) (%d,%d)", cw, slotx, sloty, slotxx, slotyy);
+		printfdf(false,"(): window %p coord: (%d,%d) (%d,%d)", cw, cw->x, cw->y, cw->src.width, cw->src.height);
+		printfdf(false,"(): window %p slot: (%d,%d) (%d,%d)", cw, slotx, sloty, slotxx, slotyy);
 		slot_minx  = MIN(slot_minx, slotx);
 		slot_miny  = MIN(slot_miny, sloty);
 		slot_maxx  = MAX(slot_maxx, slotxx);
@@ -582,16 +582,16 @@ for (int max_iterations=0; recalculate && max_iterations<100; max_iterations++)
 								slotyy_old++;
 
 							int slotx_new = slotx_old + targetx - pivotx;
-							int sloty_new = slotx_old + targety - pivoty;
-							int slotxx_new = slotx_old + targetx - pivotx;
-							int slotyy_new = slotx_old + targety - pivoty;
+							int sloty_new = sloty_old + targety - pivoty;
+							int slotxx_new = slotx_new + slotxx_old - slotx_old;
+							int slotyy_new = sloty_new + slotyy_old - sloty_old;
 
 							for (int j=sloty_new; !collision && j<slotyy_new && j<slot_maxy; j++) {
 								for (int i=slotx_new; !collision && i<slotxx_new && i<slot_maxx; i++) {
 									if (slot2n[(j-slot_miny) * (slot_maxx - slot_minx) + i-slot_minx] > 0) {
 										if (slot2n[(j-slot_miny) * (slot_maxx - slot_minx) + i-slot_minx] == 1
-												&& slotx_old <= i && i <= slotxx_old
-												&& sloty_old <= j && j <= slotyy_old) {
+												&& slotx_old <= i && i < slotxx_old
+												&& sloty_old <= j && j < slotyy_old) {
 											// do not count own window slots
 											continue;
 										}
