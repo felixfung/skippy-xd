@@ -817,6 +817,21 @@ open_pipe(session_t *ps, struct pollfd *r_fd) {
 	return false;
 }
 
+static bool
+pivoting(session_t *ps, KeyCode *keycodes) {
+	bool result = false;
+	char keys[32];
+	XQueryKeymap(ps->dpy, keys);
+
+	for (int i=0; keycodes[i] != 0x00; i++) {
+		int slot = keycodes[i] / 8;
+		int mask = 1 << keycodes[i];
+		result = result || (keys[slot] & mask);
+	}
+
+	return result;
+}
+
 static void
 mainloop(session_t *ps, bool activate_on_start) {
 	MainWin *mw = NULL;
@@ -946,19 +961,20 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// the placement of this code allows MainWin not to map
 		// so that previews may not show for switch
 		// when the pivot key is held for only short time
-		if (mw && mw->keycodes_PivotSwitch)
+		if (mw)
 		{
-			bool pivoting = false;
-			char keys[32];
-			XQueryKeymap(ps->dpy, keys);
-
-			for (int i=0; mw->keycodes_PivotSwitch[i] != 0x00; i++) {
-				int slot = mw->keycodes_PivotSwitch[i] / 8;
-				int mask = 1 << mw->keycodes_PivotSwitch[i];
-				pivoting = pivoting || (keys[slot] & mask);
+			bool pivotTerminate = false;
+			if (layout == LAYOUTMODE_SWITCH && mw->keycodes_PivotSwitch) {
+				pivotTerminate = !pivoting(ps, mw->keycodes_PivotSwitch);
 			}
-
-			if (mw && !pivoting && layout == LAYOUTMODE_SWITCH) {
+			else if (layout == LAYOUTMODE_EXPOSE && mw->keycodes_PivotExpose) {
+				pivotTerminate = !pivoting(ps, mw->keycodes_PivotExpose);
+			}
+			else if (layout == LAYOUTMODE_PAGING && mw->keycodes_PivotPaging) {
+				pivotTerminate = !pivoting(ps, mw->keycodes_PivotPaging);
+			}
+			
+			if (pivotTerminate) {
 				die = true;
 				ps->o.focus_initial = 0;
 			}
