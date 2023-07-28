@@ -678,7 +678,8 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 		printfdf(false, "(): else if (ev->type == KeyRelease) {");
 		printfdf(false, "(): keycode: %d:", evk->keycode);
 
-		if (cw->mainwin->pressed_key) {
+		if (cw->mainwin->pressed_key
+				&& mw->client_to_focus->mode != CLIDISP_DESKTOP) {
 			if (arr_keycodes_includes(mw->keycodes_Iconify, evk->keycode)) {
 				ClientWin *cw_action = mw->client_to_focus;
 				focus_miniw_next(ps, mw->client_to_focus);
