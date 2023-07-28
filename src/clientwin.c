@@ -679,17 +679,42 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 		printfdf(false, "(): keycode: %d:", evk->keycode);
 
 		if (cw->mainwin->pressed_key) {
-			if (arr_keycodes_includes(cw->mainwin->keycodes_Iconify, evk->keycode)) {
-				clientwin_action(mw->client_to_focus, CLIENTOP_ICONIFY);
-				focus_miniw_next(ps, cw->mainwin->client_to_focus);
+			if (arr_keycodes_includes(mw->keycodes_Iconify, evk->keycode)) {
+				ClientWin *cw_action = mw->client_to_focus;
+				focus_miniw_next(ps, mw->client_to_focus);
+				clientwin_action(cw_action, CLIENTOP_ICONIFY);
+				clientwin_render(cw_action);
+				clientwin_update(cw_action);
+				clientwin_update2(cw_action);
+				clientwin_render(cw_action);
+				usleep(1000);
+				XSetInputFocus(ps->dpy, mw->window, RevertToParent, CurrentTime);
+				clientwin_render(mw->client_to_focus);
 			}
-			else if (arr_keycodes_includes(cw->mainwin->keycodes_Shade, evk->keycode)) {
-				clientwin_action(mw->client_to_focus, CLIENTOP_SHADE_EWMH);
-				focus_miniw_next(ps, cw->mainwin->client_to_focus);
+			else if (arr_keycodes_includes(mw->keycodes_Shade, evk->keycode)) {
+				ClientWin *cw_action = mw->client_to_focus;
+				focus_miniw_next(ps, mw->client_to_focus);
+				clientwin_action(cw_action, CLIENTOP_SHADE_EWMH);
+				clientwin_render(cw_action);
+				clientwin_update(cw_action);
+				clientwin_update2(cw_action);
+				clientwin_render(cw_action);
+				clientwin_render(mw->client_to_focus);
 			}
-			else if (arr_keycodes_includes(cw->mainwin->keycodes_Close, evk->keycode)) {
-				clientwin_action(mw->client_to_focus, CLIENTOP_CLOSE_EWMH);
-				focus_miniw_next(ps, cw->mainwin->client_to_focus);
+			else if (arr_keycodes_includes(mw->keycodes_Close, evk->keycode)) {
+				ClientWin *cw_delete = mw->client_to_focus;
+				focus_miniw_next(ps, mw->client_to_focus);
+				clientwin_render(mw->client_to_focus);
+				clientwin_action(cw_delete, CLIENTOP_CLOSE_EWMH);
+				XFlush(ps->dpy);
+				usleep(20000);
+				XFlush(ps->dpy);
+				XSetInputFocus(ps->dpy, mw->window, RevertToParent, CurrentTime);
+				dlist *del = dlist_find(mw->focuslist,
+						clientwin_cmp_func, (void *) cw_delete->wid_client);
+				mw->focuslist = dlist_remove(del);
+				if (dlist_len(mw->focuslist) == 0)
+					return 1;
 			}
 		}
 		else
