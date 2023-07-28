@@ -140,12 +140,6 @@ font = fixed-11:weight=bold
 
 [bindings]
 
-miwMouse1 = focus
-miwMouse2 = close-ewmh
-miwMouse3 = iconify
-miwMouse4 = keysNext
-miwMouse5 = keysPrev
-
 keysUp = Up w
 keysDown = Down s
 keysLeft = Left a
@@ -156,4 +150,14 @@ keysCancel = Escape BackSpace x q
 keysNext = n f
 keysPrev = p b
 
+keysIconify = 1
+keysShade = 2
+keysClose = 3
+
 keysPivotSwitch = Alt_L
+
+miwMouse1 = focus
+miwMouse2 = close-ewmh
+miwMouse3 = iconify
+miwMouse4 = keysNext
+miwMouse5 = keysPrev

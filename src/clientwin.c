@@ -650,47 +650,77 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 		if (debuglog) fputs("\n", stdout);
 
 		if (arr_keycodes_includes(cw->mainwin->keycodes_Up, evk->keycode))
-		{
 			focus_up(cw->mainwin->client_to_focus);
-		}
-
 		else if (arr_keycodes_includes(cw->mainwin->keycodes_Down, evk->keycode))
-		{
 			focus_down(cw->mainwin->client_to_focus);
-		}
-
 		else if (arr_keycodes_includes(cw->mainwin->keycodes_Left, evk->keycode))
-		{
 			focus_left(cw->mainwin->client_to_focus);
-		}
-
 		else if (arr_keycodes_includes(cw->mainwin->keycodes_Right, evk->keycode))
-		{
 			focus_right(cw->mainwin->client_to_focus);
-		}
-
 		else if (arr_keycodes_includes(cw->mainwin->keycodes_Prev, evk->keycode))
-		{
 			focus_miniw_prev(ps, cw->mainwin->client_to_focus);
-		}
-
 		else if (arr_keycodes_includes(cw->mainwin->keycodes_Next, evk->keycode))
-		{
 			focus_miniw_next(ps, cw->mainwin->client_to_focus);
-		}
-
 		else if (arr_keycodes_includes(cw->mainwin->keycodes_Cancel, evk->keycode))
 		{
 			mw->refocus = true;
 			return 1;
 		}
-
 		else if (arr_keycodes_includes(cw->mainwin->keycodes_Select, evk->keycode))
 		{
 			mw->client_to_focus = cw->mainwin->client_to_focus;
 			return 1;
 		}
+		cw->mainwin->pressed_key = true;
 	}
+
+	else if (ev->type == KeyRelease) {
+		printfdf(false, "(): else if (ev->type == KeyRelease) {");
+		printfdf(false, "(): keycode: %d:", evk->keycode);
+
+		if (cw->mainwin->pressed_key
+				&& mw->client_to_focus->mode != CLIDISP_DESKTOP) {
+			if (arr_keycodes_includes(mw->keycodes_Iconify, evk->keycode)) {
+				ClientWin *cw_action = mw->client_to_focus;
+				focus_miniw_next(ps, mw->client_to_focus);
+				clientwin_action(cw_action, CLIENTOP_ICONIFY);
+				clientwin_render(cw_action);
+				clientwin_update(cw_action);
+				clientwin_update2(cw_action);
+				clientwin_render(cw_action);
+				usleep(1000);
+				XSetInputFocus(ps->dpy, mw->window, RevertToParent, CurrentTime);
+				clientwin_render(mw->client_to_focus);
+			}
+			else if (arr_keycodes_includes(mw->keycodes_Shade, evk->keycode)) {
+				ClientWin *cw_action = mw->client_to_focus;
+				focus_miniw_next(ps, mw->client_to_focus);
+				clientwin_action(cw_action, CLIENTOP_SHADE_EWMH);
+				clientwin_render(cw_action);
+				clientwin_update(cw_action);
+				clientwin_update2(cw_action);
+				clientwin_render(cw_action);
+				clientwin_render(mw->client_to_focus);
+			}
+			else if (arr_keycodes_includes(mw->keycodes_Close, evk->keycode)) {
+				ClientWin *cw_delete = mw->client_to_focus;
+				focus_miniw_next(ps, mw->client_to_focus);
+				clientwin_render(mw->client_to_focus);
+				clientwin_action(cw_delete, CLIENTOP_CLOSE_EWMH);
+				XFlush(ps->dpy);
+				usleep(20000);
+				XFlush(ps->dpy);
+				XSetInputFocus(ps->dpy, mw->window, RevertToParent, CurrentTime);
+				dlist *del = dlist_find(mw->focuslist,
+						clientwin_cmp_func, (void *) cw_delete->wid_client);
+				mw->focuslist = dlist_remove(del);
+				if (dlist_len(mw->focuslist) == 0)
+					return 1;
+			}
+		}
+		else
+			printfdf(false, "(): KeyRelease %u ignored.", evk->keycode);
+    }
 
 	else if (ev->type == ButtonPress) {
 		cw->mainwin->pressed_mouse = true;

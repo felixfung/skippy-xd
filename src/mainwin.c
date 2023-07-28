@@ -139,6 +139,9 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keys_str_syms(ps->o.bindings_keysNext, &mw->keysyms_Next);
 	keys_str_syms(ps->o.bindings_keysCancel, &mw->keysyms_Cancel);
 	keys_str_syms(ps->o.bindings_keysSelect, &mw->keysyms_Select);
+	keys_str_syms(ps->o.bindings_keysIconify, &mw->keysyms_Iconify);
+	keys_str_syms(ps->o.bindings_keysShade, &mw->keysyms_Shade);
+	keys_str_syms(ps->o.bindings_keysClose, &mw->keysyms_Close);
 	keys_str_syms(ps->o.bindings_keysPivotSwitch, &mw->keysyms_PivotSwitch);
 
 	// convert the arrays of KeySyms into arrays of KeyCodes, for this specific Display
@@ -150,6 +153,9 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keysyms_arr_keycodes(dpy, mw->keysyms_Next, &mw->keycodes_Next);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Cancel, &mw->keycodes_Cancel);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Select, &mw->keycodes_Select);
+	keysyms_arr_keycodes(dpy, mw->keysyms_Iconify, &mw->keycodes_Iconify);
+	keysyms_arr_keycodes(dpy, mw->keysyms_Shade, &mw->keycodes_Shade);
+	keysyms_arr_keycodes(dpy, mw->keysyms_Close, &mw->keycodes_Close);
 	keysyms_arr_keycodes(dpy, mw->keysyms_PivotSwitch, &mw->keycodes_PivotSwitch);
 
 	// we check all possible pairs, one pair at a time. This is in a specific order, to give a more helpful error msg
