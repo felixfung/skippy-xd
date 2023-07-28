@@ -249,6 +249,8 @@ typedef struct {
 	char *bindings_keysShade;
 	char *bindings_keysClose;
 	char *bindings_keysPivotSwitch;
+	char *bindings_keysPivotExpose;
+	char *bindings_keysPivotPaging;
 } options_t;
 
 #define OPTIONST_INIT { \
