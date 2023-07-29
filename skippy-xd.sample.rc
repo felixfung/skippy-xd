@@ -155,6 +155,8 @@ keysShade = 2
 keysClose = 3
 
 keysPivotSwitch = Alt_L
+keysPivotExpose = Super_L
+keysPivotPaging = Control_L
 
 miwMouse1 = focus
 miwMouse2 = close-ewmh
