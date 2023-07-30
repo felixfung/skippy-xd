@@ -29,14 +29,14 @@
 bool debuglog = false;
 
 enum pipe_cmd_t {
-	// Not ordered properly for backward compatibility
+	PIPECMD_EXIT_DAEMON = -1,
 	PIPECMD_RELOAD_CONFIG = 0,
 	PIPECMD_SWITCH = 1,
-	PIPECMD_SWITCH_PREV,
 	PIPECMD_EXPOSE,
 	PIPECMD_PAGING,
-	PIPECMD_DEACTIVATE,
-	PIPECMD_EXIT_DAEMON,
+	// these two are flags
+	PIPECMD_PREV = 4,
+	PIPECMD_NEXT = 8,
 };
 
 session_t *ps_g = NULL;
@@ -104,7 +104,7 @@ parse_pict_posp_mode(session_t *ps, const char *str, enum pict_posp_mode *dest) 
 		[ PICTPOSP_SCALE		] = "scale",
 		[ PICTPOSP_SCALEK		] = "scalek",
 		[ PICTPOSP_SCALEE		] = "scalee",
-		[ PICTPOSP_SCALEEK	] = "scaleek",
+		[ PICTPOSP_SCALEEK		] = "scaleek",
 		[ PICTPOSP_TILE	 		] = "tile",
 	};
 	for (int i = 0; i < CARR_LEN(STRS_PICTPOSP); ++i)
@@ -817,6 +817,38 @@ open_pipe(session_t *ps, struct pollfd *r_fd) {
 	return false;
 }
 
+static inline int
+read_pipe(session_t *ps, struct pollfd *r_fd, char *piped_input) {
+	int read_ret = read(ps->fd_pipe, piped_input, 1);
+	if (0 == read_ret) {
+		printfef(false, "(): EOF reached on pipe \"%s\".", ps->o.pipePath);
+		open_pipe(ps, r_fd);
+	}
+	else if (-1 == read_ret) {
+		if (EAGAIN != errno)
+			printfef(false, "(): Reading pipe \"%s\" failed: %d", ps->o.pipePath, errno);
+		//exit(1);
+	}
+
+	assert(1 == read_ret);
+	return read_ret;
+}
+
+static bool
+pivoting(session_t *ps, KeyCode *keycodes) {
+	bool result = false;
+	char keys[32];
+	XQueryKeymap(ps->dpy, keys);
+
+	for (int i=0; keycodes[i] != 0x00; i++) {
+		int slot = keycodes[i] / 8;
+		int mask = 1 << keycodes[i];
+		result = result || (keys[slot] & mask);
+	}
+
+	return result;
+}
+
 static void
 mainloop(session_t *ps, bool activate_on_start) {
 	MainWin *mw = NULL;
@@ -946,19 +978,20 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// the placement of this code allows MainWin not to map
 		// so that previews may not show for switch
 		// when the pivot key is held for only short time
-		if (mw && mw->keycodes_PivotSwitch)
+		if (mw)
 		{
-			bool pivoting = false;
-			char keys[32];
-			XQueryKeymap(ps->dpy, keys);
-
-			for (int i=0; mw->keycodes_PivotSwitch[i] != 0x00; i++) {
-				int slot = mw->keycodes_PivotSwitch[i] / 8;
-				int mask = 1 << mw->keycodes_PivotSwitch[i];
-				pivoting = pivoting || (keys[slot] & mask);
+			bool pivotTerminate = false;
+			if (layout == LAYOUTMODE_SWITCH && mw->keycodes_PivotSwitch) {
+				pivotTerminate = !pivoting(ps, mw->keycodes_PivotSwitch);
 			}
-
-			if (mw && !pivoting && layout == LAYOUTMODE_SWITCH) {
+			else if (layout == LAYOUTMODE_EXPOSE && mw->keycodes_PivotExpose) {
+				pivotTerminate = !pivoting(ps, mw->keycodes_PivotExpose);
+			}
+			else if (layout == LAYOUTMODE_PAGING && mw->keycodes_PivotPaging) {
+				pivotTerminate = !pivoting(ps, mw->keycodes_PivotPaging);
+			}
+			
+			if (pivotTerminate) {
 				die = true;
 				ps->o.focus_initial = 0;
 			}
@@ -1182,99 +1215,66 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 		// Handle daemon commands
 		if (POLLIN & r_fd[1].revents) {
-			unsigned char piped_input = 0;
-			int read_ret = read(ps->fd_pipe, &piped_input, 1);
-			if (0 == read_ret) {
-				printfdf(false, "(): EOF reached on pipe \"%s\".", ps->o.pipePath);
-				open_pipe(ps, r_fd);
-			}
-			else if (-1 == read_ret) {
-				if (EAGAIN != errno)
-					printfdf(false, "(): Reading pipe \"%s\" failed: %d", ps->o.pipePath, errno);
-			}
-			else {
-				assert(1 == read_ret);
-				printfdf(false, "(): Received pipe command: %d", piped_input);
+			char piped_input;
+			read_pipe(ps, r_fd, &piped_input);
+			printfdf(false, "(): Received pipe command: %d", piped_input);
 
-				switch (piped_input) {
-					case PIPECMD_RELOAD_CONFIG:
-						load_config_file(ps);
-						mainwin_reload(ps, ps->mainwin);
-						break;
-					case PIPECMD_SWITCH:
-					case PIPECMD_SWITCH_PREV:
-					case PIPECMD_EXPOSE:
-					case PIPECMD_PAGING:
-						if (mw) {
-							if (piped_input != PIPECMD_SWITCH
-									&& piped_input != PIPECMD_SWITCH_PREV) {
-								mw->refocus = die = true;
-								break;
-							}
-						}
+			switch (piped_input) {
+				case PIPECMD_RELOAD_CONFIG:
+					load_config_file(ps);
+					mainwin_reload(ps, ps->mainwin);
+					break;
+				case PIPECMD_EXIT_DAEMON:
+					printfdf(false, "(): Exit command received, killing daemon...");
+					unlink(ps->o.pipePath);
+					return;
+				default:
+					ps->o.focus_initial = -((piped_input & PIPECMD_PREV) > 0)
+						+ ((piped_input & PIPECMD_NEXT) > 0);
 
+					if (!mw || !mw->mapped)
+					{
 						animating = activate = true;
-						if (piped_input == PIPECMD_SWITCH
-								|| piped_input == PIPECMD_SWITCH_PREV) {
+						if ((piped_input | PIPECMD_PREV | PIPECMD_NEXT)
+								== (PIPECMD_SWITCH | PIPECMD_PREV | PIPECMD_NEXT)) {
 							ps->o.mode = PROGMODE_SWITCH;
 							layout = LAYOUTMODE_SWITCH;
 						}
-						else if (piped_input == PIPECMD_EXPOSE) {
+						else if ((piped_input | PIPECMD_PREV | PIPECMD_NEXT)
+								== (PIPECMD_EXPOSE | PIPECMD_PREV | PIPECMD_NEXT)) {
 							ps->o.mode = PROGMODE_EXPOSE;
 							layout = LAYOUTMODE_EXPOSE;
-							ps->o.focus_initial = 0;
 						}
-						else /* if (piped_input == PIPECMD_PAGING) */ {
+						else if ((piped_input | PIPECMD_PREV | PIPECMD_NEXT)
+								== (PIPECMD_PAGING | PIPECMD_PREV | PIPECMD_NEXT)) {
 							ps->o.mode = PROGMODE_PAGING;
 							layout = LAYOUTMODE_PAGING;
-							ps->o.focus_initial = 0;
 						}
-
 						printfdf(false, "(): skippy activating, mode=%d", layout);
-						if (mw && mw->mapped)
-						{
-							printfdf(false, "(): if (ps->mainwin->mapped)");
-							fflush(stdout);fflush(stderr);
-
-							// There is a glitch whereby calling focus_miniw_prev() or focus_miniw_next()
-							// does not trigger an Xev to focus-out and un-highlight the focus of the
-							// 1st highlighted win, so we manually unfocus it here first, before moving on
-							// to focus and highlight the next window... it's probably because we miss the Xev
-							// since we are not in the right place in the main loop, cant unwind the call stack
-							//mw->client_to_focus->focused = 0;
-							//clientwin_render(mw->client_to_focus);
-
-							if (piped_input == PIPECMD_SWITCH_PREV)
-							{
-								printfdf(false, "(): focus_miniw_prev(ps, mw->client_to_focus);");
-								focus_miniw_prev(ps, mw->client_to_focus);
-							}
-
-							else if (piped_input == PIPECMD_SWITCH)
-							{
-								printfdf(false, "(): focus_miniw_next(ps, mw->client_to_focus);");
-								focus_miniw_next(ps, mw->client_to_focus);
-							}
-							clientwin_render(mw->client_to_focus);
-						}
-						else
-						{
-							printfdf(false, "(): activate = true;");
-							animating = activate = true;
-							if (piped_input == PIPECMD_SWITCH)
-								ps->o.focus_initial = +1;
-							else if (piped_input == PIPECMD_SWITCH_PREV)
-								ps->o.focus_initial = -1;
-						}
+					}
+					else if (mw && ps->o.focus_initial == 0) {
+						// parameter == 0, toggle
+						// otherwise shift window focus
+						mw->refocus = die = true;
+						printfdf(false, "(): toggling skippy off");
 						break;
-					case PIPECMD_EXIT_DAEMON:
-						printfdf(false, "(): Exit command received, killing daemon...");
-						unlink(ps->o.pipePath);
-						return;
-					default:
-						printfdf(false, "(): Unknown daemon command \"%d\" received.", piped_input);
-						break;
-				}
+					}
+					else if (mw && mw->mapped)
+					{
+						printfdf(false, "(): cycling window");
+						fflush(stdout);fflush(stderr);
+
+						if (ps->o.focus_initial < 0)
+							ps->o.focus_initial = dlist_len(mw->focuslist) + ps->o.focus_initial;
+
+						while (ps->o.focus_initial > 0) {
+							focus_miniw_next(ps, mw->client_to_focus);
+							ps->o.focus_initial--;
+						}
+
+						clientwin_render(mw->client_to_focus);
+					}
+					break;
 			}
 		}
 
@@ -1285,7 +1285,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 	}
 }
 
-static bool
+static void
 send_command_to_daemon_via_fifo(int command, const char *pipePath) {
 	{
 		int access_ret = 0;
@@ -1302,44 +1302,49 @@ send_command_to_daemon_via_fifo(int command, const char *pipePath) {
 	fputc(command, fp);
 
 	fclose(fp);
-
-	return true;
 }
 
-static inline bool
+static inline void
 queue_reload_config(const char *pipePath) {
 	printfdf(false, "(): Reload config file...");
-	return send_command_to_daemon_via_fifo(PIPECMD_RELOAD_CONFIG, pipePath);
+	send_command_to_daemon_via_fifo(PIPECMD_RELOAD_CONFIG, pipePath);
 }
 
-static inline bool
-activate_switch(const char *pipePath) {
-	printfdf(false, "(): Activating switcher...");
-	return send_command_to_daemon_via_fifo(PIPECMD_SWITCH, pipePath);
-}
-
-static inline bool
-activate_switch_prev(const char *pipePath) {
-	printfdf(false, "(): Activating switcher...");
-	return send_command_to_daemon_via_fifo(PIPECMD_SWITCH_PREV, pipePath);
-}
-
-static inline bool
-activate_expose(const char *pipePath) {
-	printfdf(false, "(): Activating expose...");
-	return send_command_to_daemon_via_fifo(PIPECMD_EXPOSE, pipePath);
-}
-
-static inline bool
-activate_paging(const char *pipePath) {
-	printfdf(false, "(): Activating paging...");
-	return send_command_to_daemon_via_fifo(PIPECMD_PAGING, pipePath);
-}
-
-static inline bool
+static inline void
 exit_daemon(const char *pipePath) {
 	printfdf(false, "(): Killing daemon...");
-	return send_command_to_daemon_via_fifo(PIPECMD_EXIT_DAEMON, pipePath);
+	send_command_to_daemon_via_fifo(PIPECMD_EXIT_DAEMON, pipePath);
+}
+
+static inline char
+char2pipe(char focus_initial) {
+	char res = 0;
+	if (focus_initial > 0)
+	   res = PIPECMD_NEXT;
+	else if (focus_initial < 0)
+		res = PIPECMD_PREV;
+	return res;
+}
+
+static inline void
+activate_switch(session_t *ps, const char *pipePath) {
+	printfdf(false, "(): Activating switch...");
+	send_command_to_daemon_via_fifo(PIPECMD_SWITCH
+			| char2pipe(ps->o.focus_initial), pipePath);
+}
+
+static inline void
+activate_expose(session_t *ps, const char *pipePath) {
+	printfdf(false, "(): Activating expose...");
+	send_command_to_daemon_via_fifo(PIPECMD_EXPOSE
+			| char2pipe(ps->o.focus_initial), pipePath);
+}
+
+static inline void
+activate_paging(session_t *ps, const char *pipePath) {
+	printfdf(false, "(): Activating paging...");
+	send_command_to_daemon_via_fifo(PIPECMD_PAGING
+			| char2pipe(ps->o.focus_initial), pipePath);
 }
 
 /**
@@ -1428,41 +1433,18 @@ show_help() {
 			"  --stop-daemon       - terminates skippy-xd daemon.\n"
 			"\n"
 			"  --switch            - connects to daemon and switch to next window.\n"
-			"  --switch-prev       - connects to daemon and switch to previous window.\n"
 			"  --expose            - connects to daemon and activate expose.\n"
 			"  --paging            - connects to daemon and activate paging.\n"
 			// "  --test                      - Temporary development testing. To be removed.\n"
+			"\n"
+			"  --prev              - focus on the previous window.\n"
+			"  --next              - focus on the next window.\n"
 			"\n"
 			, stdout);
 #ifdef CFG_LIBPNG
 	spng_about(stdout);
 #endif
 }
-
-// static void
-// developer_tests() {
-// 	fputs("skippy-xd (" SKIPPYXD_VERSION ")\n", stdout);
-// 	fputs("Running: developer tests\n", stdout);
-// 	fputs("\n", stdout);
-
-// 	char *str = "one two three four,five six!!!!";
-//     fprintf(stdout, "testing str_count_words(), str=\"%s\"\n", str);
-
-// 	int num_words = str_count_words(str);
-//     fprintf(stdout, "num_words=%i\n", num_words);
-
-// 	fputs("done.\n", stdout);
-// 	fputs("\n", stdout);
-
-// 	fputs("sleep(0.3);\n", stdout);
-// 	usleep(0.3 *1000000);
-// 	fputs("done.\n", stdout);
-
-
-// 	fputs("\n", stdout);
-// 	fputs("Finished. Exiting.\n"
-// 			, stdout);
-// }
 
 static inline bool
 init_xexts(session_t *ps) {
@@ -1584,11 +1566,12 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		OPT_CONFIG = 256,
 		OPT_CONFIG_RELOAD,
 		OPT_ACTV_SWITCH,
-		OPT_ACTV_SWITCH_PREV,
 		OPT_ACTV_EXPOSE,
 		OPT_ACTV_PAGING,
 		OPT_DM_START,
 		OPT_DM_STOP,
+		OPT_PREV,
+		OPT_NEXT,
 	};
 	static const char * opts_short = "hS";
 	static const struct option opts_long[] = {
@@ -1596,11 +1579,12 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		{ "config",                   required_argument, NULL, OPT_CONFIG },
 		{ "config-reload",            no_argument,       NULL, OPT_CONFIG_RELOAD },
 		{ "switch",                   no_argument,       NULL, OPT_ACTV_SWITCH },
-		{ "switch-prev",              no_argument,       NULL, OPT_ACTV_SWITCH_PREV },
 		{ "expose",                   no_argument,       NULL, OPT_ACTV_EXPOSE },
 		{ "paging",                   no_argument,       NULL, OPT_ACTV_PAGING },
 		{ "start-daemon",             no_argument,       NULL, OPT_DM_START },
 		{ "stop-daemon",              no_argument,       NULL, OPT_DM_STOP },
+		{ "prev",                     no_argument,       NULL, OPT_PREV },
+		{ "next",                     no_argument,       NULL, OPT_NEXT },
 		// { "test",                     no_argument,       NULL, 't' },
 		{ NULL, no_argument, NULL, 0 }
 	};
@@ -1644,9 +1628,6 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 			case OPT_ACTV_SWITCH:
 				ps->o.mode = PROGMODE_SWITCH;
 				break;
-			case OPT_ACTV_SWITCH_PREV:
-				ps->o.mode = PROGMODE_SWITCH_PREV;
-				break;
 			case OPT_ACTV_EXPOSE:
 				ps->o.mode = PROGMODE_EXPOSE;
 				break;
@@ -1655,6 +1636,12 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 				break;
 			case OPT_DM_STOP:
 				ps->o.mode = PROGMODE_DM_STOP;
+				break;
+			case OPT_PREV:
+				ps->o.focus_initial--;
+				break;
+			case OPT_NEXT:
+				ps->o.focus_initial++;
 				break;
 			T_CASEBOOL(OPT_DM_START, runAsDaemon);
 #undef T_CASEBOOL
@@ -1726,6 +1713,8 @@ load_config_file(session_t *ps)
     ps->o.bindings_keysShade = mstrdup(config_get(config, "bindings", "keysShade", "2"));
     ps->o.bindings_keysClose = mstrdup(config_get(config, "bindings", "keysClose", "3"));
     ps->o.bindings_keysPivotSwitch = mstrdup(config_get(config, "bindings", "keysPivotSwitch", "Alt_L"));
+    ps->o.bindings_keysPivotExpose = mstrdup(config_get(config, "bindings", "keysPivotExpose", "Super_L"));
+    ps->o.bindings_keysPivotPaging = mstrdup(config_get(config, "bindings", "keysPivotPaging", "Control_L"));
 
     // print an error message for any key bindings that aren't recognized
     check_keysyms(ps->o.config_path, ": [bindings] keysUp =", ps->o.bindings_keysUp);
@@ -1740,6 +1729,8 @@ load_config_file(session_t *ps)
     check_keysyms(ps->o.config_path, ": [bindings] keysShade =", ps->o.bindings_keysShade);
     check_keysyms(ps->o.config_path, ": [bindings] keysClose =", ps->o.bindings_keysClose);
     check_keysyms(ps->o.config_path, ": [bindings] keysPivotSwitch =", ps->o.bindings_keysPivotSwitch);
+    check_keysyms(ps->o.config_path, ": [bindings] keysPivotExpose =", ps->o.bindings_keysPivotExpose);
+    check_keysyms(ps->o.config_path, ": [bindings] keysPivotPaging =", ps->o.bindings_keysPivotPaging);
 
 	if (!parse_cliop(ps, config_get(config, "bindings", "miwMouse1", "focus"), &ps->o.bindings_miwMouse[1])
 			|| !parse_cliop(ps, config_get(config, "bindings", "miwMouse2", "close-ewmh"), &ps->o.bindings_miwMouse[2])
@@ -1919,16 +1910,13 @@ int main(int argc, char *argv[]) {
 		case PROGMODE_NORMAL:
 			break;
 		case PROGMODE_SWITCH:
-			activate_switch(pipePath);
-			goto main_end;
-		case PROGMODE_SWITCH_PREV:
-			activate_switch_prev(pipePath);
+			activate_switch(ps, pipePath);
 			goto main_end;
 		case PROGMODE_EXPOSE:
-			activate_expose(pipePath);
+			activate_expose(ps, pipePath);
 			goto main_end;
 		case PROGMODE_PAGING:
-			activate_paging(pipePath);
+			activate_paging(ps, pipePath);
 			goto main_end;
 		case PROGMODE_RELOAD_CONFIG:
 			queue_reload_config(pipePath);
@@ -2029,6 +2017,8 @@ main_end:
 			free(ps->o.bindings_keysShade);
 			free(ps->o.bindings_keysClose);
 			free(ps->o.bindings_keysPivotSwitch);
+			free(ps->o.bindings_keysPivotExpose);
+			free(ps->o.bindings_keysPivotPaging);
 		}
 
 		if (ps->fd_pipe >= 0)

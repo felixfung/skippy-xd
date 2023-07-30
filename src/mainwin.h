@@ -65,6 +65,8 @@ struct _mainwin_t {
 	KeySym *keysyms_Shade;
 	KeySym *keysyms_Close;
 	KeySym *keysyms_PivotSwitch;
+	KeySym *keysyms_PivotExpose;
+	KeySym *keysyms_PivotPaging;
 
 	KeyCode *keycodes_Up;
 	KeyCode *keycodes_Down;
@@ -78,6 +80,8 @@ struct _mainwin_t {
 	KeyCode *keycodes_Shade;
 	KeyCode *keycodes_Close;
 	KeyCode *keycodes_PivotSwitch;
+	KeyCode *keycodes_PivotExpose;
+	KeyCode *keycodes_PivotPaging;
 
 	bool mapped;
 

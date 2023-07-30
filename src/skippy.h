@@ -85,7 +85,6 @@ enum {
 enum progmode {
 	PROGMODE_NORMAL,
 	PROGMODE_SWITCH,
-	PROGMODE_SWITCH_PREV,
 	PROGMODE_EXPOSE,
 	PROGMODE_PAGING,
 	PROGMODE_RELOAD_CONFIG,
@@ -186,7 +185,7 @@ typedef struct {
 	char *config_path;
 	enum progmode mode;
 	bool runAsDaemon;
-	int focus_initial;
+	char focus_initial;
 
 	int exposeLayout;
 	int distance;
@@ -249,6 +248,8 @@ typedef struct {
 	char *bindings_keysShade;
 	char *bindings_keysClose;
 	char *bindings_keysPivotSwitch;
+	char *bindings_keysPivotExpose;
+	char *bindings_keysPivotPaging;
 } options_t;
 
 #define OPTIONST_INIT { \
