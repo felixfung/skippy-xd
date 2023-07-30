@@ -1683,7 +1683,7 @@ load_config_file(session_t *ps)
 			for (num = xid; num >= 10; num /= 10) pipeStrLen++;
 		}
 
-		const char * path = config_get(config, "general", "pipePath", "/tmp/skippy-xd-fifo");
+		const char * path = config_get(config, "system", "pipePath", "/tmp/skippy-xd-fifo");
 		pipeStrLen += strlen(path);
 
 		char * pipePath = malloc (pipeStrLen * sizeof(unsigned char));
@@ -1741,7 +1741,7 @@ load_config_file(session_t *ps)
 	}
 
 	{
-		const char *s = config_get(config, "general", "exposeLayout", NULL);
+		const char *s = config_get(config, "layout", "exposeLayout", NULL);
 		if (s) {
 			if (strcmp(s,"boxy") == 0) {
 				ps->o.exposeLayout = LAYOUT_BOXY;
@@ -1757,29 +1757,30 @@ load_config_file(session_t *ps)
 			ps->o.exposeLayout = LAYOUT_BOXY;
     }
 
-    config_get_int_wrap(config, "general", "distance", &ps->o.distance, 1, INT_MAX);
+    config_get_int_wrap(config, "layout", "distance", &ps->o.distance, 1, INT_MAX);
     config_get_bool_wrap(config, "general", "useNetWMFullscreen", &ps->o.useNetWMFullscreen);
 	{
 		ps->o.clientList = 0;
-		const char *tmp = config_get(config, "general", "clientList", NULL);
+		const char *tmp = config_get(config, "system", "clientList", NULL);
 		if (tmp && strcmp(tmp, "_NET_CLIENT_LIST") == 0)
 			ps->o.clientList = 1;
 		if (tmp && strcmp(tmp, "_WIN_CLIENT_LIST") == 0)
 			ps->o.clientList = 2;
 	}
-    config_get_double_wrap(config, "general", "updateFreq", &ps->o.updateFreq, -1000.0, 1000.0);
-    config_get_int_wrap(config, "general", "switchWaitDuration", &ps->o.switchWaitDuration, 0, 2000);
-    config_get_int_wrap(config, "general", "animationDuration", &ps->o.animationDuration, 0, 2000);
-    config_get_bool_wrap(config, "general", "pseudoTrans", &ps->o.pseudoTrans);
-    config_get_bool_wrap(config, "general", "includeFrame", &ps->o.includeFrame);
-    config_get_bool_wrap(config, "general", "allowUpscale", &ps->o.allowUpscale);
-	config_get_int_wrap(config, "general", "cornerRadius", &ps->o.cornerRadius, 0, INT_MAX);
-    config_get_int_wrap(config, "general", "preferredIconSize", &ps->o.preferredIconSize, 1, INT_MAX);
-    config_get_bool_wrap(config, "general", "switchShowAllDesktops", &ps->o.switchShowAllDesktops);
-    config_get_bool_wrap(config, "general", "exposeShowAllDesktops", &ps->o.exposeShowAllDesktops);
-    config_get_bool_wrap(config, "general", "showShadow", &ps->o.showShadow);
-    config_get_bool_wrap(config, "general", "movePointer", &ps->o.movePointer);
-    config_get_bool_wrap(config, "xinerama", "showAll", &ps->o.xinerama_showAll);
+    config_get_double_wrap(config, "system", "updateFreq", &ps->o.updateFreq, -1000.0, 1000.0);
+    config_get_int_wrap(config, "layout", "switchWaitDuration", &ps->o.switchWaitDuration, 0, 2000);
+    config_get_int_wrap(config, "layout", "animationDuration", &ps->o.animationDuration, 0, 2000);
+    config_get_bool_wrap(config, "system", "pseudoTrans", &ps->o.pseudoTrans);
+    config_get_bool_wrap(config, "display", "includeFrame", &ps->o.includeFrame);
+    config_get_bool_wrap(config, "layout", "allowUpscale", &ps->o.allowUpscale);
+	config_get_int_wrap(config, "display", "cornerRadius", &ps->o.cornerRadius, 0, INT_MAX);
+    config_get_int_wrap(config, "display", "preferredIconSize", &ps->o.preferredIconSize, 1, INT_MAX);
+    config_get_bool_wrap(config, "filter", "switchShowAllDesktops", &ps->o.switchShowAllDesktops);
+    config_get_bool_wrap(config, "filter", "exposeShowAllDesktops", &ps->o.exposeShowAllDesktops);
+    config_get_bool_wrap(config, "filter", "showShadow", &ps->o.showShadow);
+    config_get_bool_wrap(config, "display", "movePointer", &ps->o.movePointer);
+    config_get_bool_wrap(config, "filter", "showOnlyCurrentMonitor", &ps->o.xinerama_showAll);
+	ps->o.xinerama_showAll = !ps->o.xinerama_showAll;
     config_get_int_wrap(config, "normal", "tintOpacity", &ps->o.normal_tintOpacity, 0, 256);
     config_get_int_wrap(config, "normal", "opacity", &ps->o.normal_opacity, 0, 256);
     config_get_int_wrap(config, "highlight", "tintOpacity", &ps->o.highlight_tintOpacity, 0, 256);
@@ -1802,7 +1803,7 @@ load_config_file(session_t *ps)
         };
 
         bool thumbnail_icons = false;
-        config_get_bool_wrap(config, "general", "showIconsOnThumbnails", &thumbnail_icons);
+        config_get_bool_wrap(config, "display", "showIconsOnThumbnails", &thumbnail_icons);
         if (thumbnail_icons) {
             ps->o.clientDisplayModes = allocchk(malloc(sizeof(DEF_CLIDISPM_ICON)));
             memcpy(ps->o.clientDisplayModes, &DEF_CLIDISPM_ICON, sizeof(DEF_CLIDISPM_ICON));
@@ -1813,7 +1814,7 @@ load_config_file(session_t *ps)
         }
     }
     {
-        const char *sspec = config_get(config, "general", "background", NULL);
+        const char *sspec = config_get(config, "display", "background", NULL);
         if (sspec && strlen(sspec)) {
             pictspec_t spec = PICTSPECT_INIT;
             if (!parse_pictspec(ps, sspec, &spec))
@@ -1838,8 +1839,8 @@ load_config_file(session_t *ps)
 			ps->o.background = None;
 		}
     }
-    if (!parse_pictspec(ps, config_get(config, "general", "iconFillSpec", "orig mid mid #FFFFFF"), &ps->o.iconFillSpec)
-            || !parse_pictspec(ps, config_get(config, "general", "fillSpec", "orig mid mid #FFFFFF"), &ps->o.fillSpec))
+    if (!parse_pictspec(ps, config_get(config, "display", "iconFillSpec", "orig mid mid #FFFFFF"), &ps->o.iconFillSpec)
+            || !parse_pictspec(ps, config_get(config, "display", "fillSpec", "orig mid mid #FFFFFF"), &ps->o.fillSpec))
         return RET_BADARG;
     if (!simg_cachespec(ps, &ps->o.fillSpec))
         return RET_BADARG;

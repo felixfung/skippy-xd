@@ -1,116 +1,97 @@
 # Copy this to ~/.config/skippy-xd/skippy-xd.rc and edit it to your liking
 #
-# Notes:
+# File Syntax:
+# Comments must be on their own seperate lines that start with a #
 #
-# - File Syntax:
-#   Comments must be on their own seperate lines that start with a #
-#   You cannot append # comment after a settings line or a section header
+# colors can be anything XAllocNamedColor can handle
+# (like "black" or "#000000")
 #
-# - colors can be anything XAllocNamedColor can handle
-#   (like "black" or "#000000")
+# fonts are Xft font descriptions
 #
-# - fonts are Xft font descriptions
+# booleans are "true" or anything but "true" (-> false)
 #
-# - booleans are "true" or anything but "true" (-> false)
-#
-# - opacity is an integer in the range of 0-255
-#
-# - brightness is a floating point number (with 0.0 as neutral)
-#
-# - Picture specification:
-#   [WIDTHxHEIGHT] [orig|scale|scalek|tile] [left|mid|right] [left|mid|right]
-#   [COLOR|#FFFFFFFF] [PATH]
-#
-# - keysUp, keysDown, keysLeft, keysRight:
-#   selects the window in the direction compared to the current selected window,
-#   without wrapping
-#
-# - keysPrev, keysNext:
-#   selects window previous or next to current one, in up->down, left->right
-#   ordering, wrapping per column and per row
-#   
-#   Examples:
-#   background = 500x400 tile right mid #FF0000 /home/richard/screenshots/256.png
-#   background = orig mid mid #FF000080
-#
-# - [bindings] for miwMouse[1,2,3] can bind to "no" (do nothing), "focus"
-#   (focus to window), "iconify", "shade-ewmh" (toggle window shade state),
-#   "close-icccm" (close window with ICCCM method), "close-ewmh" (close
-#   window with EWMH method), or "destroy" (forcefully destroy the window),
-#   "keysPrev" to focus on previous window, "keysNext" to focus on next window.
-#
-# - [bindings] key* = is a list of valid XWindows KeySym identifiers, case
-#   sensitive and <space> seperated list. Run the program 'xev' to find them.
-#
-# - [bindings] modifierKeyMasks* = is a list of valid XWindows modifier key
-#   bitmask identifiers, as defined in the /usr/include/X11/X.h header file.
+# opacity is an integer in the range of 0-255
 #
 
-[general]
+[system]
 
 # File path of skippy-xd pipe daemon communication
 pipePath = /tmp/skippy-xd-fifo
+
+# Frequency to update pixmaps
+updateFreq = 60.0
 
 # Depending on your window manager, you may want to choose between
 # XQueryTree, _NET_CLIENT_LIST, _WIN_CLIENT_LIST
 clientList = XQueryTree
 
-# Background picture when skippy-xd is activated
-background =
-
-# Frequency to update pixmaps
-updateFreq = 60.0
-
 # when compositors such as picom are not used
 # turn on pseudo-transparency
 pseudoTrans = true
 
-# Move the mouse cursor when skippy is activated
-movePointer = false
+[layout]
 
 # Wait time before displaying switch previews
 switchWaitDuration = 100
 
 # Set = 0 to switch off animations
-# for switch, there is never animation
+# For switch, there is never animation
 animationDuration = 200
 
 # Relative minimal distance between windows
 distance = 50
 
-# Whether to display window frames
-includeFrame = true
+# exposeLayout=xd uses the same layout as switcher, maximizing screen estate
+# exposeLayout=boxy tends to preserve window positions, thus guiding the eye more
+exposeLayout = boxy
 
 # Whether to show the window bigger than its original size
-allowUpscale = true
+allowUpscale = false
+
+[filter]
+
+# in multi-monitor setting, whether to filter windows by monitor
+showOnlyCurrentMonitor = false
 
 # Choose whether to show shadow windows:
 # windows that are minimized, shaded, or on other virtual desktops
 showShadow = true
 
-# exposeLayout=xd uses the same layout as switcher, maximizing screen estate
-# exposeLayout=boxy tends to preserve window positions, thus guiding the eye more
-exposeLayout = boxy
-
 # For switch and expose,
 # Whether to limit window select on current virtual desktop
 # Or allow window selection on all virtual desktops
 # Paging always show all desktops
-switchShowAllDesktops = true
+switchShowAllDesktops = false
 exposeShowAllDesktops = false
+
+[display]
+
+# Background picture when skippy-xd is activated
+# Picture specification:
+#   [WIDTHxHEIGHT] [orig|scale|scalek|tile] [left|mid|right] [left|mid|right]
+#   [COLOR|#FFFFFFFF] [PATH]
+# Examples:
+#   background = 500x400 tile right mid #FF0000 /home/richard/screenshots/256.png
+#   background = orig mid mid #FF000080
+background =
+
+# Move the mouse cursor when skippy is activated
+movePointer = false
+
+# Whether to display window frames
+includeFrame = true
 
 # Show window previews with rounded corners,
 # with corner radius in pixels
 cornerRadius = 5
 
-# Icon visual parameters
-preferredIconSize = 48
+# Icon parameters
 showIconsOnThumbnails = true
-iconFillSpec = orig mid mid #333333
-fillSpec = orig mid mid #333333
+preferredIconSize = 48
 
-[xinerama]
-showAll = true
+# Display when live preview is not available
+fillSpec = orig mid mid #333333
+iconFillSpec = orig mid mid #333333
 
 [normal]
 tint = black
@@ -127,18 +108,10 @@ tint = #040404
 tintOpacity = 0
 opacity = 160
 
-[tooltip]
-show = true
-offsetX = 0
-offsetY = 5
-border = #ffffff
-background = #404040
-opacity = 128
-text = #ffffff
-textShadow = black
-font = fixed-11:weight=bold
-
 [bindings]
+
+# key* = is a list of valid XWindows KeySym identifiers, case
+# sensitive and <space> seperated list. Run the program 'xev' to find them.
 
 keysUp = Up w
 keysDown = Down s
@@ -158,8 +131,30 @@ keysPivotSwitch = Alt_L
 keysPivotExpose = Super_L
 keysPivotPaging = Control_L
 
+# mouse button bindings, options include
+# "no": do nothing
+# "focus": select window
+# "iconify": minimize window
+# "shade-ewmh": toggle window shade
+# "close-icccm": close window with ICCCM method
+# "close-ewmh": lcose window with EWMH method
+# "destroy": forcefully destroy window
+# "keysPrev": focus on previous window
+# "keysNext": focus on next window
+
 miwMouse1 = focus
 miwMouse2 = close-ewmh
 miwMouse3 = iconify
 miwMouse4 = keysNext
 miwMouse5 = keysPrev
+
+[tooltip]
+show = true
+offsetX = 0
+offsetY = 5
+border = #ffffff
+background = #404040
+opacity = 128
+text = #ffffff
+textShadow = black
+font = fixed-11:weight=bold
