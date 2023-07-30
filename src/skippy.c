@@ -1432,7 +1432,7 @@ show_help() {
 			"  --start-daemon      - runs as daemon mode.\n"
 			"  --stop-daemon       - terminates skippy-xd daemon.\n"
 			"\n"
-			"  --switch            - connects to daemon and switch to next window.\n"
+			"  --switch            - connects to daemon and activate switch.\n"
 			"  --expose            - connects to daemon and activate expose.\n"
 			"  --paging            - connects to daemon and activate paging.\n"
 			// "  --test                      - Temporary development testing. To be removed.\n"
