@@ -85,7 +85,6 @@ enum {
 enum progmode {
 	PROGMODE_NORMAL,
 	PROGMODE_SWITCH,
-	PROGMODE_SWITCH_PREV,
 	PROGMODE_EXPOSE,
 	PROGMODE_PAGING,
 	PROGMODE_RELOAD_CONFIG,
@@ -186,7 +185,7 @@ typedef struct {
 	char *config_path;
 	enum progmode mode;
 	bool runAsDaemon;
-	int focus_initial;
+	char focus_initial;
 
 	int exposeLayout;
 	int distance;
