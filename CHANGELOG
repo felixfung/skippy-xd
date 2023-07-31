@@ -1,5 +1,12 @@
 Skippy-XD changelog
 
+0.7.2 -- "Candybar" (30 July 2023) ~/felixfung
+ - True transparency (previous lazyTrans) support
+ - Re-organize config file categorizations
+ - Refactor --next --prev to cmdline interface
+ - Pivot keys for expose and paging
+ - Keyboard actions similar to mouse actions
+
 0.7.1 -- "Juggernaut" (21 July 2023) ~/felixfung
  - Multimonitor bugs fixed
  - Improved paging tinting (no more lag)
@@ -15,7 +22,7 @@ Skippy-XD changelog
  - Support mouse scroll wheel
  - Tooltip shows on bottom of windows
 
-0.6.0~fung -- "" (10 Mar 2023) ~/felixfung
+0.6.0 -- "" (10 Mar 2023) ~/felixfung
  - Thumbnail displays for iconized or otherwise unmapped windows
  - Animation when activating skippy
  - Boxy layout / multiple layouts
