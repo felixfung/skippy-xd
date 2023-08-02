@@ -31,4 +31,6 @@ skippy-xd --expose
 skippy-xd --paging
 ```
 
+skippy-xd works on anything X. See https://github.com/felixfung/skippy-xd/wiki/Adoption#compatible-desktop-environmentswindow-managers for details.
+
 Also check the wiki for detailed how to use, config options, and other info.
