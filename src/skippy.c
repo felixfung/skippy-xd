@@ -1816,8 +1816,10 @@ load_config_file(session_t *ps)
     {
         const char *sspec = config_get(config, "display", "background", NULL);
         if (sspec && strlen(sspec)) {
+            char bg_spec[256] = "orig mid mid ";
+            strcat(bg_spec, sspec);
             pictspec_t spec = PICTSPECT_INIT;
-            if (!parse_pictspec(ps, sspec, &spec))
+            if (!parse_pictspec(ps, bg_spec, &spec))
                 return RET_BADARG;
             int root_width = DisplayWidth(ps->dpy, ps->screen),
                     root_height = DisplayHeight(ps->dpy, ps->screen);
