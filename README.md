@@ -16,4 +16,19 @@ Paging shows you your entire desktop:
 
 If you want to fly around your daily window flow, if you want cool window motions that adds to your productivity, if you want to manage your windows like a boss, skippy-xd might be the thing for you.
 
-Checkout the youtube videos https://youtu.be/R__zua04xe0, https://youtu.be/reUDapFGnmQ. Also check the wiki for how to use, config options, and other info.
+Checkout the youtube videos https://youtu.be/R__zua04xe0, https://youtu.be/reUDapFGnmQ.
+
+Installation and usage is simple:
+```
+git clone https://github.com/felixfung/skippy-xd.git
+cd skippy-xd
+make
+make install
+
+skippy-xd --start-daemon
+skippy-xd --switch
+skippy-xd --expose
+skippy-xd --paging
+```
+
+Also check the wiki for detailed how to use, config options, and other info.
