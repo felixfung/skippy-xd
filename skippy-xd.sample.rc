@@ -128,8 +128,8 @@ keysShade = 2
 keysClose = 3
 
 keysPivotSwitch = Alt_L
-keysPivotExpose = Super_L
-keysPivotPaging = Control_L
+keysPivotExpose = 
+keysPivotPaging = 
 
 # mouse button bindings, options include
 # "no": do nothing
