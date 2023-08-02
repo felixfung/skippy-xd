@@ -72,7 +72,8 @@ exposeShowAllDesktops = false
 #   [COLOR|#FFFFFFFF] [PATH]
 # Examples:
 #   background = 500x400 tile right mid #FF0000 /home/richard/screenshots/256.png
-#   background = orig mid mid #FF000080
+#   background = orig mid mid /home/richard/screenshots/256.png
+#   background = orig mid mid #00000066
 background =
 
 # Move the mouse cursor when skippy is activated
