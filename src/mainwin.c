@@ -305,7 +305,9 @@ mainwin_update_background(MainWin *mw) {
 	mw->background = XRenderCreatePicture(ps->dpy, mw->bg_pixmap, mw->format, CPRepeat, &pa);
 	
 	if (ps->o.background) {
-		XRenderComposite(ps->dpy, PictOpSrc, ps->o.background->pict, None, mw->background, mw->x, mw->y, 0, 0, 0, 0, mw->width, mw->height);
+		Picture from = XRenderCreatePicture(ps->dpy, root, XRenderFindVisualFormat(ps->dpy, DefaultVisual(ps->dpy, ps->screen)), 0, 0);
+		XRenderComposite(ps->dpy, PictOpSrc, from, None, mw->background, mw->x, mw->y, 0, 0, 0, 0, mw->width, mw->height);
+		XRenderComposite(ps->dpy, PictOpOver, ps->o.background->pict, None, mw->background, mw->x, mw->y, 0, 0, 0, 0, mw->width, mw->height);
 	}
 	else if (!root) {
 		static const XRenderColor black = { 0, 0, 0, 0xffff};

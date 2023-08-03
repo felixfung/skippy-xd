@@ -1816,8 +1816,10 @@ load_config_file(session_t *ps)
     {
         const char *sspec = config_get(config, "display", "background", NULL);
         if (sspec && strlen(sspec)) {
+            char bg_spec[256] = "orig mid mid ";
+            strcat(bg_spec, sspec);
             pictspec_t spec = PICTSPECT_INIT;
-            if (!parse_pictspec(ps, sspec, &spec))
+            if (!parse_pictspec(ps, bg_spec, &spec))
                 return RET_BADARG;
             int root_width = DisplayWidth(ps->dpy, ps->screen),
                     root_height = DisplayHeight(ps->dpy, ps->screen);
@@ -1839,16 +1841,25 @@ load_config_file(session_t *ps)
 			ps->o.background = None;
 		}
     }
-    if (!parse_pictspec(ps, config_get(config, "display", "iconFillSpec", "orig mid mid #FFFFFF"), &ps->o.iconFillSpec)
-            || !parse_pictspec(ps, config_get(config, "display", "fillSpec", "orig mid mid #FFFFFF"), &ps->o.fillSpec))
-        return RET_BADARG;
-    if (!simg_cachespec(ps, &ps->o.fillSpec))
-        return RET_BADARG;
-    if (ps->o.iconFillSpec.path
-            && !(ps->o.iconDefault = simg_load(ps, ps->o.iconFillSpec.path,
-                    PICTPOSP_SCALEK, ps->o.preferredIconSize, ps->o.preferredIconSize,
-                    ALIGN_MID, ALIGN_MID, NULL)))
-        return RET_BADARG;
+	{
+		char defaultstr[256] = "orig mid mid ";
+		const char* sspec = config_get(config, "display", "fillSpec", "mid mid #333333");
+		strcat(defaultstr, sspec);
+		if (!parse_pictspec(ps, defaultstr, &ps->o.fillSpec))
+			return RET_BADARG;
+		char defaultstr2[256] = "orig ";
+		const char* sspec2 = config_get(config, "display", "iconFillSpec", "mid mid #333333");
+		strcat(defaultstr2, sspec2);
+		if (!parse_pictspec(ps, defaultstr2, &ps->o.iconFillSpec))
+			return RET_BADARG;
+		if (!simg_cachespec(ps, &ps->o.fillSpec))
+			return RET_BADARG;
+		if (ps->o.iconFillSpec.path
+				&& !(ps->o.iconDefault = simg_load(ps, ps->o.iconFillSpec.path,
+						PICTPOSP_SCALEK, ps->o.preferredIconSize, ps->o.preferredIconSize,
+						ALIGN_MID, ALIGN_MID, NULL)))
+			return RET_BADARG;
+	}
 
     setlocale(LC_NUMERIC, lc_numeric_old);
     free(lc_numeric_old);

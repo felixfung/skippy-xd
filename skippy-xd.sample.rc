@@ -67,12 +67,9 @@ exposeShowAllDesktops = false
 [display]
 
 # Background picture when skippy-xd is activated
-# Picture specification:
-#   [WIDTHxHEIGHT] [orig|scale|scalek|tile] [left|mid|right] [left|mid|right]
-#   [COLOR|#FFFFFFFF] [PATH]
-# Examples:
-#   background = 500x400 tile right mid #FF0000 /home/richard/screenshots/256.png
-#   background = orig mid mid #FF000080
+# Examples to paint wallpaper, or to tint existing background:
+#   background = /home/richard/screenshots/256.png
+#   background = #00000066
 background =
 
 # Move the mouse cursor when skippy is activated
@@ -89,9 +86,12 @@ cornerRadius = 5
 showIconsOnThumbnails = true
 preferredIconSize = 48
 
-# Display when live preview is not available
-fillSpec = orig mid mid #333333
-iconFillSpec = orig mid mid #333333
+# Box display when live preview is not available
+# Format: [left|mid|right] [left|mid|right] [COLOR|#FFFFFFFF]
+iconFillSpec = mid mid #333333
+# Box display when live preview is not available, and icon is not available
+# Format: [COLOR|#FFFFFFFF]
+fillSpec = #333333
 
 [normal]
 tint = black
