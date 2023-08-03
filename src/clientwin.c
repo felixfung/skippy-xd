@@ -98,6 +98,12 @@ clientwin_create(MainWin *mw, Window client) {
 	cw->pixmap = None;
 	cw->cpixmap = None;
 
+	if (ps->o.tooltip_show) {
+		if (cw->tooltip)
+			tooltip_destroy(cw->tooltip);
+		cw->tooltip = tooltip_create(mw);
+	}
+
 	if (ps->o.includeFrame)
 		cw->src.window = wm_find_frame(ps, client);
 	if (!cw->src.window)
@@ -331,6 +337,9 @@ clientwin_destroy(ClientWin *cw, bool destroyed) {
 	free_pictw(ps, &cw->icon_pict);
 	free_pictw(ps, &cw->icon_pict_filled);
 	free_pictw(ps, &cw->pict_filled);
+
+	if (cw->tooltip)
+		tooltip_destroy(cw->tooltip);
 
 	if (cw->src.window && !destroyed) {
 		free_damage(ps, &cw->damage);
@@ -586,6 +595,11 @@ clientwin_map(ClientWin *cw) {
 
 	XMapWindow(ps->dpy, cw->mini.window);
 	XRaiseWindow(ps->dpy, cw->mini.window);
+
+	if (ps->o.tooltip_show && ps->o.mode != PROGMODE_PAGING) {
+		clientwin_tooltip(cw);
+		tooltip_handle(cw->tooltip);
+	}
 }
 
 void
@@ -600,6 +614,9 @@ clientwin_unmap(ClientWin *cw) {
 	XSetWindowBackgroundPixmap(ps->dpy, cw->mini.window, None);
 
 	cw->focused = false;
+
+	if (cw->tooltip)
+		tooltip_unmap(cw->tooltip);
 }
 
 void
@@ -615,12 +632,11 @@ childwin_focus(ClientWin *cw) {
 }
 
 void
-clientwin_tooltip(ClientWin *cw, XEvent *ev) {
+clientwin_tooltip(ClientWin *cw) {
 	MainWin *mw = cw->mainwin;
 	session_t *ps = mw->ps;
-	cw->mainwin->cw_tooltip = cw;
-	if (cw->mainwin->tooltip) {
-		cw->mainwin->cw_tooltip = cw;
+
+	if (cw->tooltip) {
 		int win_title_len = 0;
 		FcChar8 *win_title = wm_get_window_title(ps, cw->wid_client, &win_title_len);
 
@@ -675,9 +691,7 @@ clientwin_tooltip(ClientWin *cw, XEvent *ev) {
 		}
 
 		if (win_title) {
-			tooltip_map(cw->mainwin->tooltip,
-					ev->xcrossing.x_root, ev->xcrossing.y_root, cw,
-					win_title, win_title_len);
+			tooltip_map(cw->tooltip, cw, win_title, win_title_len);
 			free(win_title);
 		}
 	}
@@ -814,8 +828,6 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 
 		if (debuglog) fputs("\n", stdout);
 		XFlush(ps->dpy);
-
-		clientwin_tooltip(cw->mainwin->client_to_focus, ev);
 	} else if (ev->type == FocusOut) {
 		printfdf(false, "(): else if (ev->type == FocusOut) {");
 		XFocusChangeEvent *evf = &ev->xfocus;
@@ -848,7 +860,6 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 		}
 	} else if(ev->type == LeaveNotify) {
 		printfdf(false, "(): else if (ev->type == LeaveNotify) {");
-		cw->mainwin->cw_tooltip = NULL;
 	}
 	return 0;
 }

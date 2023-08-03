@@ -734,6 +734,11 @@ desktopwin_map(ClientWin *cw)
 	
 	clientwin_render(cw);
 
+	if (ps->o.tooltip_show) {
+		clientwin_tooltip(cw);
+		tooltip_handle(cw->tooltip);
+	}
+
 	XMapWindow(ps->dpy, cw->mini.window);
 	XRaiseWindow(ps->dpy, cw->mini.window);
 }
@@ -1131,8 +1136,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 					REDUCE(clientwin_render((ClientWin *)iter->data), mw->clientondesktop);
 				}
 			}
-			else if (mw && mw->tooltip && wid == mw->tooltip->window)
-				tooltip_handle(mw->tooltip, &ev);
 			else if (mw && wid) {
 				dlist *iter = mw->clientondesktop;
 				if (layout == LAYOUTMODE_PAGING)

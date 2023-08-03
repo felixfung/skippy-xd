@@ -69,7 +69,6 @@ mainwin_create(session_t *ps) {
 	
 	// mw->pressed = mw->focus = 0;
 	mw->pressed = mw->client_to_focus = 0;
-	mw->tooltip = 0;
 	mw->clientondesktop = 0;
 	mw->focuslist = 0;
 	mw->refocus = false;
@@ -237,13 +236,7 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	mw->shadowTint.alpha = alphaconv(ps->o.shadow_tintOpacity);
 
 	mw->distance = ps->o.distance;
-	
-	if (ps->o.tooltip_show) {
-		if(mw->tooltip)
-			tooltip_destroy(mw->tooltip);
-		mw->tooltip = tooltip_create(mw);
-	}
-	
+
 	return mw;
 }
 
@@ -402,8 +395,6 @@ mainwin_map(MainWin *mw) {
 void
 mainwin_unmap(MainWin *mw)
 {
-	if(mw->tooltip)
-		tooltip_unmap(mw->tooltip);
 	if(mw->bg_pixmap)
 	{
 		XFreePixmap(mw->ps->dpy, mw->bg_pixmap);
@@ -420,9 +411,6 @@ mainwin_destroy(MainWin *mw) {
 
 	// Free all clients associated with this main window
 	dlist_free_with_func(mw->clients, (dlist_free_func) clientwin_destroy);
-
-	if(mw->tooltip)
-		tooltip_destroy(mw->tooltip);
 	
 	if(mw->background != None)
 		XRenderFreePicture(ps->dpy, mw->background);

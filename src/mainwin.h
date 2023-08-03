@@ -20,8 +20,6 @@
 #ifndef SKIPPY_MAINWIN_H
 #define SKIPPY_MAINWIN_H
 
-struct _Tooltip;
-
 struct _mainwin_t {
 	session_t *ps;
 	Visual *visual;
@@ -51,7 +49,6 @@ struct _mainwin_t {
 	
 	ClientWin *pressed, *focus;
 	dlist *clientondesktop, *focuslist, *desktopwins, *dminis;
-	struct _Tooltip *tooltip;
 	
 	KeySym *keysyms_Up;
 	KeySym *keysyms_Down;
@@ -83,6 +80,7 @@ struct _mainwin_t {
 	KeyCode *keycodes_PivotExpose;
 	KeyCode *keycodes_PivotPaging;
 
+	bool refocus;
 	bool mapped;
 
 #ifdef CFG_XINERAMA
@@ -94,9 +92,6 @@ struct _mainwin_t {
 	ClientWin *client_to_focus;
 	/// @brief the originally focused window
 	ClientWin *client_to_focus_on_cancel;
-	bool refocus;
-	// int ignore_next_refocus;
-	ClientWin *cw_tooltip;
 };
 
 MainWin *mainwin_create(session_t *ps);

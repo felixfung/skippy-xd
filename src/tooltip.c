@@ -93,7 +93,7 @@ tooltip_create(MainWin *mw) {
 		return 0;
 	}
 	wm_wid_set_info(ps, tt->window, "tooltip", _NET_WM_WINDOW_TYPE_TOOLTIP);
-	
+
 	tmp = ps->o.tooltip_border;
 	if(! XftColorAllocName(ps->dpy, mw->visual, mw->colormap, tmp, &tt->border))
 	{
@@ -163,14 +163,14 @@ tooltip_create(MainWin *mw) {
 }
 
 void
-tooltip_map(Tooltip *tt, int mouse_x, int mouse_y, ClientWin *cw,
-		FcChar8 *text, int len)
+tooltip_map(Tooltip *tt, ClientWin *cw, FcChar8 *text, int len)
 {
 	session_t * const ps = tt->mainwin->ps;
 	unsigned int max_width = tt->mainwin->width * 0.3;
 	FcChar8 *ptr;
 
-	XUnmapWindow(ps->dpy, tt->window);
+	//if (tt->window)
+		//XUnmapWindow(ps->dpy, tt->window);
 	
 	XftTextExtentsUtf8(ps->dpy, tt->font, text, len, &tt->extents);
 	
@@ -187,7 +187,7 @@ tooltip_map(Tooltip *tt, int mouse_x, int mouse_y, ClientWin *cw,
 	tt->width = tt->extents.width + 8;
 	tt->height = tt->font_height + 5 + (tt->shadow.pixel ? 2 : 0);
 	XResizeWindow(ps->dpy, tt->window, tt->width, tt->height);
-	tooltip_move(tt, mouse_x, mouse_y, cw);
+	tooltip_move(tt, cw);
 	
 	if(tt->text)
 		free(tt->text);
@@ -202,7 +202,7 @@ tooltip_map(Tooltip *tt, int mouse_x, int mouse_y, ClientWin *cw,
 }
 
 void
-tooltip_move(Tooltip *tt, int mouse_x, int mouse_y, ClientWin *cw) {
+tooltip_move(Tooltip *tt, ClientWin *cw) {
 
 	session_t *ps = tt->mainwin->ps;
 	int x = ps->o.tooltip_offsetX,
@@ -233,19 +233,17 @@ tooltip_unmap(Tooltip *tt)
 }
 
 void
-tooltip_handle(Tooltip *tt, XEvent *ev)
+tooltip_handle(Tooltip *tt)
 {
 	if (!tt->text)
 		return;
 	
-	if (ev->type == Expose && ev->xexpose.count == 0) {
-		XftDrawRect(tt->draw, &tt->border, 0, 0, tt->width, 1);
-		XftDrawRect(tt->draw, &tt->border, 0, 1, 1, tt->height - 2);
-		XftDrawRect(tt->draw, &tt->border, 0, tt->height - 1, tt->width, 1);
-		XftDrawRect(tt->draw, &tt->border, tt->width - 1, 1, 1, tt->height - 2);
-		XftDrawRect(tt->draw, &tt->background, 1, 1, tt->width - 2, tt->height - 2);
-		if(tt->shadow.pixel)
-			XftDrawStringUtf8(tt->draw, &tt->shadow, tt->font, 6, 3 + tt->extents.y + (tt->font_height - tt->extents.y) / 2, tt->text, tt->text_len);
-		XftDrawStringUtf8(tt->draw, &tt->color, tt->font, 4, 1 + tt->extents.y + (tt->font_height - tt->extents.y) / 2, tt->text, tt->text_len);
-	}
+	XftDrawRect(tt->draw, &tt->border, 0, 0, tt->width, 1);
+	XftDrawRect(tt->draw, &tt->border, 0, 1, 1, tt->height - 2);
+	XftDrawRect(tt->draw, &tt->border, 0, tt->height - 1, tt->width, 1);
+	XftDrawRect(tt->draw, &tt->border, tt->width - 1, 1, 1, tt->height - 2);
+	XftDrawRect(tt->draw, &tt->background, 1, 1, tt->width - 2, tt->height - 2);
+	if(tt->shadow.pixel)
+		XftDrawStringUtf8(tt->draw, &tt->shadow, tt->font, 6, 3 + tt->extents.y + (tt->font_height - tt->extents.y) / 2, tt->text, tt->text_len);
+	XftDrawStringUtf8(tt->draw, &tt->color, tt->font, 4, 1 + tt->extents.y + (tt->font_height - tt->extents.y) / 2, tt->text, tt->text_len);
 }
