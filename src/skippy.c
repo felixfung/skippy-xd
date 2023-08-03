@@ -1002,22 +1002,20 @@ mainloop(session_t *ps, bool activate_on_start) {
 					&& timeslice < ps->o.animationDuration
 					&& timeslice + first_animated >=
 					last_rendered + (1000.0 / 60.0)) {
-				if (!ps->o.pseudoTrans && !mw->mapped)
+				if (!mw->mapped)
 					mainwin_map(mw);
 
 				anime(ps->mainwin, ps->mainwin->clients,
 					((float)timeslice)/(float)ps->o.animationDuration);
 				last_rendered = time_in_millis();
 
-				if (ps->o.pseudoTrans && !mw->mapped)
-					mainwin_map(mw);
 				XFlush(ps->dpy);
 			}
 			else if ((layout == LAYOUTMODE_SWITCH
 						&& timeslice >= ps->o.switchWaitDuration) ||
 					(layout != LAYOUTMODE_SWITCH
 						&& timeslice >= ps->o.animationDuration)) {
-				if (!ps->o.pseudoTrans && !mw->mapped)
+				if (!mw->mapped)
 					mainwin_map(mw);
 
 				anime(ps->mainwin, ps->mainwin->clients, 1);
@@ -1031,8 +1029,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 					}
 				}
 
-				if (ps->o.pseudoTrans && !mw->mapped)
-					mainwin_map(mw);
 				XFlush(ps->dpy);
 
 				focus_miniw_adv(ps, mw->client_to_focus,
