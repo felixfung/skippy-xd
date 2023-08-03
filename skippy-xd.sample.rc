@@ -87,10 +87,11 @@ showIconsOnThumbnails = true
 preferredIconSize = 48
 
 # Box display when live preview is not available
-#   [WIDTHxHEIGHT] [orig|scale|scalek|tile] [left|mid|right] [left|mid|right]
-#   [COLOR|#FFFFFFFF] [PATH]
-fillSpec = orig mid mid #333333
-iconFillSpec = orig mid mid #333333
+# Format: [left|mid|right] [left|mid|right] [COLOR|#FFFFFFFF]
+iconFillSpec = mid mid #333333
+# Box display when live preview is not available, and icon is not available
+# Format: [COLOR|#FFFFFFFF]
+fillSpec = #333333
 
 [normal]
 tint = black
