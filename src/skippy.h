@@ -226,6 +226,7 @@ typedef struct {
 	int shadow_opacity;
 
 	bool tooltip_show;
+	bool tooltip_showDesktop;
 	int tooltip_offsetX;
 	int tooltip_offsetY;
 	char *tooltip_border;
@@ -290,6 +291,7 @@ typedef struct {
 	.shadow_tintOpacity = 0, \
 	.shadow_opacity = 160, \
 	.tooltip_show = true, \
+	.tooltip_showDesktop = true, \
 	.tooltip_offsetX = 0, \
 	.tooltip_offsetY = 20, \
 	.tooltip_border = NULL, \

@@ -1782,6 +1782,7 @@ load_config_file(session_t *ps)
     config_get_int_wrap(config, "shadow", "tintOpacity", &ps->o.shadow_tintOpacity, 0, 256);
     config_get_int_wrap(config, "shadow", "opacity", &ps->o.shadow_opacity, 0, 256);
     config_get_bool_wrap(config, "tooltip", "show", &ps->o.tooltip_show);
+    config_get_bool_wrap(config, "tooltip", "showDesktop", &ps->o.tooltip_showDesktop);
     config_get_int_wrap(config, "tooltip", "offsetX", &ps->o.tooltip_offsetX, INT_MIN, INT_MAX);
     config_get_int_wrap(config, "tooltip", "offsetY", &ps->o.tooltip_offsetY, INT_MIN, INT_MAX);
     config_get_int_wrap(config, "tooltip", "tintOpacity", &ps->o.highlight_tintOpacity, 0, 256);

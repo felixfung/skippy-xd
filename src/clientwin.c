@@ -623,8 +623,28 @@ clientwin_tooltip(ClientWin *cw, XEvent *ev) {
 		cw->mainwin->cw_tooltip = cw;
 		int win_title_len = 0;
 		FcChar8 *win_title = wm_get_window_title(ps, cw->wid_client, &win_title_len);
+
 		if (!win_title)
 			win_title = wm_get_window_title(ps, cw->mini.window, &win_title_len);
+
+		if (ps->o.tooltip_showDesktop) {
+			int desktop = wm_get_window_desktop(ps, cw->wid_client);
+			win_title_len += 4 + (desktop >= 10);
+			char tmp[win_title_len];
+			FcChar8 desktop_str[3];
+			sprintf((char *) desktop_str, "%d", desktop);
+
+			strcpy(tmp, (char *) win_title);
+			free(win_title);
+			win_title = malloc(win_title_len);
+
+			win_title[0] = '[';
+			win_title[1] = '\0';
+			strcat((char *) win_title, (char *) desktop_str);
+			strcat((char *) win_title, (char *) "] ");
+			strcat((char *) win_title, (char *) tmp);
+		}
+
 		if (win_title) {
 			tooltip_map(cw->mainwin->tooltip,
 					ev->xcrossing.x_root, ev->xcrossing.y_root, cw,

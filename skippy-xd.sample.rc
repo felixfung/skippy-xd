@@ -150,6 +150,7 @@ miwMouse5 = keysPrev
 
 [tooltip]
 show = true
+showDesktop = true
 offsetX = 0
 offsetY = 5
 border = #ffffff
