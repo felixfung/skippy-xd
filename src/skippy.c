@@ -488,34 +488,31 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 	}
 
 	dlist *first = dlist_first(mw->focuslist);
-	mw->client_to_focus = first->data;
-	mw->client_to_focus->focused = 1;
+	if (first) {
+		mw->client_to_focus = first->data;
+		mw->client_to_focus->focused = 1;
+	}
 }
 
 static bool
 init_layout(MainWin *mw, enum layoutmode layout, Window leader)
 {
-	if (!mw->clientondesktop)
-		return true;
-	
-	/* set up the windows layout */
-	{
-		unsigned int newwidth = 0, newheight = 0;
+	unsigned int newwidth = 100, newheight = 100;
+	if (mw->clientondesktop)
 		layout_run(mw, mw->clientondesktop, &newwidth, &newheight, layout);
 
-		float multiplier = (float) (mw->width - 2 * mw->distance) / newwidth;
-		if (multiplier * newheight > mw->height - 2 * mw->distance)
-			multiplier = (float) (mw->height - 2 * mw->distance) / newheight;
-		if (!mw->ps->o.allowUpscale)
-			multiplier = MIN(multiplier, 1.0f);
+	float multiplier = (float) (mw->width - 2 * mw->distance) / newwidth;
+	if (multiplier * newheight > mw->height - 2 * mw->distance)
+		multiplier = (float) (mw->height - 2 * mw->distance) / newheight;
+	if (!mw->ps->o.allowUpscale)
+		multiplier = MIN(multiplier, 1.0f);
 
-		int xoff = (mw->width - (float) newwidth * multiplier) / 2;
-		int yoff = (mw->height - (float) newheight * multiplier) / 2;
+	int xoff = (mw->width - (float) newwidth * multiplier) / 2;
+	int yoff = (mw->height - (float) newheight * multiplier) / 2;
 
-		mw->multiplier = multiplier;
-		mw->xoff = xoff;
-		mw->yoff = yoff;
-	}
+	mw->multiplier = multiplier;
+	mw->xoff = xoff;
+	mw->yoff = yoff;
 
 	init_focus(mw, layout, leader);
 
@@ -759,10 +756,6 @@ skippy_activate(MainWin *mw, enum layoutmode layout)
 	mw->client_to_focus = NULL;
 
 	daemon_count_clients(mw);
-	if ((!mw->clients || !mw->clientondesktop) && layout != LAYOUTMODE_PAGING) {
-		return false;
-	}
-
 	foreach_dlist(mw->clients) {
 		clientwin_update((ClientWin *) iter->data);
 		clientwin_update2((ClientWin *) iter->data);
@@ -1267,12 +1260,13 @@ mainloop(session_t *ps, bool activate_on_start) {
 						if (ps->o.focus_initial < 0)
 							ps->o.focus_initial = dlist_len(mw->focuslist) + ps->o.focus_initial;
 
-						while (ps->o.focus_initial > 0) {
+						while (ps->o.focus_initial > 0 && mw->client_to_focus) {
 							focus_miniw_next(ps, mw->client_to_focus);
 							ps->o.focus_initial--;
 						}
 
-						clientwin_render(mw->client_to_focus);
+						if (mw->client_to_focus)
+							clientwin_render(mw->client_to_focus);
 					}
 					break;
 			}
