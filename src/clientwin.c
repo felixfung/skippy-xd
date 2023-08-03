@@ -627,11 +627,40 @@ clientwin_tooltip(ClientWin *cw, XEvent *ev) {
 		if (!win_title)
 			win_title = wm_get_window_title(ps, cw->mini.window, &win_title_len);
 
-		if (ps->o.tooltip_showDesktop) {
+#ifdef CFG_XINERAMA
+		int monitor = -1;
+		if (ps->o.tooltip_showMonitor && ps->o.mode != PROGMODE_PAGING) {
+			XineramaScreenInfo *iter = mw->xin_info;
+			for(int i = 0; i < mw->xin_screens && monitor == -1; ++i)
+			{
+				if(cw->src.x >= iter->x_org && cw->src.x < iter->x_org + iter->width &&
+				   cw->src.y >= iter->y_org && cw->src.y < iter->y_org + iter->height)
+					monitor = i;
+				iter++;
+			}
+
+			win_title_len += 4 + (monitor >= 10);
+			char tmp[win_title_len];
+			FcChar8 monitor_str[30];
+			sprintf((char *) monitor_str, "%d", monitor);
+
+			strcpy(tmp, (char *) win_title);
+			free(win_title);
+			win_title = malloc(win_title_len);
+
+			win_title[0] = '[';
+			win_title[1] = '\0';
+			strcat((char *) win_title, (char *) monitor_str);
+			strcat((char *) win_title, (char *) "] ");
+			strcat((char *) win_title, (char *) tmp);
+		}
+#endif /* CFG_XINERAMA */
+
+		if (ps->o.tooltip_showDesktop && ps->o.mode != PROGMODE_PAGING) {
 			int desktop = wm_get_window_desktop(ps, cw->wid_client);
 			win_title_len += 4 + (desktop >= 10);
 			char tmp[win_title_len];
-			FcChar8 desktop_str[3];
+			FcChar8 desktop_str[30];
 			sprintf((char *) desktop_str, "%d", desktop);
 
 			strcpy(tmp, (char *) win_title);
