@@ -26,7 +26,7 @@ make
 make install
 
 skippy-xd --start-daemon
-skippy-xd --switch
+skippy-xd --switch --next
 skippy-xd --expose
 skippy-xd --paging
 ```
