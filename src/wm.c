@@ -793,7 +793,7 @@ wm_wid_set_info(session_t *ps, Window wid, const char *name,
 		Atom window_type) {
 	// Set window name
 	{
-		char *textcpy = mstrjoin("skippy-xd ", name);
+		char *textcpy = mstrjoin(" ", name);
 		{
 			XTextProperty text_prop = { };
 			if (Success == XmbTextListToTextProperty(ps->dpy, &textcpy, 1,

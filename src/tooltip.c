@@ -92,7 +92,7 @@ tooltip_create(MainWin *mw) {
 		tooltip_destroy(tt);
 		return 0;
 	}
-	wm_wid_set_info(ps, tt->window, "tooltip", _NET_WM_WINDOW_TYPE_TOOLTIP);
+	wm_wid_set_info(ps, tt->window, "skippy-xd tooltip", _NET_WM_WINDOW_TYPE_TOOLTIP);
 
 	tmp = ps->o.tooltip_border;
 	if(! XftColorAllocName(ps->dpy, mw->visual, mw->colormap, tmp, &tt->border))
