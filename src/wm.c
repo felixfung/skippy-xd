@@ -507,14 +507,16 @@ wm_get_window_title(session_t *ps, Window wid, int *length_return) {
 
 FcChar8 *
 wm_get_desktop_name(session_t *ps, int desktop) {
-	unsigned char *data = NULL;
+	unsigned char *buffer = NULL, *data = NULL;
 	int real_format = 0;
 	Atom real_type = None;
 	unsigned long items_read = 0, items_left = 0;
-	int status = XGetWindowProperty(ps->dpy, ps->root, //DefaultRootWindow(ps->dpy),
+	int status = XGetWindowProperty(ps->dpy, DefaultRootWindow(ps->dpy),
 			_NET_DESKTOP_NAMES, 0L, 8192L, False, AnyPropertyType, &real_type, &real_format,
-			&items_read, &items_left, &data);
-	if (Success == status) {// && 32 == real_format && data)
+			&items_read, &items_left, &buffer);
+
+	data = buffer;
+	if (Success == status) {
 		for (int i=0; i<desktop; i++) {
 			while (*data != '\0')
 				data++;
@@ -522,7 +524,10 @@ wm_get_desktop_name(session_t *ps, int desktop) {
 		}
 	}
 
-	return data;
+	unsigned char *dup = malloc(strlen((char *) data) + 1);
+	strcpy((char *) dup, (char *) data);
+	XFree(buffer);
+	return dup;
 }
 
 void

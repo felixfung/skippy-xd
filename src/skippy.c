@@ -629,7 +629,7 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 			{
 				unsigned char *str = wm_get_desktop_name(mw->ps, desktop_idx);
 				wm_wid_set_info(cw->mainwin->ps, cw->mini.window, (char *) str, None);
-				//free(str);
+				free(str);
 			}
 
 			cw->zombie = false;
