@@ -66,6 +66,7 @@ static Atom
 	_NET_WM_STATE_STICKY,
 	_NET_WM_WINDOW_TYPE,
 	_NET_WM_VISIBLE_NAME,
+	_NET_DESKTOP_NAMES,
 	_NET_WM_NAME,
 	
 	/* Old gnome atoms */
@@ -142,6 +143,7 @@ wm_get_atoms(session_t *ps) {
 	T_GETATOM(_NET_WM_WINDOW_TYPE_NORMAL);
 	T_GETATOM(_NET_WM_WINDOW_TYPE_TOOLTIP);
 	T_GETATOM(_NET_WM_VISIBLE_NAME);
+	T_GETATOM(_NET_DESKTOP_NAMES);
 	T_GETATOM(_NET_WM_NAME);
 	T_GETATOM(_NET_ACTIVE_WINDOW);
 	T_GETATOM(_NET_CLOSE_WINDOW);
@@ -503,6 +505,31 @@ wm_get_window_title(session_t *ps, Window wid, int *length_return) {
 	return (FcChar8 *) ret;
 }
 
+FcChar8 *
+wm_get_desktop_name(session_t *ps, int desktop) {
+	unsigned char *buffer = NULL, *data = NULL;
+	int real_format = 0;
+	Atom real_type = None;
+	unsigned long items_read = 0, items_left = 0;
+	int status = XGetWindowProperty(ps->dpy, DefaultRootWindow(ps->dpy),
+			_NET_DESKTOP_NAMES, 0L, 8192L, False, AnyPropertyType, &real_type, &real_format,
+			&items_read, &items_left, &buffer);
+
+	data = buffer;
+	if (Success == status) {
+		for (int i=0; i<desktop; i++) {
+			while (*data != '\0')
+				data++;
+			data++;
+		}
+	}
+
+	unsigned char *dup = malloc(strlen((char *) data) + 1);
+	strcpy((char *) dup, (char *) data);
+	XFree(buffer);
+	return dup;
+}
+
 void
 printfdfWindowName(session_t *ps, char *prefix_str, Window wid)
 {
@@ -771,7 +798,7 @@ wm_wid_set_info(session_t *ps, Window wid, const char *name,
 		Atom window_type) {
 	// Set window name
 	{
-		char *textcpy = mstrjoin("skippy-xd ", name);
+		char *textcpy = mstrjoin(" ", name);
 		{
 			XTextProperty text_prop = { };
 			if (Success == XmbTextListToTextProperty(ps->dpy, &textcpy, 1,

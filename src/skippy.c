@@ -627,11 +627,8 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 			cw->mode = CLIDISP_DESKTOP;
 
 			{
-				static const char *PREFIX = "virtual desktop ";
-				const int len = strlen(PREFIX) + 20;
-				char *str = allocchk(malloc(len));
-				snprintf(str, len, "%s%d", PREFIX, cw->slots);
-				wm_wid_set_info(cw->mainwin->ps, cw->mini.window, str, None);
+				unsigned char *str = wm_get_desktop_name(mw->ps, desktop_idx);
+				wm_wid_set_info(cw->mainwin->ps, cw->mini.window, (char *) str, None);
 				free(str);
 			}
 
@@ -733,6 +730,11 @@ desktopwin_map(ClientWin *cw)
 	cw->focused = cw == mw->client_to_focus;
 	
 	clientwin_render(cw);
+
+	if (ps->o.tooltip_show) {
+		clientwin_tooltip(cw);
+		tooltip_handle(cw->tooltip);
+	}
 
 	XMapWindow(ps->dpy, cw->mini.window);
 	XRaiseWindow(ps->dpy, cw->mini.window);
@@ -997,22 +999,20 @@ mainloop(session_t *ps, bool activate_on_start) {
 					&& timeslice < ps->o.animationDuration
 					&& timeslice + first_animated >=
 					last_rendered + (1000.0 / 60.0)) {
-				if (!ps->o.pseudoTrans && !mw->mapped)
+				if (!mw->mapped)
 					mainwin_map(mw);
 
 				anime(ps->mainwin, ps->mainwin->clients,
 					((float)timeslice)/(float)ps->o.animationDuration);
 				last_rendered = time_in_millis();
 
-				if (ps->o.pseudoTrans && !mw->mapped)
-					mainwin_map(mw);
 				XFlush(ps->dpy);
 			}
 			else if ((layout == LAYOUTMODE_SWITCH
 						&& timeslice >= ps->o.switchWaitDuration) ||
 					(layout != LAYOUTMODE_SWITCH
 						&& timeslice >= ps->o.animationDuration)) {
-				if (!ps->o.pseudoTrans && !mw->mapped)
+				if (!mw->mapped)
 					mainwin_map(mw);
 
 				anime(ps->mainwin, ps->mainwin->clients, 1);
@@ -1026,8 +1026,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 					}
 				}
 
-				if (ps->o.pseudoTrans && !mw->mapped)
-					mainwin_map(mw);
 				XFlush(ps->dpy);
 
 				focus_miniw_adv(ps, mw->client_to_focus,
@@ -1131,8 +1129,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 					REDUCE(clientwin_render((ClientWin *)iter->data), mw->clientondesktop);
 				}
 			}
-			else if (mw && mw->tooltip && wid == mw->tooltip->window)
-				tooltip_handle(mw->tooltip, &ev);
 			else if (mw && wid) {
 				dlist *iter = mw->clientondesktop;
 				if (layout == LAYOUTMODE_PAGING)
@@ -1782,6 +1778,8 @@ load_config_file(session_t *ps)
     config_get_int_wrap(config, "shadow", "tintOpacity", &ps->o.shadow_tintOpacity, 0, 256);
     config_get_int_wrap(config, "shadow", "opacity", &ps->o.shadow_opacity, 0, 256);
     config_get_bool_wrap(config, "tooltip", "show", &ps->o.tooltip_show);
+    config_get_bool_wrap(config, "tooltip", "showDesktop", &ps->o.tooltip_showDesktop);
+    config_get_bool_wrap(config, "tooltip", "showMonitor", &ps->o.tooltip_showMonitor);
     config_get_int_wrap(config, "tooltip", "offsetX", &ps->o.tooltip_offsetX, INT_MIN, INT_MAX);
     config_get_int_wrap(config, "tooltip", "offsetY", &ps->o.tooltip_offsetY, INT_MIN, INT_MAX);
     config_get_int_wrap(config, "tooltip", "tintOpacity", &ps->o.highlight_tintOpacity, 0, 256);
