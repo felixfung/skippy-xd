@@ -66,6 +66,7 @@ static Atom
 	_NET_WM_STATE_STICKY,
 	_NET_WM_WINDOW_TYPE,
 	_NET_WM_VISIBLE_NAME,
+	_NET_DESKTOP_NAMES,
 	_NET_WM_NAME,
 	
 	/* Old gnome atoms */
@@ -142,6 +143,7 @@ wm_get_atoms(session_t *ps) {
 	T_GETATOM(_NET_WM_WINDOW_TYPE_NORMAL);
 	T_GETATOM(_NET_WM_WINDOW_TYPE_TOOLTIP);
 	T_GETATOM(_NET_WM_VISIBLE_NAME);
+	T_GETATOM(_NET_DESKTOP_NAMES);
 	T_GETATOM(_NET_WM_NAME);
 	T_GETATOM(_NET_ACTIVE_WINDOW);
 	T_GETATOM(_NET_CLOSE_WINDOW);
@@ -501,6 +503,26 @@ wm_get_window_title(session_t *ps, Window wid, int *length_return) {
 		*length_return = strlen(ret);
 
 	return (FcChar8 *) ret;
+}
+
+FcChar8 *
+wm_get_desktop_name(session_t *ps, int desktop) {
+	unsigned char *data = NULL;
+	int real_format = 0;
+	Atom real_type = None;
+	unsigned long items_read = 0, items_left = 0;
+	int status = XGetWindowProperty(ps->dpy, ps->root, //DefaultRootWindow(ps->dpy),
+			_NET_DESKTOP_NAMES, 0L, 8192L, False, AnyPropertyType, &real_type, &real_format,
+			&items_read, &items_left, &data);
+	if (Success == status) {// && 32 == real_format && data)
+		for (int i=0; i<desktop; i++) {
+			while (*data != '\0')
+				data++;
+			data++;
+		}
+	}
+
+	return data;
 }
 
 void

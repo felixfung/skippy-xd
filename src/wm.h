@@ -85,6 +85,7 @@ Pixmap wm_get_root_pmap(Display *dpy);
 unsigned long wm_get_desktops(session_t *ps);
 long wm_get_current_desktop(session_t *ps);
 FcChar8 *wm_get_window_title(session_t *ps, Window wid, int *length_return);
+FcChar8 *wm_get_desktop_name(session_t *ps, int desktop);
 void printfdfWindowName(session_t *ps, char *prefix_str, Window wid);
 Window wm_get_group_leader(Display *dpy, Window window);
 void wm_set_fullscreen(session_t *ps, Window window,

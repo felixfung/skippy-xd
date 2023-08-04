@@ -627,12 +627,9 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 			cw->mode = CLIDISP_DESKTOP;
 
 			{
-				static const char *PREFIX = "virtual desktop ";
-				const int len = strlen(PREFIX) + 20;
-				char *str = allocchk(malloc(len));
-				snprintf(str, len, "%s%d", PREFIX, cw->slots);
-				wm_wid_set_info(cw->mainwin->ps, cw->mini.window, str, None);
-				free(str);
+				unsigned char *str = wm_get_desktop_name(mw->ps, desktop_idx);
+				wm_wid_set_info(cw->mainwin->ps, cw->mini.window, (char *) str, None);
+				//free(str);
 			}
 
 			cw->zombie = false;
