@@ -115,13 +115,13 @@ simg_get_composite_params(pictw_t *src, int twidth, int theight,
 	    num_y = theight / height;
 	}
 	switch (alg) {
-		case ALIGN_LEFT:  break;
-		case ALIGN_RIGHT: x = twidth - width * num_x; break;
+		case ALIGN_LEFT:  x = 5; break;
+		case ALIGN_RIGHT: x = twidth - width * num_x - 5; break;
 		case ALIGN_MID:   x = (twidth - width * num_x) / 2; break;
 	};
 	switch (valg) {
-		case ALIGN_LEFT:  break;
-		case ALIGN_RIGHT: y = theight - height * num_y; break;
+		case ALIGN_LEFT:  y = 5; break;
+		case ALIGN_RIGHT: y = theight - height * num_y - 5; break;
 		case ALIGN_MID:   y = (theight - height * num_y) / 2; break;
 	};
 	x = MAX(x, 0);
