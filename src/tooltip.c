@@ -166,7 +166,7 @@ void
 tooltip_map(Tooltip *tt, ClientWin *cw, FcChar8 *text, int len)
 {
 	session_t * const ps = tt->mainwin->ps;
-	unsigned int max_width = tt->mainwin->width * 0.3;
+	unsigned int max_width = cw->src.width * 0.3;
 	FcChar8 *ptr;
 
 	//if (tt->window)
