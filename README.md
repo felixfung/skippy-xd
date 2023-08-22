@@ -18,6 +18,8 @@ If you want to fly around your daily window flow, if you want cool window motion
 
 Checkout the youtube videos https://youtu.be/R__zua04xe0, https://youtu.be/reUDapFGnmQ.
 
+skippy-xd works on anything X. See https://github.com/felixfung/skippy-xd/wiki/Adoption#compatible-desktop-environmentswindow-managers for details.
+
 Installation and usage is simple:
 ```
 git clone https://github.com/felixfung/skippy-xd.git
@@ -30,7 +32,5 @@ skippy-xd --switch --next
 skippy-xd --expose
 skippy-xd --paging
 ```
-
-skippy-xd works on anything X. See https://github.com/felixfung/skippy-xd/wiki/Adoption#compatible-desktop-environmentswindow-managers for details.
 
 Also check the wiki for detailed how to use, config options, and other info.
