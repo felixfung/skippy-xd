@@ -154,6 +154,7 @@ showDesktop = true
 showMonitor = true
 offsetX = 0
 offsetY = -5
+width = 0.8
 border = #ffffff
 background = #404040
 opacity = 128
