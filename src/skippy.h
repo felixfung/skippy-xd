@@ -1347,6 +1347,20 @@ sort_cw_by_column(dlist* dlist1, dlist* dlist2, void* data)
 		return 0;
 }
 
+static inline int
+sort_cw_by_id(dlist* dlist1, dlist* dlist2, void* data)
+{
+	ClientWin *cw1 = (ClientWin *) dlist1->data;
+	ClientWin *cw2 = (ClientWin *) dlist2->data;
+
+	if (cw1->src.window < cw2->src.window)
+		return -1;
+	else if (cw1->src.window > cw2->src.window)
+		return 1;
+	else
+		return 0;
+}
+
 extern session_t *ps_g;
 
 int load_config_file(session_t *ps);
