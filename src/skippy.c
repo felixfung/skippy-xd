@@ -856,7 +856,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 	enum layoutmode layout = LAYOUTMODE_EXPOSE;
 	bool animating = activate;
 	long first_animated = 0L;
-	long paging_last_forced_update = 0;
 
 	switch (ps->o.mode) {
 		case PROGMODE_SWITCH:
@@ -1146,8 +1145,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 								&& ev.type != LeaveNotify))) {
 							die = clientwin_handle(cw, &ev);
 							if (layout == LAYOUTMODE_PAGING
-									&& ev.type != MotionNotify)
+									&& ev.type != MotionNotify) {
 								desktopwin_map(cw);
+								pending_damage = true;
+							}
 						}
 						break;
 					}
@@ -1189,20 +1190,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 		if (pending_damage)
 			timeout = 0;
 		poll(r_fd, (r_fd[1].fd >= 0 ? 2: 1), timeout);
-
-		// force refresh focused desktop tint
-		// not great solution at all...
-		if (mw && layout == LAYOUTMODE_PAGING)
-		{
-			const int pseudoTransRefreshRate = 10;
-			const int transRefreshRate = 1;
-			int refreshRate = ps->o.pseudoTrans ?
-				pseudoTransRefreshRate : transRefreshRate;
-			if (time_in_millis() - paging_last_forced_update > refreshRate) {
-				pending_damage = true;
-				paging_last_forced_update = time_in_millis();
-			}
-		}
 
 		// Handle daemon commands
 		if (POLLIN & r_fd[1].revents) {
