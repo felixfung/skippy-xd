@@ -498,10 +498,8 @@ static bool
 init_layout(MainWin *mw, enum layoutmode layout, Window leader)
 {
 	unsigned int newwidth = 100, newheight = 100;
-	if (mw->clientondesktop) {
-		dlist_sort(mw->clientondesktop, sort_cw_by_id, 0);
+	if (mw->clientondesktop)
 		layout_run(mw, mw->clientondesktop, &newwidth, &newheight, layout);
-	}
 
 	float multiplier = (float) (mw->width - 2 * mw->distance) / newwidth;
 	if (multiplier * newheight > mw->height - 2 * mw->distance)
