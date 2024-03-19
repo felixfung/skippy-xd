@@ -41,8 +41,12 @@ void layout_run(MainWin *mw, dlist *windows,
 		unsigned int *total_width, unsigned int *total_height,
 		enum layoutmode layout) {
 	if (layout == LAYOUTMODE_EXPOSE
-			&& mw->ps->o.exposeLayout == LAYOUT_BOXY)
-		layout_boxy(mw, windows, total_width, total_height);
+			&& mw->ps->o.exposeLayout == LAYOUT_BOXY) {
+		dlist *sorted_windows = dlist_dup(windows);
+		dlist_sort(sorted_windows, sort_cw_by_id, 0);
+		layout_boxy(mw, sorted_windows, total_width, total_height);
+		dlist_free(sorted_windows);
+	}
 	else {
 		// to get the proper z-order based window ordering,
 		// reversing the list of windows is needed
