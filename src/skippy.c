@@ -1145,10 +1145,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 								&& ev.type != LeaveNotify))) {
 							die = clientwin_handle(cw, &ev);
 							if (layout == LAYOUTMODE_PAGING
-									&& ev.type != MotionNotify) {
-								desktopwin_map(cw);
+									&& ev.type != MotionNotify)
 								pending_damage = true;
-							}
 						}
 						break;
 					}
