@@ -33,7 +33,6 @@ Atom
 	_NET_WM_WINDOW_TYPE_DOCK,
 	_NET_WM_WINDOW_TYPE_NORMAL,
 	_NET_WM_WINDOW_TYPE_TOOLTIP,
-	_NET_WM_WINDOW_TYPE_POPUP_MENU,
 
 	// EWMH atoms
 	_NET_CLOSE_WINDOW,
@@ -143,7 +142,6 @@ wm_get_atoms(session_t *ps) {
 	T_GETATOM(_NET_WM_WINDOW_TYPE_DOCK);
 	T_GETATOM(_NET_WM_WINDOW_TYPE_NORMAL);
 	T_GETATOM(_NET_WM_WINDOW_TYPE_TOOLTIP);
-	T_GETATOM(_NET_WM_WINDOW_TYPE_POPUP_MENU);
 	T_GETATOM(_NET_WM_VISIBLE_NAME);
 	T_GETATOM(_NET_DESKTOP_NAMES);
 	T_GETATOM(_NET_WM_NAME);
@@ -624,8 +622,7 @@ wm_validate_window(session_t *ps, Window wid) {
 	{
 		long v = winprop_get_int(&prop);
 		if ((_NET_WM_WINDOW_TYPE_DESKTOP == v
-					|| _NET_WM_WINDOW_TYPE_DOCK == v
-					|| _NET_WM_WINDOW_TYPE_POPUP_MENU == v))
+					|| _NET_WM_WINDOW_TYPE_DOCK == v))
 			result = false;
 	}
 	free_winprop(&prop);
