@@ -523,6 +523,9 @@ static bool
 init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 {
 	int screencount = wm_get_desktops(mw->ps);
+#ifdef CFG_XINERAMA
+	printfdf(true,"(): %d %d", screencount, mw->xin_screens);
+#endif
 	if (screencount == -1)
 		screencount = 1;
 	int desktop_dim = ceil(sqrt(screencount));
@@ -1143,8 +1146,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 								&& ev.type != LeaveNotify))) {
 							die = clientwin_handle(cw, &ev);
 							if (layout == LAYOUTMODE_PAGING
-									&& ev.type != MotionNotify)
+									&& ev.type != MotionNotify) {
+								cw->damaged = true;
 								pending_damage = true;
+							}
 						}
 						break;
 					}
@@ -1163,8 +1168,11 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 			if (layout == LAYOUTMODE_PAGING) {
 				foreach_dlist (mw->dminis) {
-					clientwin_update2(iter->data);
-					desktopwin_map(((ClientWin *) iter->data));
+					ClientWin *cw = (ClientWin *) iter->data;
+					if (cw->damaged) {
+						clientwin_update2(cw);
+						desktopwin_map(cw);
+					}
 				}
 			}
 			last_rendered = time_in_millis();
