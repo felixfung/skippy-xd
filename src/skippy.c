@@ -738,6 +738,8 @@ desktopwin_map(ClientWin *cw)
 
 	XMapWindow(ps->dpy, cw->mini.window);
 	XRaiseWindow(ps->dpy, cw->mini.window);
+
+	cw->damaged = false;
 }
 
 static bool
