@@ -523,9 +523,6 @@ static bool
 init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 {
 	int screencount = wm_get_desktops(mw->ps);
-#ifdef CFG_XINERAMA
-	printfdf(true,"(): %d %d", screencount, mw->xin_screens);
-#endif
 	if (screencount == -1)
 		screencount = 1;
 	int desktop_dim = ceil(sqrt(screencount));
