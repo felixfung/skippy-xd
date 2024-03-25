@@ -738,8 +738,6 @@ desktopwin_map(ClientWin *cw)
 
 	XMapWindow(ps->dpy, cw->mini.window);
 	XRaiseWindow(ps->dpy, cw->mini.window);
-
-	cw->damaged = false;
 }
 
 static bool
@@ -1139,13 +1137,15 @@ mainloop(session_t *ps, bool activate_on_start) {
 					if (cw->mini.window == wid) {
 						if (!(POLLIN & r_fd[1].revents)
 								&& ((layout != LAYOUTMODE_PAGING)
+								// do not process these excessive paging events
 								|| (ev.type != Expose
-								&& ev.type != GraphicsExpose
-								&& ev.type != EnterNotify
-								&& ev.type != LeaveNotify))) {
+								 && ev.type != GraphicsExpose
+								 && ev.type != MotionNotify
+								 && ev.type != EnterNotify
+								 && ev.type != LeaveNotify
+								))) {
 							die = clientwin_handle(cw, &ev);
-							if (layout == LAYOUTMODE_PAGING
-									&& ev.type != MotionNotify) {
+							if (layout == LAYOUTMODE_PAGING) {
 								cw->damaged = true;
 								pending_damage = true;
 							}
@@ -1168,9 +1168,13 @@ mainloop(session_t *ps, bool activate_on_start) {
 			if (layout == LAYOUTMODE_PAGING) {
 				foreach_dlist (mw->dminis) {
 					ClientWin *cw = (ClientWin *) iter->data;
-					if (cw->damaged) {
+					// with pseudo-transparency,
+					// some desktops never receive refresh events
+					// so we need to refresh all desktops
+					if (cw->damaged || ps->o.pseudoTrans) {
 						clientwin_update2(cw);
 						desktopwin_map(cw);
+						cw->damaged = false;
 					}
 				}
 			}
