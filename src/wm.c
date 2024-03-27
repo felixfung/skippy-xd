@@ -635,8 +635,16 @@ wm_validate_window(session_t *ps, Window wid) {
 	winprop_t prop = { };
 	bool result = true;
 
-	if (wm_identify_panel(ps, wid))
-		return false;
+	// Check _NET_WM_WINDOW_TYPE
+	prop = wid_get_prop(ps, wid, _NET_WM_WINDOW_TYPE, 1, XA_ATOM, 32);
+	{
+		long v = winprop_get_int(&prop);
+		if ((_NET_WM_WINDOW_TYPE_DESKTOP == v
+					|| _NET_WM_WINDOW_TYPE_DOCK == v
+					|| _NET_WM_WINDOW_TYPE_POPUP_MENU == v))
+			result = false;
+	}
+	free_winprop(&prop);
 
 	if (WMPSN_EWMH == ps->wmpsn) {
 		// Check _NET_WM_STATE
