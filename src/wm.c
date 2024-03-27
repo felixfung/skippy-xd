@@ -622,8 +622,7 @@ wm_identify_panel(session_t *ps, Window wid) {
 	{
 		long v = winprop_get_int(&prop);
 		if ((_NET_WM_WINDOW_TYPE_DESKTOP == v
-				|| _NET_WM_WINDOW_TYPE_DOCK == v
-				|| _NET_WM_WINDOW_TYPE_POPUP_MENU == v))
+				|| _NET_WM_WINDOW_TYPE_DOCK == v))
 			result = true;
 	}
 	free_winprop(&prop);
