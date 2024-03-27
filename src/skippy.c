@@ -370,10 +370,10 @@ panel_map(ClientWin *cw)
 	int border = 0;
 	XSetWindowBorderWidth(cw->mainwin->ps->dpy, cw->mini.window, border);
 
-	cw->mini.x = cw->src.x * 2;
-	cw->mini.y = cw->src.y * 2;
-	cw->mini.width = cw->src.width * 2;
-	cw->mini.height = cw->src.height * 2;
+	cw->mini.x = cw->src.x;
+	cw->mini.y = cw->src.y;
+	cw->mini.width = cw->src.width;
+	cw->mini.height = cw->src.height;
 
 	XMoveResizeWindow(cw->mainwin->ps->dpy, cw->mini.window, cw->mini.x - border, cw->mini.y - border, cw->mini.width, cw->mini.height);
 
