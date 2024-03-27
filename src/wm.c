@@ -615,22 +615,29 @@ wm_set_fullscreen(session_t *ps, Window window,
 }
 
 bool
+wm_identify_panel(session_t *ps, Window wid) {
+	bool result = false;
+	// Check _NET_WM_WINDOW_TYPE
+	winprop_t prop = wid_get_prop(ps, wid, _NET_WM_WINDOW_TYPE, 1, XA_ATOM, 32);
+	{
+		long v = winprop_get_int(&prop);
+		if ((_NET_WM_WINDOW_TYPE_DESKTOP == v
+				|| _NET_WM_WINDOW_TYPE_DOCK == v
+				|| _NET_WM_WINDOW_TYPE_POPUP_MENU == v))
+			result = true;
+	}
+	free_winprop(&prop);
+
+	return result;
+}
+
+bool
 wm_validate_window(session_t *ps, Window wid) {
 	winprop_t prop = { };
 	bool result = true;
 
-	// Check _NET_WM_WINDOW_TYPE
-	prop = wid_get_prop(ps, wid, _NET_WM_WINDOW_TYPE, 1, XA_ATOM, 32);
-	{
-		long v = winprop_get_int(&prop);
-		if ((_NET_WM_WINDOW_TYPE_DESKTOP == v
-					|| _NET_WM_WINDOW_TYPE_DOCK == v
-					|| _NET_WM_WINDOW_TYPE_POPUP_MENU == v))
-			result = false;
-	}
-	free_winprop(&prop);
-
-	if (!result) return result;
+	if (wm_identify_panel(ps, wid))
+		return false;
 
 	if (WMPSN_EWMH == ps->wmpsn) {
 		// Check _NET_WM_STATE

@@ -48,7 +48,7 @@ struct _mainwin_t {
 	Picture normalPicture, highlightPicture, shadowPicture;
 	
 	ClientWin *pressed, *focus;
-	dlist *clientondesktop, *focuslist, *desktopwins, *dminis;
+	dlist *clientondesktop, *focuslist, *desktopwins, *dminis, *panels;
 	
 	KeySym *keysyms_Up;
 	KeySym *keysyms_Down;

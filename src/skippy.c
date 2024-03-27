@@ -365,15 +365,46 @@ ev_dump(session_t *ps, const MainWin *mw, const XEvent *ev) {
 }
 
 static void
+panel_map(ClientWin *cw)
+{
+	int border = 0;
+	XSetWindowBorderWidth(cw->mainwin->ps->dpy, cw->mini.window, border);
+
+	cw->mini.x = cw->src.x * 2;
+	cw->mini.y = cw->src.y * 2;
+	cw->mini.width = cw->src.width * 2;
+	cw->mini.height = cw->src.height * 2;
+
+	XMoveResizeWindow(cw->mainwin->ps->dpy, cw->mini.window, cw->mini.x - border, cw->mini.y - border, cw->mini.width, cw->mini.height);
+
+	if(cw->pixmap)
+		XFreePixmap(cw->mainwin->ps->dpy, cw->pixmap);
+
+	if(cw->destination)
+		XRenderFreePicture(cw->mainwin->ps->dpy, cw->destination);
+
+	cw->pixmap = XCreatePixmap(cw->mainwin->ps->dpy, cw->mini.window, cw->mini.width, cw->mini.height, cw->mainwin->depth);
+	XSetWindowBackgroundPixmap(cw->mainwin->ps->dpy, cw->mini.window, cw->pixmap);
+
+	cw->destination = XRenderCreatePicture(cw->mainwin->ps->dpy, cw->pixmap, cw->mini.format, 0, 0);
+}
+
+static void
 anime(
 	MainWin *mw,
 	dlist *clients,
 	float timeslice
 )
 {
-	clients = dlist_first(clients);
+	foreach_dlist (mw->panels) {
+		ClientWin *cw = iter->data;
+		panel_map(cw);
+		clientwin_map(cw);
+	}
+
 	float multiplier = 1.0 + timeslice * (mw->multiplier - 1.0);
 	mainwin_transform(mw, multiplier);
+
 	foreach_dlist (mw->clientondesktop) {
 		ClientWin *cw = (ClientWin *) iter->data;
 		clientwin_move(cw, multiplier, mw->xoff, mw->yoff, timeslice);
@@ -440,18 +471,21 @@ daemon_count_clients(MainWin *mw)
 
 	update_clients(mw);
 
+	// update mw->clientondesktop
 	dlist_free(mw->clientondesktop);
 	mw->clientondesktop = NULL;
+	long desktop = wm_get_current_desktop(mw->ps);
+	dlist *tmp = dlist_first(dlist_find_all(mw->clients,
+				(dlist_match_func) clientwin_validate_func, &desktop));
+	mw->clientondesktop = tmp;
 
-	{
-		session_t * const ps = mw->ps;
-		long desktop = wm_get_current_desktop(ps);
-
-		dlist *tmp = dlist_first(dlist_find_all(mw->clients,
-					(dlist_match_func) clientwin_validate_func, &desktop));
-
-		mw->clientondesktop = tmp;
-	}
+	// update window panel list
+	if (mw->panels)
+		dlist_free(mw->panels);
+	mw->panels = NULL;
+	tmp = dlist_first(dlist_find_all(mw->clients,
+			(dlist_match_func) clientwin_validate_panel, &desktop));
+	mw->panels = tmp;
 
 	return;
 }
@@ -780,11 +814,24 @@ skippy_activate(MainWin *mw, enum layoutmode layout)
 		ClientWin *cw = iter->data;
 		cw->x *= mw->multiplier;
 		cw->y *= mw->multiplier;
+		cw->panel = false;
 		if (!mw->ps->o.pseudoTrans)
 		{
 			cw->x += cw->mainwin->x;
 			cw->y += cw->mainwin->y;
 		}
+	}
+
+	foreach_dlist(mw->panels) {
+		ClientWin *cw = iter->data;
+		//cw->x = cw->src.x;
+		//cw->y = cw->src.y;
+		cw->factor = 1;
+		cw->panel = true;
+		//clientwin_move(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
+		//clientwin_move(cw, mw->multiplier, 0, 0, 0);
+		clientwin_update(cw);
+		clientwin_update2(cw);
 	}
 
 	return true;
@@ -952,6 +999,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 			}
 			dlist_free(mw->desktopwins);
 			mw->desktopwins = NULL;
+
+			foreach_dlist(mw->panels) {
+				clientwin_unmap(iter->data);
+			}
 
 			// Catch all errors, but remove all events
 			XSync(ps->dpy, False);
@@ -1163,6 +1214,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 			foreach_dlist(mw->clientondesktop) {
 				if (((ClientWin *) iter->data)->damaged)
 					clientwin_repair(iter->data);
+			}
+
+			foreach_dlist(mw->panels) {
+				clientwin_repair((ClientWin *) iter->data);
 			}
 
 			if (layout == LAYOUTMODE_PAGING) {

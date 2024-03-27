@@ -36,6 +36,13 @@ clientwin_cmp_func(dlist *l, void *data) {
 void clientwin_round_corners(ClientWin *cw);
 
 int
+clientwin_validate_panel(dlist *l, void *data) {
+	ClientWin *cw = l->data;
+	MainWin *mw = cw->mainwin;
+	return wm_identify_panel(mw->ps, cw->wid_client);
+}
+
+int
 clientwin_validate_func(dlist *l, void *data) {
 	ClientWin *cw = l->data;
 	MainWin *mw = cw->mainwin;
@@ -583,12 +590,14 @@ clientwin_map(ClientWin *cw) {
 
 	if (cw->origin) {
 		cw->damage = XDamageCreate(ps->dpy, cw->src.window, XDamageReportDeltaRectangles);
-		XRenderSetPictureTransform(ps->dpy, cw->origin, &cw->mainwin->transform);
+		if (!cw->panel)
+			XRenderSetPictureTransform(ps->dpy, cw->origin, &cw->mainwin->transform);
 	}
 
 	if (cw->shadow) {
 		cw->damage = XDamageCreate(ps->dpy, cw->src.window, XDamageReportDeltaRectangles);
-		XRenderSetPictureTransform(ps->dpy, cw->shadow, &cw->mainwin->transform);
+		if (!cw->panel)
+			XRenderSetPictureTransform(ps->dpy, cw->shadow, &cw->mainwin->transform);
 	}
 
 	clientwin_render(cw);
