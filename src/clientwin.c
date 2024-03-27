@@ -426,6 +426,10 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 					cw->destination, s_x, s_y, 0, 0, s_x, s_y, s_w, s_h);
 		}
 
+		if (cw->panel && ps->o.background)
+			XRenderComposite(ps->dpy, PictOpOver, ps->o.background->pict, None,
+					cw->destination, s_x, s_y, 0, 0, s_x, s_y, s_w, s_h);
+
 		if (CLIDISP_ZOMBIE_ICON == cw->mode || CLIDISP_THUMBNAIL_ICON == cw->mode) {
 			assert(cw->icon_pict && cw->icon_pict->pict);
 			img_composite_params_t params = IMG_COMPOSITE_PARAMS_INIT;
