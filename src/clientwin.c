@@ -605,7 +605,7 @@ clientwin_map(ClientWin *cw) {
 	XMapWindow(ps->dpy, cw->mini.window);
 	XRaiseWindow(ps->dpy, cw->mini.window);
 
-	if (ps->o.tooltip_show && ps->o.mode != PROGMODE_PAGING) {
+	if (ps->o.tooltip_show && ps->o.mode != PROGMODE_PAGING && !cw->panel) {
 		clientwin_tooltip(cw);
 		tooltip_handle(cw->tooltip);
 	}
