@@ -225,6 +225,8 @@ typedef struct {
 	int shadow_tintOpacity;
 	int shadow_opacity;
 
+	bool panel_show;
+
 	bool tooltip_show;
 	bool tooltip_showDesktop;
 	bool tooltip_showMonitor;
@@ -292,6 +294,7 @@ typedef struct {
 	.shadow_tint = NULL, \
 	.shadow_tintOpacity = 0, \
 	.shadow_opacity = 160, \
+	.panel_show = true, \
 	.tooltip_show = true, \
 	.tooltip_showDesktop = true, \
 	.tooltip_showMonitor = true, \

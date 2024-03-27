@@ -480,12 +480,14 @@ daemon_count_clients(MainWin *mw)
 	mw->clientondesktop = tmp;
 
 	// update window panel list
-	if (mw->panels)
-		dlist_free(mw->panels);
-	mw->panels = NULL;
-	tmp = dlist_first(dlist_find_all(mw->clients,
-			(dlist_match_func) clientwin_validate_panel, &desktop));
-	mw->panels = tmp;
+	if (mw->ps->o.panel_show) {
+		if (mw->panels)
+			dlist_free(mw->panels);
+		mw->panels = NULL;
+		tmp = dlist_first(dlist_find_all(mw->clients,
+				(dlist_match_func) clientwin_validate_panel, &desktop));
+		mw->panels = tmp;
+	}
 
 	return;
 }
@@ -1828,6 +1830,7 @@ load_config_file(session_t *ps)
     config_get_int_wrap(config, "highlight", "opacity", &ps->o.highlight_opacity, 0, 256);
     config_get_int_wrap(config, "shadow", "tintOpacity", &ps->o.shadow_tintOpacity, 0, 256);
     config_get_int_wrap(config, "shadow", "opacity", &ps->o.shadow_opacity, 0, 256);
+    config_get_bool_wrap(config, "panel", "show", &ps->o.panel_show);
     config_get_bool_wrap(config, "tooltip", "show", &ps->o.tooltip_show);
     config_get_bool_wrap(config, "tooltip", "showDesktop", &ps->o.tooltip_showDesktop);
     config_get_bool_wrap(config, "tooltip", "showMonitor", &ps->o.tooltip_showMonitor);
