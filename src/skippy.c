@@ -396,12 +396,6 @@ anime(
 	float timeslice
 )
 {
-	foreach_dlist (mw->panels) {
-		ClientWin *cw = iter->data;
-		panel_map(cw);
-		clientwin_map(cw);
-	}
-
 	float multiplier = 1.0 + timeslice * (mw->multiplier - 1.0);
 	mainwin_transform(mw, multiplier);
 
@@ -899,12 +893,8 @@ skippy_activate(MainWin *mw, enum layoutmode layout)
 
 	foreach_dlist(mw->panels) {
 		ClientWin *cw = iter->data;
-		//cw->x = cw->src.x;
-		//cw->y = cw->src.y;
 		cw->factor = 1;
 		cw->panel = true;
-		//clientwin_move(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
-		//clientwin_move(cw, mw->multiplier, 0, 0, 0);
 		clientwin_update(cw);
 		clientwin_update2(cw);
 	}
@@ -976,6 +966,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 	enum layoutmode layout = LAYOUTMODE_EXPOSE;
 	bool animating = activate;
 	long first_animated = 0L;
+	bool first_animating = false;
 
 	switch (ps->o.mode) {
 		case PROGMODE_SWITCH:
@@ -1018,6 +1009,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				mw = ps->mainwin;
 				pending_damage = false;
 				first_animated = time_in_millis();
+				first_animating = true;
 			}
 		}
 		if (mw)
@@ -1127,6 +1119,16 @@ mainloop(session_t *ps, bool activate_on_start) {
 				if (!mw->mapped)
 					mainwin_map(mw);
 
+				if (first_animating) {
+					foreach_dlist (mw->panels) {
+						ClientWin *cw = iter->data;
+						panel_map(cw);
+						clientwin_map(cw);
+					}
+
+					first_animating = false;
+				}
+
 				anime(ps->mainwin, ps->mainwin->clients,
 					((float)timeslice)/(float)ps->o.animationDuration);
 				last_rendered = time_in_millis();
@@ -1139,6 +1141,16 @@ mainloop(session_t *ps, bool activate_on_start) {
 						&& timeslice >= ps->o.animationDuration)) {
 				if (!mw->mapped)
 					mainwin_map(mw);
+
+				if (first_animating) {
+					foreach_dlist (mw->panels) {
+						ClientWin *cw = iter->data;
+						panel_map(cw);
+						clientwin_map(cw);
+					}
+
+					first_animating = false;
+				}
 
 				anime(ps->mainwin, ps->mainwin->clients, 1);
 				animating = false;
