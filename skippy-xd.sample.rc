@@ -110,6 +110,7 @@ opacity = 160
 
 [panel]
 show = true
+showDesktop = false
 backgroundTinting = true
 allowOverlap = true
 

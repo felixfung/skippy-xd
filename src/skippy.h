@@ -226,6 +226,7 @@ typedef struct {
 	int shadow_opacity;
 
 	bool panel_show;
+	bool panel_show_desktop;
 	bool panel_tinting;
 	bool panel_allow_overlap;
 
@@ -297,6 +298,7 @@ typedef struct {
 	.shadow_tintOpacity = 0, \
 	.shadow_opacity = 160, \
 	.panel_show = true, \
+	.panel_show_desktop = false, \
 	.panel_tinting = true, \
 	.panel_allow_overlap = true, \
 	.tooltip_show = true, \
