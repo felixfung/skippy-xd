@@ -470,6 +470,10 @@ daemon_count_clients(MainWin *mw)
 	// if that option is user supplied
 
 	update_clients(mw);
+	foreach_dlist (mw->clients) {
+		ClientWin *cw = iter->data;
+		printfdf(true,"(): %d", cw->wid_client);
+	}
 
 	// update mw->clientondesktop
 	dlist_free(mw->clientondesktop);
@@ -530,12 +534,83 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 	}
 }
 
+static void
+panel_overlapping_offset(MainWin *mw, unsigned int *newwidth, unsigned int *newheight)
+{
+	if (!mw->ps->o.panel_allow_overlap) {
+        // use heuristics to find panel borders
+        // e.g. a panel on the bottom
+		bool top_panel = false, bottom_panel = false,
+			 left_panel = false, right_panel = false;
+		int x1=0, y1=0, x2=mw->width, y2=mw->height;
+		foreach_dlist(mw->panels) {
+			ClientWin *cw = iter->data;
+			// assumed horizontal panel
+			if (cw->src.width >= cw->src.height) {
+				// assumed top panel
+				if (cw->src.y < mw->height / 2.0) {
+					top_panel = true;
+					y1 = MAX(y1, cw->src.y + cw->src.height);
+				}
+				// assumed bottom panel
+				else {
+					bottom_panel = true;
+					y2 = MIN(y2, cw->src.y);
+				}
+			}
+			// assumed vertical panel
+			else {
+				// assumed left panel
+				if (cw->src.x < mw->width / 2.0) {
+					left_panel = true;
+					x1 = MAX(x1, cw->src.x + cw->src.width);
+				}
+				// assumed right panel
+				else {
+					right_panel = true;
+					x2 = MIN(x2, cw->src.x);
+				}
+			}
+		}
+
+		printfdf(true,"() panel framing calculations: (%d,%d) (%d,%d)", x1, y1, x2, y2);
+
+		if (top_panel) {
+			newheight += mw->distance + y1;
+			foreach_dlist(mw->clientondesktop) {
+				ClientWin *cw = iter->data;
+				cw->y += y1 + mw->distance;
+			}
+			//yoff += y1;
+		}
+
+		if (bottom_panel) {
+			newheight += mw->distance + y2;
+		}
+
+		if (left_panel) {
+			*newwidth += mw->distance + x1 + x2;
+			foreach_dlist(mw->clientondesktop) {
+				ClientWin *cw = iter->data;
+				cw->x += x1 + mw->distance;
+			}
+			//xoff += x1;
+		}
+
+		if (right_panel) {
+			*newwidth += mw->distance + x2;
+		}
+	}
+}
+
 static bool
 init_layout(MainWin *mw, enum layoutmode layout, Window leader)
 {
 	unsigned int newwidth = 100, newheight = 100;
 	if (mw->clientondesktop)
 		layout_run(mw, mw->clientondesktop, &newwidth, &newheight, layout);
+
+	//panel_overlapping_offset(mw, &newwidth, &newheight);
 
 	float multiplier = (float) (mw->width - 2 * mw->distance) / newwidth;
 	if (multiplier * newheight > mw->height - 2 * mw->distance)
@@ -596,8 +671,10 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 	int screenheight = ceil((float)screencount / (float)screenwidth);
 
     {
-		int totalwidth = screenwidth * (desktop_width + mw->distance) - mw->distance;
-		int totalheight = screenheight * (desktop_height + mw->distance) - mw->distance;
+		unsigned int totalwidth = screenwidth * (desktop_width + mw->distance) - mw->distance;
+		unsigned int totalheight = screenheight * (desktop_height + mw->distance) - mw->distance;
+
+		//panel_overlapping_offset(mw, &totalwidth, &totalheight);
 
 		float multiplier = (float) (mw->width - 1 * mw->distance) / (float) totalwidth;
 		if (multiplier * totalheight > mw->height - 1 * mw->distance)
@@ -1832,6 +1909,7 @@ load_config_file(session_t *ps)
     config_get_int_wrap(config, "shadow", "opacity", &ps->o.shadow_opacity, 0, 256);
     config_get_bool_wrap(config, "panel", "show", &ps->o.panel_show);
     config_get_bool_wrap(config, "panel", "backgroundTinting", &ps->o.panel_tinting);
+    config_get_bool_wrap(config, "panel", "allowOverlap", &ps->o.panel_allow_overlap);
     config_get_bool_wrap(config, "tooltip", "show", &ps->o.tooltip_show);
     config_get_bool_wrap(config, "tooltip", "showDesktop", &ps->o.tooltip_showDesktop);
     config_get_bool_wrap(config, "tooltip", "showMonitor", &ps->o.tooltip_showMonitor);
