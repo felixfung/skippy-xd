@@ -470,10 +470,6 @@ daemon_count_clients(MainWin *mw)
 	// if that option is user supplied
 
 	update_clients(mw);
-	foreach_dlist (mw->clients) {
-		ClientWin *cw = iter->data;
-		printfdf(true,"(): %d", cw->wid_client);
-	}
 
 	// update mw->clientondesktop
 	dlist_free(mw->clientondesktop);
