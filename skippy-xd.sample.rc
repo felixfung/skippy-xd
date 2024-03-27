@@ -110,6 +110,7 @@ opacity = 160
 
 [panel]
 show = true
+backgroundTinting = true
 
 [tooltip]
 show = true
