@@ -564,8 +564,8 @@ panel_overlapping_offset(MainWin *mw,
 			}
 		}
 
-        x2 = mw->width - x2;
-        y2 = mw->height - y2;
+		x2 = mw->width - x2;
+		y2 = mw->height - y2;
 
 		printfdf(false,"() panel framing calculations: (%d,%d) (%d,%d)", x1, y1, x2, y2);
 
