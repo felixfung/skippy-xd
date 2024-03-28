@@ -90,6 +90,7 @@ void printfdfWindowName(session_t *ps, char *prefix_str, Window wid);
 Window wm_get_group_leader(Display *dpy, Window window);
 void wm_set_fullscreen(session_t *ps, Window window,
 		int x, int y, unsigned width, unsigned height);
+bool wm_identify_panel(session_t *ps, Window wid);
 bool wm_validate_window(session_t *ps, Window wid);
 long wm_get_window_desktop(session_t *ps, Window wid);
 Window wm_get_focused(session_t *ps);

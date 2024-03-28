@@ -365,15 +365,40 @@ ev_dump(session_t *ps, const MainWin *mw, const XEvent *ev) {
 }
 
 static void
+panel_map(ClientWin *cw)
+{
+	int border = 0;
+	XSetWindowBorderWidth(cw->mainwin->ps->dpy, cw->mini.window, border);
+
+	cw->mini.x = cw->src.x;
+	cw->mini.y = cw->src.y;
+	cw->mini.width = cw->src.width;
+	cw->mini.height = cw->src.height;
+
+	XMoveResizeWindow(cw->mainwin->ps->dpy, cw->mini.window, cw->mini.x - border, cw->mini.y - border, cw->mini.width, cw->mini.height);
+
+	if(cw->pixmap)
+		XFreePixmap(cw->mainwin->ps->dpy, cw->pixmap);
+
+	if(cw->destination)
+		XRenderFreePicture(cw->mainwin->ps->dpy, cw->destination);
+
+	cw->pixmap = XCreatePixmap(cw->mainwin->ps->dpy, cw->mini.window, cw->mini.width, cw->mini.height, cw->mainwin->depth);
+	XSetWindowBackgroundPixmap(cw->mainwin->ps->dpy, cw->mini.window, cw->pixmap);
+
+	cw->destination = XRenderCreatePicture(cw->mainwin->ps->dpy, cw->pixmap, cw->mini.format, 0, 0);
+}
+
+static void
 anime(
 	MainWin *mw,
 	dlist *clients,
 	float timeslice
 )
 {
-	clients = dlist_first(clients);
 	float multiplier = 1.0 + timeslice * (mw->multiplier - 1.0);
 	mainwin_transform(mw, multiplier);
+
 	foreach_dlist (mw->clientondesktop) {
 		ClientWin *cw = (ClientWin *) iter->data;
 		clientwin_move(cw, multiplier, mw->xoff, mw->yoff, timeslice);
@@ -440,17 +465,22 @@ daemon_count_clients(MainWin *mw)
 
 	update_clients(mw);
 
+	// update mw->clientondesktop
 	dlist_free(mw->clientondesktop);
 	mw->clientondesktop = NULL;
+	long desktop = wm_get_current_desktop(mw->ps);
+	dlist *tmp = dlist_first(dlist_find_all(mw->clients,
+				(dlist_match_func) clientwin_validate_func, &desktop));
+	mw->clientondesktop = tmp;
 
-	{
-		session_t * const ps = mw->ps;
-		long desktop = wm_get_current_desktop(ps);
-
-		dlist *tmp = dlist_first(dlist_find_all(mw->clients,
-					(dlist_match_func) clientwin_validate_func, &desktop));
-
-		mw->clientondesktop = tmp;
+	// update window panel list
+	if (mw->ps->o.panel_show) {
+		if (mw->panels)
+			dlist_free(mw->panels);
+		mw->panels = NULL;
+		tmp = dlist_first(dlist_find_all(mw->clients,
+				(dlist_match_func) clientwin_validate_panel, &desktop));
+		mw->panels = tmp;
 	}
 
 	return;
@@ -494,6 +524,77 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 	}
 }
 
+static void
+panel_overlapping_offset(MainWin *mw,
+		float multiplier, unsigned int *newwidth, unsigned int *newheight)
+{
+	if (!mw->ps->o.panel_allow_overlap) {
+        // use heuristics to find panel borders
+        // e.g. a panel on the bottom
+		bool top_panel = false, bottom_panel = false,
+			 left_panel = false, right_panel = false;
+		int x1=0, y1=0, x2=mw->width, y2=mw->height;
+		foreach_dlist(mw->panels) {
+			ClientWin *cw = iter->data;
+			// assumed horizontal panel
+			if (cw->src.width >= cw->src.height) {
+				// assumed top panel
+				if (cw->src.y < mw->height / 2.0) {
+					top_panel = true;
+					y1 = MAX(y1, cw->src.y + cw->src.height);
+				}
+				// assumed bottom panel
+				else {
+					bottom_panel = true;
+					y2 = MIN(y2, cw->src.y);
+				}
+			}
+			// assumed vertical panel
+			else {
+				// assumed left panel
+				if (cw->src.x < mw->width / 2.0) {
+					left_panel = true;
+					x1 = MAX(x1, cw->src.x + cw->src.width);
+				}
+				// assumed right panel
+				else {
+					right_panel = true;
+					x2 = MIN(x2, cw->src.x);
+				}
+			}
+		}
+
+		x2 = mw->width - x2;
+		y2 = mw->height - y2;
+
+		printfdf(false,"() panel framing calculations: (%d,%d) (%d,%d)", x1, y1, x2, y2);
+
+		if (left_panel) {
+			*newwidth += mw->distance + x1 / multiplier;
+			foreach_dlist(mw->clientondesktop) {
+				ClientWin *cw = iter->data;
+				cw->x += x1 / multiplier + mw->distance;
+			}
+		}
+
+		if (top_panel) {
+			*newheight += mw->distance + y1 / multiplier;
+			foreach_dlist(mw->clientondesktop) {
+				ClientWin *cw = iter->data;
+				cw->y += y1 / multiplier + mw->distance;
+			}
+		}
+
+		if (right_panel) {
+			*newwidth += mw->distance + x2 / multiplier;
+		}
+
+		if (bottom_panel) {
+			*newheight += mw->distance + y2 / multiplier;
+		}
+	}
+}
+
 static bool
 init_layout(MainWin *mw, enum layoutmode layout, Window leader)
 {
@@ -502,6 +603,14 @@ init_layout(MainWin *mw, enum layoutmode layout, Window leader)
 		layout_run(mw, mw->clientondesktop, &newwidth, &newheight, layout);
 
 	float multiplier = (float) (mw->width - 2 * mw->distance) / newwidth;
+	if (multiplier * newheight > mw->height - 2 * mw->distance)
+		multiplier = (float) (mw->height - 2 * mw->distance) / newheight;
+	if (!mw->ps->o.allowUpscale)
+		multiplier = MIN(multiplier, 1.0f);
+
+	panel_overlapping_offset(mw, multiplier, &newwidth, &newheight);
+
+	multiplier = (float) (mw->width - 2 * mw->distance) / newwidth;
 	if (multiplier * newheight > mw->height - 2 * mw->distance)
 		multiplier = (float) (mw->height - 2 * mw->distance) / newheight;
 	if (!mw->ps->o.allowUpscale)
@@ -560,10 +669,16 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 	int screenheight = ceil((float)screencount / (float)screenwidth);
 
     {
-		int totalwidth = screenwidth * (desktop_width + mw->distance) - mw->distance;
-		int totalheight = screenheight * (desktop_height + mw->distance) - mw->distance;
+		unsigned int totalwidth = screenwidth * (desktop_width + mw->distance) - mw->distance;
+		unsigned int totalheight = screenheight * (desktop_height + mw->distance) - mw->distance;
 
 		float multiplier = (float) (mw->width - 1 * mw->distance) / (float) totalwidth;
+		if (multiplier * totalheight > mw->height - 1 * mw->distance)
+			multiplier = (float) (mw->height - 1 * mw->distance) / (float) totalheight;
+
+		panel_overlapping_offset(mw, multiplier, &totalwidth, &totalheight);
+
+		multiplier = (float) (mw->width - 1 * mw->distance) / (float) totalwidth;
 		if (multiplier * totalheight > mw->height - 1 * mw->distance)
 			multiplier = (float) (mw->height - 1 * mw->distance) / (float) totalheight;
 
@@ -780,11 +895,20 @@ skippy_activate(MainWin *mw, enum layoutmode layout)
 		ClientWin *cw = iter->data;
 		cw->x *= mw->multiplier;
 		cw->y *= mw->multiplier;
+		cw->panel = false;
 		if (!mw->ps->o.pseudoTrans)
 		{
 			cw->x += cw->mainwin->x;
 			cw->y += cw->mainwin->y;
 		}
+	}
+
+	foreach_dlist(mw->panels) {
+		ClientWin *cw = iter->data;
+		cw->factor = 1;
+		cw->panel = true;
+		clientwin_update(cw);
+		clientwin_update2(cw);
 	}
 
 	return true;
@@ -854,6 +978,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 	enum layoutmode layout = LAYOUTMODE_EXPOSE;
 	bool animating = activate;
 	long first_animated = 0L;
+	bool first_animating = false;
 
 	switch (ps->o.mode) {
 		case PROGMODE_SWITCH:
@@ -896,6 +1021,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				mw = ps->mainwin;
 				pending_damage = false;
 				first_animated = time_in_millis();
+				first_animating = true;
 			}
 		}
 		if (mw)
@@ -953,6 +1079,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 			dlist_free(mw->desktopwins);
 			mw->desktopwins = NULL;
 
+			foreach_dlist(mw->panels) {
+				clientwin_unmap(iter->data);
+			}
+
 			// Catch all errors, but remove all events
 			XSync(ps->dpy, False);
 			XSync(ps->dpy, True);
@@ -1001,6 +1131,16 @@ mainloop(session_t *ps, bool activate_on_start) {
 				if (!mw->mapped)
 					mainwin_map(mw);
 
+				if (first_animating) {
+					foreach_dlist (mw->panels) {
+						ClientWin *cw = iter->data;
+						panel_map(cw);
+						clientwin_map(cw);
+					}
+
+					first_animating = false;
+				}
+
 				anime(ps->mainwin, ps->mainwin->clients,
 					((float)timeslice)/(float)ps->o.animationDuration);
 				last_rendered = time_in_millis();
@@ -1013,6 +1153,16 @@ mainloop(session_t *ps, bool activate_on_start) {
 						&& timeslice >= ps->o.animationDuration)) {
 				if (!mw->mapped)
 					mainwin_map(mw);
+
+				if (first_animating) {
+					foreach_dlist (mw->panels) {
+						ClientWin *cw = iter->data;
+						panel_map(cw);
+						clientwin_map(cw);
+					}
+
+					first_animating = false;
+				}
 
 				anime(ps->mainwin, ps->mainwin->clients, 1);
 				animating = false;
@@ -1163,6 +1313,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 			foreach_dlist(mw->clientondesktop) {
 				if (((ClientWin *) iter->data)->damaged)
 					clientwin_repair(iter->data);
+			}
+
+			foreach_dlist(mw->panels) {
+				clientwin_repair((ClientWin *) iter->data);
 			}
 
 			if (layout == LAYOUTMODE_PAGING) {
@@ -1773,6 +1927,10 @@ load_config_file(session_t *ps)
     config_get_int_wrap(config, "highlight", "opacity", &ps->o.highlight_opacity, 0, 256);
     config_get_int_wrap(config, "shadow", "tintOpacity", &ps->o.shadow_tintOpacity, 0, 256);
     config_get_int_wrap(config, "shadow", "opacity", &ps->o.shadow_opacity, 0, 256);
+    config_get_bool_wrap(config, "panel", "show", &ps->o.panel_show);
+    config_get_bool_wrap(config, "panel", "showDesktop", &ps->o.panel_show_desktop);
+    config_get_bool_wrap(config, "panel", "backgroundTinting", &ps->o.panel_tinting);
+    config_get_bool_wrap(config, "panel", "allowOverlap", &ps->o.panel_allow_overlap);
     config_get_bool_wrap(config, "tooltip", "show", &ps->o.tooltip_show);
     config_get_bool_wrap(config, "tooltip", "showDesktop", &ps->o.tooltip_showDesktop);
     config_get_bool_wrap(config, "tooltip", "showMonitor", &ps->o.tooltip_showMonitor);

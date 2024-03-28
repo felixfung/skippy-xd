@@ -36,6 +36,13 @@ clientwin_cmp_func(dlist *l, void *data) {
 void clientwin_round_corners(ClientWin *cw);
 
 int
+clientwin_validate_panel(dlist *l, void *data) {
+	ClientWin *cw = l->data;
+	MainWin *mw = cw->mainwin;
+	return wm_identify_panel(mw->ps, cw->wid_client);
+}
+
+int
 clientwin_validate_func(dlist *l, void *data) {
 	ClientWin *cw = l->data;
 	MainWin *mw = cw->mainwin;
@@ -419,6 +426,10 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 					cw->destination, s_x, s_y, 0, 0, s_x, s_y, s_w, s_h);
 		}
 
+		if (cw->panel && ps->o.panel_tinting && ps->o.background)
+			XRenderComposite(ps->dpy, PictOpOver, ps->o.background->pict, None,
+					cw->destination, s_x, s_y, 0, 0, s_x, s_y, s_w, s_h);
+
 		if (CLIDISP_ZOMBIE_ICON == cw->mode || CLIDISP_THUMBNAIL_ICON == cw->mode) {
 			assert(cw->icon_pict && cw->icon_pict->pict);
 			img_composite_params_t params = IMG_COMPOSITE_PARAMS_INIT;
@@ -583,12 +594,14 @@ clientwin_map(ClientWin *cw) {
 
 	if (cw->origin) {
 		cw->damage = XDamageCreate(ps->dpy, cw->src.window, XDamageReportDeltaRectangles);
-		XRenderSetPictureTransform(ps->dpy, cw->origin, &cw->mainwin->transform);
+		if (!cw->panel)
+			XRenderSetPictureTransform(ps->dpy, cw->origin, &cw->mainwin->transform);
 	}
 
 	if (cw->shadow) {
 		cw->damage = XDamageCreate(ps->dpy, cw->src.window, XDamageReportDeltaRectangles);
-		XRenderSetPictureTransform(ps->dpy, cw->shadow, &cw->mainwin->transform);
+		if (!cw->panel)
+			XRenderSetPictureTransform(ps->dpy, cw->shadow, &cw->mainwin->transform);
 	}
 
 	clientwin_render(cw);
@@ -596,7 +609,7 @@ clientwin_map(ClientWin *cw) {
 	XMapWindow(ps->dpy, cw->mini.window);
 	XRaiseWindow(ps->dpy, cw->mini.window);
 
-	if (ps->o.tooltip_show && ps->o.mode != PROGMODE_PAGING) {
+	if (ps->o.tooltip_show && ps->o.mode != PROGMODE_PAGING && !cw->panel) {
 		clientwin_tooltip(cw);
 		tooltip_handle(cw->tooltip);
 	}

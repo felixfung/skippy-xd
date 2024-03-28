@@ -108,6 +108,26 @@ tint = #040404
 tintOpacity = 0
 opacity = 160
 
+[panel]
+show = true
+showDesktop = false
+backgroundTinting = true
+allowOverlap = true
+
+[tooltip]
+show = true
+showDesktop = false
+showMonitor = false
+offsetX = 0
+offsetY = -5
+width = 0.8
+border = #ffffff
+background = #404040
+opacity = 128
+text = #ffffff
+textShadow = black
+font = fixed-11:weight=bold
+
 [bindings]
 
 # key* = is a list of valid XWindows KeySym identifiers, case
@@ -147,17 +167,3 @@ miwMouse2 = close-ewmh
 miwMouse3 = iconify
 miwMouse4 = keysNext
 miwMouse5 = keysPrev
-
-[tooltip]
-show = true
-showDesktop = false
-showMonitor = false
-offsetX = 0
-offsetY = -5
-width = 0.8
-border = #ffffff
-background = #404040
-opacity = 128
-text = #ffffff
-textShadow = black
-font = fixed-11:weight=bold

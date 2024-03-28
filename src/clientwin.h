@@ -55,6 +55,7 @@ struct _clientwin_t {
 	bool damaged;
 
 	bool zombie;
+	bool panel;
 	/* XserverRegion repair; */
 	
 	/* These are virtual positions set by the layout routine */
@@ -86,6 +87,7 @@ clientwin_free_res(session_t *ps, ClientWin *cw) {
 	free_pictw(ps, &cw->icon_pict);
 }
 
+int clientwin_validate_panel(dlist *, void *);
 int clientwin_validate_func(dlist *, void *);
 int clientwin_sort_func(dlist *, dlist *, void *);
 ClientWin *clientwin_create(MainWin *, Window);
