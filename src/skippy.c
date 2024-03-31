@@ -1841,13 +1841,13 @@ load_config_file(session_t *ps)
     ps->o.tooltip_font = mstrdup(config_get(config, "tooltip", "font", "fixed-11:weight=bold"));
 
     // load keybindings settings
-    ps->o.bindings_keysUp = mstrdup(config_get(config, "bindings", "keysUp", "Up w"));
-    ps->o.bindings_keysDown = mstrdup(config_get(config, "bindings", "keysDown", "Down s"));
-    ps->o.bindings_keysLeft = mstrdup(config_get(config, "bindings", "keysLeft", "Left a"));
-    ps->o.bindings_keysRight = mstrdup(config_get(config, "bindings", "keysRight", "Right d"));
-    ps->o.bindings_keysPrev = mstrdup(config_get(config, "bindings", "keysPrev", "p b"));
-    ps->o.bindings_keysNext = mstrdup(config_get(config, "bindings", "keysNext", "n f"));
-    ps->o.bindings_keysCancel = mstrdup(config_get(config, "bindings", "keysCancel", "Escape BackSpace x q"));
+    ps->o.bindings_keysUp = mstrdup(config_get(config, "bindings", "keysUp", "Up"));
+    ps->o.bindings_keysDown = mstrdup(config_get(config, "bindings", "keysDown", "Down"));
+    ps->o.bindings_keysLeft = mstrdup(config_get(config, "bindings", "keysLeft", "Left"));
+    ps->o.bindings_keysRight = mstrdup(config_get(config, "bindings", "keysRight", "Right"));
+    ps->o.bindings_keysPrev = mstrdup(config_get(config, "bindings", "keysPrev", "p"));
+    ps->o.bindings_keysNext = mstrdup(config_get(config, "bindings", "keysNext", "n"));
+    ps->o.bindings_keysCancel = mstrdup(config_get(config, "bindings", "keysCancel", "Escape"));
     ps->o.bindings_keysSelect = mstrdup(config_get(config, "bindings", "keysSelect", "Return space"));
     ps->o.bindings_keysIconify = mstrdup(config_get(config, "bindings", "keysIconify", "1"));
     ps->o.bindings_keysShade = mstrdup(config_get(config, "bindings", "keysShade", "2"));
@@ -1961,7 +1961,7 @@ load_config_file(session_t *ps)
         }
     }
     {
-        const char *sspec = config_get(config, "display", "background", NULL);
+        const char *sspec = config_get(config, "display", "background", "#00000055");
         if (sspec && strlen(sspec)) {
             char bg_spec[256] = "orig mid mid ";
             strcat(bg_spec, sspec);

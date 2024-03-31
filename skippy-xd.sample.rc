@@ -21,8 +21,11 @@ pipePath = /tmp/skippy-xd-fifo
 # Frequency to update pixmaps
 updateFreq = 60.0
 
+# This queries the list of windows
 # Depending on your window manager, you may want to choose between
 # XQueryTree, _NET_CLIENT_LIST, _WIN_CLIENT_LIST
+# If you see missing windows, or windows that you did not expect,
+# Try a different option
 clientList = XQueryTree
 
 # when compositors such as picom are not used
@@ -66,11 +69,14 @@ exposeShowAllDesktops = false
 
 [display]
 
-# Background picture when skippy-xd is activated
-# Examples to paint wallpaper, or to tint existing background:
+# Background when skippy-xd is activated
+# To display background wallpaper:
 #   background = /home/richard/screenshots/256.png
-#   background = #00000066
-background =
+# For tinted background:
+#   background = #00000055
+# For transparent background:
+#   background =
+background = #00000055
 
 # Move the mouse cursor when skippy is activated
 movePointer = false
@@ -133,15 +139,15 @@ font = fixed-11:weight=bold
 # key* = is a list of valid XWindows KeySym identifiers, case
 # sensitive and <space> seperated list. Run the program 'xev' to find them.
 
-keysUp = Up w
-keysDown = Down s
-keysLeft = Left a
-keysRight = Right d
+keysUp = Up
+keysDown = Down
+keysLeft = Left
+keysRight = Right
 
 keysSelect = Return space
-keysCancel = Escape BackSpace x q
-keysNext = n f
-keysPrev = p b
+keysCancel = Escape
+keysNext = n
+keysPrev = p
 
 keysIconify = 1
 keysShade = 2
