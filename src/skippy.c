@@ -1962,6 +1962,8 @@ load_config_file(session_t *ps)
     }
     {
         const char *sspec = config_get(config, "display", "background", "#00000055");
+		if (!sspec || strlen(sspec) == 0)
+			sspec = "#00000055";
         if (sspec && strlen(sspec)) {
             char bg_spec[256] = "orig mid mid ";
             strcat(bg_spec, sspec);
