@@ -75,7 +75,7 @@ exposeShowAllDesktops = false
 # For tinted background:
 #   background = #00000055
 # For transparent background:
-#   background =
+#   background = false
 background = #00000055
 
 # Move the mouse cursor when skippy is activated
