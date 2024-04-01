@@ -485,7 +485,8 @@ mainwin_handle(MainWin *mw, XEvent *ev) {
 
 	switch(ev->type) {
 		case EnterNotify:
-			XSetInputFocus(ps->dpy, mw->window, RevertToParent, CurrentTime);
+			if (!mw->client_to_focus)
+				XSetInputFocus(ps->dpy, mw->window, RevertToParent, CurrentTime);
 			break;
 		case KeyPress:
 		case KeyRelease:

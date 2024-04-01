@@ -1279,10 +1279,11 @@ mainloop(session_t *ps, bool activate_on_start) {
 				}
 			}
 			else if (mw && wid) {
+				bool processing = true;
 				dlist *iter = mw->clientondesktop;
 				if (layout == LAYOUTMODE_PAGING)
 					iter = mw->dminis;
-				for (; iter; iter = iter->next) {
+				for (; iter && processing; iter = iter->next) {
 					ClientWin *cw = (ClientWin *) iter->data;
 					if (cw->mini.window == wid) {
 						if (!(POLLIN & r_fd[1].revents)
@@ -1300,7 +1301,14 @@ mainloop(session_t *ps, bool activate_on_start) {
 								pending_damage = true;
 							}
 						}
-						break;
+						processing = false;
+					}
+				}
+				for (iter = mw->panels; iter && processing; iter = iter->next) {
+					ClientWin *cw = (ClientWin *) iter->data;
+					if (cw->mini.window == wid) {
+						die = mainwin_handle(mw, &ev);
+						processing = false;
 					}
 				}
 			}
