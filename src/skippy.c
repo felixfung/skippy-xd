@@ -474,10 +474,11 @@ daemon_count_clients(MainWin *mw)
 	mw->clientondesktop = tmp;
 
 	// update window panel list
-	if (mw->ps->o.panel_show) {
-		if (mw->panels)
-			dlist_free(mw->panels);
+	if (mw->panels) {
+		dlist_free(mw->panels);
 		mw->panels = NULL;
+	}
+	if (mw->ps->o.panel_show) {
 		tmp = dlist_first(dlist_find_all(mw->clients,
 				(dlist_match_func) clientwin_validate_panel, &desktop));
 		mw->panels = tmp;
