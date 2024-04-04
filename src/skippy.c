@@ -761,6 +761,10 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 				cw->y += cw->mainwin->y;
 			}
 
+			XCompositeRedirectWindow(mw->ps->dpy, cw->src.window,
+					CompositeRedirectAutomatic);
+			cw->redirected = true;
+
 			clientwin_move(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
 
 			if (!mw->dminis)
@@ -805,20 +809,19 @@ desktopwin_map(ClientWin *cw)
 	if (ps->o.pseudoTrans)
 		XUnmapWindow(ps->dpy, cw->mini.window);
 
-	XRenderPictureAttributes pa = { };
-
 	if (cw->origin)
 		free_picture(ps, &cw->origin);
 	if (ps->o.pseudoTrans) {
+		XRenderPictureAttributes pa = { };
 		cw->origin = XRenderCreatePicture(ps->dpy,
 				mw->window, mw->format, CPSubwindowMode, &pa);
 	}
 	else {
 		cw->origin = cw->pict_filled->pict;
-		//XSetWindowBackgroundPixmap(ps->dpy, cw->mini.window, None);
 	}
 	XRenderSetPictureFilter(ps->dpy, cw->origin, FilterBest, 0, 0);
 
+	if (ps->o.pseudoTrans)
 	{
 		float matrix[9];
 		matrix[0] = 1.0;
@@ -838,10 +841,6 @@ desktopwin_map(ClientWin *cw)
 
 		XRenderSetPictureTransform(ps->dpy, cw->origin, &transform);
 	}
-
-	XCompositeRedirectWindow(ps->dpy, cw->src.window,
-			CompositeRedirectAutomatic);
-	cw->redirected = true;
 
 	cw->focused = cw == mw->client_to_focus;
 	
