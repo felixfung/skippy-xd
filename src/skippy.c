@@ -641,6 +641,9 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 	int desktop_height = mw->height;
 
 #ifdef CFG_XINERAMA
+	printfdf(false,"(): detecting %d screens and %d virtual desktops",
+			mw->xin_screens, screencount);
+
 	int minx = INT_MAX;
 	int miny = INT_MAX;
 	int maxx = INT_MIN;
