@@ -41,7 +41,7 @@ struct _mainwin_t {
 	float multiplier;
 
 	XRenderPictFormat *format;
-	XTransform transform;
+	XTransform transform, desktoptransform;
 	
 	XRenderColor normalTint, highlightTint, shadowTint;
 	Pixmap normalPixmap, highlightPixmap, shadowPixmap;

@@ -689,6 +689,16 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 		mw->multiplier = multiplier;
 		mw->xoff = xoff;
 		mw->yoff = yoff;
+
+		mw->desktoptransform.matrix[0][0] = 1.0;
+		mw->desktoptransform.matrix[0][1] = 0.0;
+		mw->desktoptransform.matrix[0][2] = xoff;
+		mw->desktoptransform.matrix[1][0] = 0.0;
+		mw->desktoptransform.matrix[1][1] = 1.0;
+		mw->desktoptransform.matrix[1][2] = yoff;
+		mw->desktoptransform.matrix[2][0] = 0.0;
+		mw->desktoptransform.matrix[2][1] = 0.0;
+		mw->desktoptransform.matrix[2][2] = 1.0;
 	}
 
 	foreach_dlist (mw->clients) {
@@ -761,6 +771,10 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 				cw->y += cw->mainwin->y;
 			}
 
+			XCompositeRedirectWindow(mw->ps->dpy, cw->src.window,
+					CompositeRedirectAutomatic);
+			cw->redirected = true;
+
 			clientwin_move(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
 
 			if (!mw->dminis)
@@ -805,43 +819,26 @@ desktopwin_map(ClientWin *cw)
 	if (ps->o.pseudoTrans)
 		XUnmapWindow(ps->dpy, cw->mini.window);
 
-	XRenderPictureAttributes pa = { };
-
 	if (cw->origin)
 		free_picture(ps, &cw->origin);
 	if (ps->o.pseudoTrans) {
+		XRenderPictureAttributes pa = { };
 		cw->origin = XRenderCreatePicture(ps->dpy,
 				mw->window, mw->format, CPSubwindowMode, &pa);
 	}
 	else {
 		cw->origin = cw->pict_filled->pict;
-		//XSetWindowBackgroundPixmap(ps->dpy, cw->mini.window, None);
 	}
 	XRenderSetPictureFilter(ps->dpy, cw->origin, FilterBest, 0, 0);
 
+	if (ps->o.pseudoTrans)
 	{
-		float matrix[9];
-		matrix[0] = 1.0;
-		matrix[1] = 0.0;
-		matrix[2] = cw->x + mw->xoff;
-		matrix[3] = 0.0;
-		matrix[4] = 1.0;
-		matrix[5] = cw->y + mw->yoff;
-		matrix[6] = 0.0;
-		matrix[7] = 0.0;
-		matrix[8] = 1.0;
-
-		XTransform transform;
-		for (int j=0; j<3; j++)
-			for (int i=0; i<3; i++)
-				transform.matrix[j][i] = matrix[j*3+i];
-
-		XRenderSetPictureTransform(ps->dpy, cw->origin, &transform);
+		mw->desktoptransform.matrix[0][2] += cw->x;
+		mw->desktoptransform.matrix[1][2] += cw->y;
+		XRenderSetPictureTransform(ps->dpy, cw->origin, &mw->desktoptransform);
+		mw->desktoptransform.matrix[0][2] -= cw->x;
+		mw->desktoptransform.matrix[1][2] -= cw->y;
 	}
-
-	XCompositeRedirectWindow(ps->dpy, cw->src.window,
-			CompositeRedirectAutomatic);
-	cw->redirected = true;
 
 	cw->focused = cw == mw->client_to_focus;
 	
