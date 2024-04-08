@@ -476,10 +476,10 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 						cw->destination, tint, s_x, s_y, s_w, s_h);
 				XClearArea(cw->mainwin->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
 			}
-			if(ps->o.cornerRadius)
-				clientwin_round_corners(cw);
 		}
 	}
+
+	clientwin_round_corners(cw);
 
 	XClearArea(cw->mainwin->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
 }
@@ -537,10 +537,12 @@ void clientwin_round_corners(ClientWin *cw) {
 	XSetForeground(ps->dpy, shape_gc, 0);
 	XFillRectangle(ps->dpy, mask, shape_gc, 0, 0, w, h);
 	XSetForeground(ps->dpy, shape_gc, 1);
-	XFillArc(ps->dpy, mask, shape_gc, 0, 0, dia, dia, 0, 360 * 64);
-	XFillArc(ps->dpy, mask, shape_gc, w-dia-1, 0, dia, dia, 0, 360 * 64);
-	XFillArc(ps->dpy, mask, shape_gc, 0, h-dia-1, dia, dia, 0, 360 * 64);
-	XFillArc(ps->dpy, mask, shape_gc, w-dia-1, h-dia-1, dia, dia, 0, 360 * 64);
+	if (dia > 0) {
+		XFillArc(ps->dpy, mask, shape_gc, 0, 0, dia, dia, 0, 360 * 64);
+		XFillArc(ps->dpy, mask, shape_gc, w-dia-1, 0, dia, dia, 0, 360 * 64);
+		XFillArc(ps->dpy, mask, shape_gc, 0, h-dia-1, dia, dia, 0, 360 * 64);
+		XFillArc(ps->dpy, mask, shape_gc, w-dia-1, h-dia-1, dia, dia, 0, 360 * 64);
+	}
 	XFillRectangle(ps->dpy, mask, shape_gc, ps->o.cornerRadius, 0, w-dia, h);
 	XFillRectangle(ps->dpy, mask, shape_gc, 0, ps->o.cornerRadius, w, h-dia);
 	XShapeCombineMask(ps->dpy, cw->mini.window, ShapeBounding, 0, 0, mask, ShapeSet);
@@ -580,8 +582,7 @@ clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 
 	cw->destination = XRenderCreatePicture(cw->mainwin->ps->dpy, cw->pixmap, cw->mini.format, 0, 0);
 	
-	if(cw->mainwin->ps->o.cornerRadius)
-		clientwin_round_corners(cw);
+	clientwin_round_corners(cw);
 }
 
 void
