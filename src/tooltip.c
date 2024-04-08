@@ -235,7 +235,7 @@ tooltip_unmap(Tooltip *tt)
 void
 tooltip_handle(Tooltip *tt)
 {
-	if (!tt->text)
+	if (!tt || !tt->text)
 		return;
 	
 	XftDrawRect(tt->draw, &tt->border, 0, 0, tt->width, 1);
