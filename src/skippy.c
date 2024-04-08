@@ -780,6 +780,12 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 
 			clientwin_move(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
 
+			if (mw->ps->o.tooltip_show) {
+				if (cw->tooltip)
+					tooltip_destroy(cw->tooltip);
+				cw->tooltip = tooltip_create(cw->mainwin);
+			}
+
 			if (!mw->dminis)
 				mw->dminis = dlist_add(NULL, cw);
 			else

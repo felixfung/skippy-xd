@@ -105,12 +105,6 @@ clientwin_create(MainWin *mw, Window client) {
 	cw->pixmap = None;
 	cw->cpixmap = None;
 
-	if (ps->o.tooltip_show) {
-		if (cw->tooltip)
-			tooltip_destroy(cw->tooltip);
-		cw->tooltip = tooltip_create(mw);
-	}
-
 	if (ps->o.includeFrame)
 		cw->src.window = wm_find_frame(ps, client);
 	if (!cw->src.window)
@@ -216,6 +210,12 @@ clientwin_update(ClientWin *cw) {
 		cw->src.width = wattr.width;
 		cw->src.height = wattr.height;
 		cw->src.format = XRenderFindVisualFormat(ps->dpy, wattr.visual);
+	}
+
+	if (ps->o.tooltip_show) {
+		if (cw->tooltip)
+			tooltip_destroy(cw->tooltip);
+		cw->tooltip = tooltip_create(cw->mainwin);
 	}
 
 	bool isViewable = wattr.map_state == IsViewable;
