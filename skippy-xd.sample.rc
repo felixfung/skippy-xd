@@ -13,6 +13,11 @@
 # opacity is an integer in the range of 0-255
 #
 
+# for system config options, stop and then start new skippy daemon
+# to reload config options
+# all other config options can be reloaded on the fly
+# with skippy-xd --config-reload
+
 [system]
 
 # File path of skippy-xd pipe daemon communication
