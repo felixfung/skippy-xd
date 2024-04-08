@@ -16,7 +16,7 @@ Paging shows you your entire desktop:
 
 If you want to fly around your daily window flow, if you want cool window motions that adds to your productivity, if you want to manage your windows like a boss, skippy-xd might be the thing for you.
 
-Checkout the youtube videos https://youtu.be/R__zua04xe0, https://youtu.be/reUDapFGnmQ, https://www.youtu.be/lS33Z2s8xrs.
+Checkout the youtube videos https://youtu.be/R__zua04xe0, https://youtu.be/reUDapFGnmQ, https://youtu.be/lS33Z2s8xrs.
 
 skippy-xd works on anything X. See https://github.com/felixfung/skippy-xd/wiki/Adoption#compatible-desktop-environmentswindow-managers for details.
 
