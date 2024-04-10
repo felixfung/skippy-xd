@@ -1041,6 +1041,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 			mainwin_unmap(mw);
 			foreach_dlist(mw->clientondesktop) { clientwin_unmap((ClientWin *) iter->data); }
 			XSync(ps->dpy, False);
+			usleep(10000);
+			XSync(ps->dpy, False);
 
 			// Focus the client window only after the main window get unmapped and
 			// keyboard gets ungrabbed.
@@ -1057,6 +1059,14 @@ mainloop(session_t *ps, bool activate_on_start) {
 						new_desktop = -1;
 						if(mw->client_to_focus_on_cancel)
 							childwin_focus(mw->client_to_focus_on_cancel);
+					}
+
+					if (new_desktop != -1) {
+						usleep(10000);
+						XSync(ps->dpy, False);
+						wm_set_desktop_ewmh(ps, new_desktop);
+						usleep(10000);
+						XSync(ps->dpy, False);
 					}
 				}
 				else {
@@ -1095,9 +1105,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 			XSync(ps->dpy, True);
 
 			mw = NULL;
-
-			if (new_desktop != -1)
-				wm_set_desktop_ewmh(ps, new_desktop);
 		}
 		if (!mw)
 			die = false;
