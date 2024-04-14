@@ -329,6 +329,8 @@ mainwin_update(MainWin *mw)
 	unsigned int dummy_u;
 
 	if (ps->xinfo.xinerama_exist && XineramaIsActive(ps->dpy)) {
+		if(mw->xin_info)
+			XFree(mw->xin_info);
 		mw->xin_info = XineramaQueryScreens(ps->dpy, &mw->xin_screens);
 		printfdf(false, "(): Xinerama is enabled (%d screens).", mw->xin_screens);
 	}
