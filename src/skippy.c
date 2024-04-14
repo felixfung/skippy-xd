@@ -423,7 +423,7 @@ update_clients(MainWin *mw)
 		else {
 			dlist *tmp = iter->next;
 			clientwin_destroy((ClientWin *) iter->data, True);
-			mw->clients = dlist_remove(iter);
+			mw->clients = dlist_remove_free_data(iter);
 			iter = tmp;
 		}
 	}
@@ -449,7 +449,7 @@ update_clients(MainWin *mw)
 		}
 	}
 
-	dlist_free(stack);
+	dlist_free_with_data(stack);
 	dlist_free(mw->clients);
 	mw->clients = dlist_first(new_clients);
 }
@@ -457,21 +457,25 @@ update_clients(MainWin *mw)
 static void
 daemon_count_clients(MainWin *mw)
 {
+	update_clients(mw);
+
+	// update mw->clientondesktop
+	long desktop = wm_get_current_desktop(mw->ps);
+
 	// given the client table, update the clientondesktop
 	// the difference between mw->clients and mw->clientondesktop
 	// is that mw->clients is all the client windows 
 	// while mw->clientondesktop is only those in current virtual desktop
 	// if that option is user supplied
-
-	update_clients(mw);
-
-	// update mw->clientondesktop
-	dlist_free(mw->clientondesktop);
-	mw->clientondesktop = NULL;
-	long desktop = wm_get_current_desktop(mw->ps);
-	dlist *tmp = dlist_first(dlist_find_all(mw->clients,
+	if (mw->clientondesktop) {
+		dlist_free(mw->clientondesktop);
+		mw->clientondesktop = NULL;
+	}
+	{
+		dlist *tmp = dlist_first(dlist_find_all(mw->clients,
 				(dlist_match_func) clientwin_validate_func, &desktop));
-	mw->clientondesktop = tmp;
+		mw->clientondesktop = tmp;
+	}
 
 	// update window panel list
 	if (mw->panels) {
@@ -479,7 +483,7 @@ daemon_count_clients(MainWin *mw)
 		mw->panels = NULL;
 	}
 	if (mw->ps->o.panel_show) {
-		tmp = dlist_first(dlist_find_all(mw->clients,
+		dlist *tmp = dlist_first(dlist_find_all(mw->clients,
 				(dlist_match_func) clientwin_validate_panel, &desktop));
 		mw->panels = tmp;
 	}

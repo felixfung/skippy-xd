@@ -413,7 +413,11 @@ mainwin_destroy(MainWin *mw) {
 
 	// Free all clients associated with this main window
 	dlist_free_with_func(mw->clients, (dlist_free_func) clientwin_destroy);
-	
+
+	dlist_free(mw->clients);
+	dlist_free(mw->clientondesktop);
+	dlist_free(mw->panels);
+
 	if(mw->background != None)
 		XRenderFreePicture(ps->dpy, mw->background);
 	
