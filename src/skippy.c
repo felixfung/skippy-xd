@@ -449,7 +449,7 @@ update_clients(MainWin *mw)
 		}
 	}
 
-	dlist_free_with_data(stack);
+	dlist_free(stack);
 	dlist_free(mw->clients);
 	mw->clients = dlist_first(new_clients);
 }
