@@ -715,6 +715,34 @@ clientwin_tooltip(ClientWin *cw) {
 }
 
 int
+close_clientwindow(ClientWin* cw) {
+	MainWin *mw = cw->mainwin;
+	session_t *ps = mw->ps;
+
+	clientwin_unmap(cw);
+	clientwin_action(cw, CLIENTOP_CLOSE_EWMH);
+	XFlush(ps->dpy);
+	usleep(10000);
+	XFlush(ps->dpy);
+	focus_miniw_next(ps, cw);
+	XFlush(ps->dpy);
+
+	dlist *del = dlist_find(mw->clientondesktop,
+			clientwin_cmp_func, (void *) cw->wid_client);
+	mw->clientondesktop = dlist_remove(del);
+	del = dlist_find(mw->clients,
+			clientwin_cmp_func, (void *) cw->wid_client);
+	mw->clients = dlist_remove(del);
+	del = dlist_find(mw->focuslist,
+			clientwin_cmp_func, (void *) cw->wid_client);
+	mw->focuslist = dlist_remove(del);
+
+	if (dlist_len(mw->focuslist) == 0)
+		return 1;
+	return 0;
+}
+
+int
 clientwin_handle(ClientWin *cw, XEvent *ev) {
 	if (! cw)
 		return 1;
@@ -783,26 +811,7 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 				clientwin_render(mw->client_to_focus);
 			}
 			else if (arr_keycodes_includes(mw->keycodes_Close, evk->keycode)) {
-				clientwin_unmap(cw);
-				clientwin_action(cw, CLIENTOP_CLOSE_EWMH);
-				XFlush(ps->dpy);
-				usleep(10000);
-				XFlush(ps->dpy);
-				focus_miniw_next(ps, cw);
-				XFlush(ps->dpy);
-
-				dlist *del = dlist_find(mw->clientondesktop,
-						clientwin_cmp_func, (void *) cw->wid_client);
-				mw->clientondesktop = dlist_remove(del);
-				del = dlist_find(mw->clients,
-						clientwin_cmp_func, (void *) cw->wid_client);
-				mw->clients = dlist_remove(del);
-				del = dlist_find(mw->focuslist,
-						clientwin_cmp_func, (void *) cw->wid_client);
-				mw->focuslist = dlist_remove(del);
-
-				if (dlist_len(mw->focuslist) == 0)
-					return 1;
+				return close_clientwindow(cw);
 			}
 		}
 		else
@@ -819,11 +828,12 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 		const unsigned button = ev->xbutton.button;
 		if (cw->mainwin->pressed_mouse) {
 			if (button < MAX_MOUSE_BUTTONS) {
-				int ret = clientwin_action(cw,
+				if (ps->o.bindings_miwMouse[button] == CLIENTOP_CLOSE_EWMH
+				 || ps->o.bindings_miwMouse[button] == CLIENTOP_CLOSE_ICCCM)
+					return close_clientwindow(cw);
+				else
+				   return clientwin_action(cw,
 						ps->o.bindings_miwMouse[button]);
-				if (ret) {
-					return ret;
-				}
 			}
 		}
 		else
