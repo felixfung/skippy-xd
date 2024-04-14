@@ -635,6 +635,9 @@ clientwin_unmap(ClientWin *cw) {
 
 void
 childwin_focus(ClientWin *cw) {
+	if (!cw)
+		return;
+
 	session_t * const ps = cw->mainwin->ps;
 
 	if (ps->o.movePointer)
@@ -711,6 +714,51 @@ clientwin_tooltip(ClientWin *cw) {
 	}
 }
 
+void
+shadow_clientwindow(ClientWin* cw, enum cliop op) {
+	MainWin *mw = cw->mainwin;
+	session_t *ps = mw->ps;
+
+	clientwin_action(cw, op);
+	XFlush(ps->dpy);
+	usleep(10000);
+	XFlush(ps->dpy);
+	focus_miniw_next(ps, cw);
+	XFlush(ps->dpy);
+	clientwin_update(cw);
+	clientwin_update2(cw);
+	clientwin_render(cw);
+	XFlush(ps->dpy);
+}
+
+int
+close_clientwindow(ClientWin* cw) {
+	MainWin *mw = cw->mainwin;
+	session_t *ps = mw->ps;
+
+	clientwin_unmap(cw);
+	clientwin_action(cw, CLIENTOP_CLOSE_EWMH);
+	XFlush(ps->dpy);
+	usleep(10000);
+	XFlush(ps->dpy);
+	focus_miniw_next(ps, cw);
+	XFlush(ps->dpy);
+
+	dlist *del = dlist_find(mw->clientondesktop,
+			clientwin_cmp_func, (void *) cw->wid_client);
+	mw->clientondesktop = dlist_remove(del);
+	del = dlist_find(mw->clients,
+			clientwin_cmp_func, (void *) cw->wid_client);
+	mw->clients = dlist_remove(del);
+	del = dlist_find(mw->focuslist,
+			clientwin_cmp_func, (void *) cw->wid_client);
+	mw->focuslist = dlist_remove(del);
+
+	if (dlist_len(mw->focuslist) == 0)
+		return 1;
+	return 0;
+}
+
 int
 clientwin_handle(ClientWin *cw, XEvent *ev) {
 	if (! cw)
@@ -758,41 +806,13 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 		if (cw->mainwin->pressed_key
 				&& mw->client_to_focus->mode != CLIDISP_DESKTOP) {
 			if (arr_keycodes_includes(mw->keycodes_Iconify, evk->keycode)) {
-				ClientWin *cw_action = mw->client_to_focus;
-				focus_miniw_next(ps, mw->client_to_focus);
-				clientwin_action(cw_action, CLIENTOP_ICONIFY);
-				clientwin_render(cw_action);
-				clientwin_update(cw_action);
-				clientwin_update2(cw_action);
-				clientwin_render(cw_action);
-				usleep(1000);
-				XSetInputFocus(ps->dpy, mw->window, RevertToParent, CurrentTime);
-				clientwin_render(mw->client_to_focus);
+				shadow_clientwindow(cw, CLIENTOP_ICONIFY);
 			}
 			else if (arr_keycodes_includes(mw->keycodes_Shade, evk->keycode)) {
-				ClientWin *cw_action = mw->client_to_focus;
-				focus_miniw_next(ps, mw->client_to_focus);
-				clientwin_action(cw_action, CLIENTOP_SHADE_EWMH);
-				clientwin_render(cw_action);
-				clientwin_update(cw_action);
-				clientwin_update2(cw_action);
-				clientwin_render(cw_action);
-				clientwin_render(mw->client_to_focus);
+				shadow_clientwindow(cw, CLIENTOP_SHADE_EWMH);
 			}
 			else if (arr_keycodes_includes(mw->keycodes_Close, evk->keycode)) {
-				ClientWin *cw_delete = mw->client_to_focus;
-				focus_miniw_next(ps, mw->client_to_focus);
-				clientwin_render(mw->client_to_focus);
-				clientwin_action(cw_delete, CLIENTOP_CLOSE_EWMH);
-				XFlush(ps->dpy);
-				usleep(20000);
-				XFlush(ps->dpy);
-				XSetInputFocus(ps->dpy, mw->window, RevertToParent, CurrentTime);
-				dlist *del = dlist_find(mw->focuslist,
-						clientwin_cmp_func, (void *) cw_delete->wid_client);
-				mw->focuslist = dlist_remove(del);
-				if (dlist_len(mw->focuslist) == 0)
-					return 1;
+				return close_clientwindow(cw);
 			}
 		}
 		else
@@ -809,11 +829,12 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 		const unsigned button = ev->xbutton.button;
 		if (cw->mainwin->pressed_mouse) {
 			if (button < MAX_MOUSE_BUTTONS) {
-				int ret = clientwin_action(cw,
+				if (ps->o.bindings_miwMouse[button] == CLIENTOP_CLOSE_EWMH
+				 || ps->o.bindings_miwMouse[button] == CLIENTOP_CLOSE_ICCCM)
+					return close_clientwindow(cw);
+				else
+				   return clientwin_action(cw,
 						ps->o.bindings_miwMouse[button]);
-				if (ret) {
-					return ret;
-				}
 			}
 		}
 		else
