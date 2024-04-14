@@ -311,9 +311,9 @@ wm_find_client(session_t *ps, Window wid) {
 					stack2 = dlist_add(stack2, (void *) children[i]);
 			sxfree(children);
 		}
-		dlist_free(stack);
+		dlist_free_with_data(stack);
 		if (result) {
-			free(stack2);
+			dlist_free_with_data(stack2);
 			break;
 		}
 		else {
