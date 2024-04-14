@@ -423,7 +423,7 @@ update_clients(MainWin *mw)
 		else {
 			dlist *tmp = iter->next;
 			clientwin_destroy((ClientWin *) iter->data, True);
-			mw->clients = dlist_remove_free_data(iter);
+			mw->clients = dlist_remove(iter);
 			iter = tmp;
 		}
 	}
