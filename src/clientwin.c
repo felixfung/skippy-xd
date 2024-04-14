@@ -635,6 +635,9 @@ clientwin_unmap(ClientWin *cw) {
 
 void
 childwin_focus(ClientWin *cw) {
+	if (!cw)
+		return;
+
 	session_t * const ps = cw->mainwin->ps;
 
 	if (ps->o.movePointer)
@@ -780,17 +783,24 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 				clientwin_render(mw->client_to_focus);
 			}
 			else if (arr_keycodes_includes(mw->keycodes_Close, evk->keycode)) {
-				ClientWin *cw_delete = mw->client_to_focus;
-				focus_miniw_next(ps, mw->client_to_focus);
-				clientwin_render(mw->client_to_focus);
-				clientwin_action(cw_delete, CLIENTOP_CLOSE_EWMH);
+				clientwin_unmap(cw);
+				clientwin_action(cw, CLIENTOP_CLOSE_EWMH);
 				XFlush(ps->dpy);
-				usleep(20000);
+				usleep(10000);
 				XFlush(ps->dpy);
-				XSetInputFocus(ps->dpy, mw->window, RevertToParent, CurrentTime);
-				dlist *del = dlist_find(mw->focuslist,
-						clientwin_cmp_func, (void *) cw_delete->wid_client);
+				focus_miniw_next(ps, cw);
+				XFlush(ps->dpy);
+
+				dlist *del = dlist_find(mw->clientondesktop,
+						clientwin_cmp_func, (void *) cw->wid_client);
+				mw->clientondesktop = dlist_remove(del);
+				del = dlist_find(mw->clients,
+						clientwin_cmp_func, (void *) cw->wid_client);
+				mw->clients = dlist_remove(del);
+				del = dlist_find(mw->focuslist,
+						clientwin_cmp_func, (void *) cw->wid_client);
 				mw->focuslist = dlist_remove(del);
+
 				if (dlist_len(mw->focuslist) == 0)
 					return 1;
 			}
