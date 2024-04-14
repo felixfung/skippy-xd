@@ -714,6 +714,23 @@ clientwin_tooltip(ClientWin *cw) {
 	}
 }
 
+void
+shadow_clientwindow(ClientWin* cw, enum cliop op) {
+	MainWin *mw = cw->mainwin;
+	session_t *ps = mw->ps;
+
+	clientwin_action(cw, op);
+	XFlush(ps->dpy);
+	usleep(10000);
+	XFlush(ps->dpy);
+	focus_miniw_next(ps, cw);
+	XFlush(ps->dpy);
+	clientwin_update(cw);
+	clientwin_update2(cw);
+	clientwin_render(cw);
+	XFlush(ps->dpy);
+}
+
 int
 close_clientwindow(ClientWin* cw) {
 	MainWin *mw = cw->mainwin;
@@ -789,26 +806,10 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 		if (cw->mainwin->pressed_key
 				&& mw->client_to_focus->mode != CLIDISP_DESKTOP) {
 			if (arr_keycodes_includes(mw->keycodes_Iconify, evk->keycode)) {
-				ClientWin *cw_action = mw->client_to_focus;
-				focus_miniw_next(ps, mw->client_to_focus);
-				clientwin_action(cw_action, CLIENTOP_ICONIFY);
-				clientwin_render(cw_action);
-				clientwin_update(cw_action);
-				clientwin_update2(cw_action);
-				clientwin_render(cw_action);
-				usleep(1000);
-				XSetInputFocus(ps->dpy, mw->window, RevertToParent, CurrentTime);
-				clientwin_render(mw->client_to_focus);
+				shadow_clientwindow(cw, CLIENTOP_ICONIFY);
 			}
 			else if (arr_keycodes_includes(mw->keycodes_Shade, evk->keycode)) {
-				ClientWin *cw_action = mw->client_to_focus;
-				focus_miniw_next(ps, mw->client_to_focus);
-				clientwin_action(cw_action, CLIENTOP_SHADE_EWMH);
-				clientwin_render(cw_action);
-				clientwin_update(cw_action);
-				clientwin_update2(cw_action);
-				clientwin_render(cw_action);
-				clientwin_render(mw->client_to_focus);
+				shadow_clientwindow(cw, CLIENTOP_SHADE_EWMH);
 			}
 			else if (arr_keycodes_includes(mw->keycodes_Close, evk->keycode)) {
 				return close_clientwindow(cw);
