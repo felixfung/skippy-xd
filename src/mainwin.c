@@ -445,6 +445,9 @@ mainwin_destroy(MainWin *mw) {
 	free(mw->keysyms_Next);
 	free(mw->keysyms_Cancel);
 	free(mw->keysyms_Select);
+	free(mw->keysyms_Iconify);
+	free(mw->keysyms_Shade);
+	free(mw->keysyms_Close);
 	free(mw->keysyms_PivotSwitch);
 	free(mw->keysyms_PivotExpose);
 	free(mw->keysyms_PivotPaging);
@@ -457,6 +460,9 @@ mainwin_destroy(MainWin *mw) {
 	free(mw->keycodes_Next);
 	free(mw->keycodes_Cancel);
 	free(mw->keycodes_Select);
+	free(mw->keycodes_Iconify);
+	free(mw->keycodes_Shade);
+	free(mw->keycodes_Close);
 	free(mw->keycodes_PivotSwitch);
 	free(mw->keycodes_PivotExpose);
 	free(mw->keycodes_PivotPaging);
