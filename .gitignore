@@ -34,3 +34,6 @@ doxygen/
 
 # User config override
 skippy-xd.rc*
+
+# Nix build result
+/result
