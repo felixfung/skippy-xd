@@ -329,6 +329,8 @@ mainwin_update(MainWin *mw)
 	unsigned int dummy_u;
 
 	if (ps->xinfo.xinerama_exist && XineramaIsActive(ps->dpy)) {
+		if(mw->xin_info)
+			XFree(mw->xin_info);
 		mw->xin_info = XineramaQueryScreens(ps->dpy, &mw->xin_screens);
 		printfdf(false, "(): Xinerama is enabled (%d screens).", mw->xin_screens);
 	}
@@ -411,7 +413,10 @@ mainwin_destroy(MainWin *mw) {
 
 	// Free all clients associated with this main window
 	dlist_free_with_func(mw->clients, (dlist_free_func) clientwin_destroy);
-	
+
+	dlist_free(mw->clientondesktop);
+	dlist_free(mw->panels);
+
 	if(mw->background != None)
 		XRenderFreePicture(ps->dpy, mw->background);
 	
@@ -445,6 +450,9 @@ mainwin_destroy(MainWin *mw) {
 	free(mw->keysyms_Next);
 	free(mw->keysyms_Cancel);
 	free(mw->keysyms_Select);
+	free(mw->keysyms_Iconify);
+	free(mw->keysyms_Shade);
+	free(mw->keysyms_Close);
 	free(mw->keysyms_PivotSwitch);
 	free(mw->keysyms_PivotExpose);
 	free(mw->keysyms_PivotPaging);
@@ -457,6 +465,9 @@ mainwin_destroy(MainWin *mw) {
 	free(mw->keycodes_Next);
 	free(mw->keycodes_Cancel);
 	free(mw->keycodes_Select);
+	free(mw->keycodes_Iconify);
+	free(mw->keycodes_Shade);
+	free(mw->keycodes_Close);
 	free(mw->keycodes_PivotSwitch);
 	free(mw->keycodes_PivotExpose);
 	free(mw->keycodes_PivotPaging);
