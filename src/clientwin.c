@@ -720,16 +720,21 @@ shadow_clientwindow(ClientWin* cw, enum cliop op) {
 	session_t *ps = mw->ps;
 
 	clientwin_action(cw, op);
+
 	XFlush(ps->dpy);
 	usleep(10000);
-	XFlush(ps->dpy);
+
 	focus_miniw_next(ps, cw);
 	clientwin_unmap(cw);
-	usleep(10000);
+
 	XFlush(ps->dpy);
+	usleep(10000);
+
 	clientwin_update(cw);
-	usleep(10000);
+
 	XFlush(ps->dpy);
+	usleep(10000);
+
 	clientwin_move(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
 	clientwin_update2(cw);
 	clientwin_map(cw);
