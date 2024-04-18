@@ -724,11 +724,15 @@ shadow_clientwindow(ClientWin* cw, enum cliop op) {
 	usleep(10000);
 	XFlush(ps->dpy);
 	focus_miniw_next(ps, cw);
+	clientwin_unmap(cw);
+	usleep(10000);
 	XFlush(ps->dpy);
 	clientwin_update(cw);
-	clientwin_update2(cw);
-	clientwin_render(cw);
+	usleep(10000);
 	XFlush(ps->dpy);
+	clientwin_move(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
+	clientwin_update2(cw);
+	clientwin_map(cw);
 }
 
 int
@@ -744,15 +748,25 @@ close_clientwindow(ClientWin* cw) {
 	focus_miniw_next(ps, cw);
 	XFlush(ps->dpy);
 
-	dlist *del = dlist_find(mw->clientondesktop,
-			clientwin_cmp_func, (void *) cw->wid_client);
-	mw->clientondesktop = dlist_remove(del);
-	del = dlist_find(mw->clients,
-			clientwin_cmp_func, (void *) cw->wid_client);
-	mw->clients = dlist_remove(del);
-	del = dlist_find(mw->focuslist,
-			clientwin_cmp_func, (void *) cw->wid_client);
-	mw->focuslist = dlist_remove(del);
+	{
+		dlist *del = dlist_find(mw->clientondesktop,
+				clientwin_cmp_func, (void *) cw->wid_client);
+		mw->clientondesktop = dlist_remove(del);
+	}
+
+	{
+		dlist *del = dlist_find(mw->clients,
+				clientwin_cmp_func, (void *) cw->wid_client);
+		mw->clients = dlist_remove(del);
+	}
+
+	{
+		dlist *del = dlist_find(mw->focuslist,
+				clientwin_cmp_func, (void *) cw->wid_client);
+		mw->focuslist = dlist_remove(del);
+	}
+
+	clientwin_destroy((ClientWin *) cw, True);
 
 	if (dlist_len(mw->focuslist) == 0)
 		return 1;
@@ -829,12 +843,20 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 		const unsigned button = ev->xbutton.button;
 		if (cw->mainwin->pressed_mouse) {
 			if (button < MAX_MOUSE_BUTTONS) {
-				if (ps->o.bindings_miwMouse[button] == CLIENTOP_CLOSE_EWMH
+				if (ps->o.bindings_miwMouse[button] == CLIENTOP_DESTROY
+				 || ps->o.bindings_miwMouse[button] == CLIENTOP_CLOSE_EWMH
 				 || ps->o.bindings_miwMouse[button] == CLIENTOP_CLOSE_ICCCM)
 					return close_clientwindow(cw);
-				else
-				   return clientwin_action(cw,
-						ps->o.bindings_miwMouse[button]);
+				else if(ps->o.bindings_miwMouse[button] == CLIENTOP_ICONIFY
+					 || ps->o.bindings_miwMouse[button] == CLIENTOP_SHADE_EWMH) {
+					shadow_clientwindow(cw, ps->o.bindings_miwMouse[button]);
+					return 0;
+				}
+				else {
+					//CLIENTOP_FOCUS, CLIENTOP_PREV, CLIENTOP_NEXT,
+					return clientwin_action(cw,
+							ps->o.bindings_miwMouse[button]);
+				}
 			}
 		}
 		else
