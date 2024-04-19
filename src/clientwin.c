@@ -192,10 +192,6 @@ clientwin_update(ClientWin *cw) {
 	session_t *ps = cw->mainwin->ps;
 	clientwin_free_res2(ps, cw);
 
-	// Reset mini window parameters
-	cw->mini.x = cw->mini.y = 0;
-	cw->mini.width = cw->mini.height = 1;
-
 	// Get window attributes
 	XWindowAttributes wattr = { };
 	XGetWindowAttributes(ps->dpy, cw->src.window, &wattr);
@@ -732,11 +728,7 @@ shadow_clientwindow(ClientWin* cw, enum cliop op) {
 
 	clientwin_update(cw);
 
-	XFlush(ps->dpy);
-	usleep(10000);
-
 	clientwin_move(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
-	clientwin_update2(cw);
 	clientwin_map(cw);
 }
 
