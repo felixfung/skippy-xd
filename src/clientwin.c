@@ -208,11 +208,8 @@ clientwin_update(ClientWin *cw) {
 		cw->src.format = XRenderFindVisualFormat(ps->dpy, wattr.visual);
 	}
 
-	if (ps->o.tooltip_show) {
-		if (cw->tooltip)
-			tooltip_destroy(cw->tooltip);
+	if (ps->o.tooltip_show && !cw->tooltip)
 		cw->tooltip = tooltip_create(cw->mainwin);
-	}
 
 	bool isViewable = wattr.map_state == IsViewable;
 	cw->zombie = !isViewable;
