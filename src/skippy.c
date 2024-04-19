@@ -1276,8 +1276,11 @@ mainloop(session_t *ps, bool activate_on_start) {
 					//((ClientWin *)iter->data)->damaged = true;
 				//}
 			}
-			else if (mw && wid == mw->window)
+			else if (mw && wid == mw->window) {
 				die = mainwin_handle(mw, &ev);
+				if (die)
+					mw->client_to_focus = NULL;
+			}
 			else if (mw && PropertyNotify == ev.type) {
 				printfdf(false, "(): else if (ev.type == PropertyNotify) {");
 
