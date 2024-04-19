@@ -208,11 +208,8 @@ clientwin_update(ClientWin *cw) {
 		cw->src.format = XRenderFindVisualFormat(ps->dpy, wattr.visual);
 	}
 
-	if (ps->o.tooltip_show) {
-		if (cw->tooltip)
-			tooltip_destroy(cw->tooltip);
+	if (ps->o.tooltip_show && !cw->tooltip)
 		cw->tooltip = tooltip_create(cw->mainwin);
-	}
 
 	bool isViewable = wattr.map_state == IsViewable;
 	cw->zombie = !isViewable;
@@ -716,11 +713,6 @@ shadow_clientwindow(ClientWin* cw, enum cliop op) {
 	session_t *ps = mw->ps;
 
 	clientwin_action(cw, op);
-
-	XFlush(ps->dpy);
-	usleep(10000);
-
-	focus_miniw_next(ps, cw);
 	clientwin_unmap(cw);
 
 	XFlush(ps->dpy);
@@ -730,15 +722,17 @@ shadow_clientwindow(ClientWin* cw, enum cliop op) {
 
 	clientwin_move(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
 	clientwin_map(cw);
+
+	focus_miniw(ps, cw);
 }
 
 int
-close_clientwindow(ClientWin* cw) {
+close_clientwindow(ClientWin* cw, enum cliop op) {
 	MainWin *mw = cw->mainwin;
 	session_t *ps = mw->ps;
 
 	clientwin_unmap(cw);
-	clientwin_action(cw, CLIENTOP_CLOSE_EWMH);
+	clientwin_action(cw, op);
 	XFlush(ps->dpy);
 	usleep(10000);
 	XFlush(ps->dpy);
@@ -823,7 +817,7 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 				shadow_clientwindow(cw, CLIENTOP_SHADE_EWMH);
 			}
 			else if (arr_keycodes_includes(mw->keycodes_Close, evk->keycode)) {
-				return close_clientwindow(cw);
+				return close_clientwindow(cw, CLIENTOP_CLOSE_EWMH);
 			}
 		}
 		else
@@ -843,7 +837,7 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 				if (ps->o.bindings_miwMouse[button] == CLIENTOP_DESTROY
 				 || ps->o.bindings_miwMouse[button] == CLIENTOP_CLOSE_EWMH
 				 || ps->o.bindings_miwMouse[button] == CLIENTOP_CLOSE_ICCCM)
-					return close_clientwindow(cw);
+					return close_clientwindow(cw, ps->o.bindings_miwMouse[button]);
 				else if(ps->o.bindings_miwMouse[button] == CLIENTOP_ICONIFY
 					 || ps->o.bindings_miwMouse[button] == CLIENTOP_SHADE_EWMH) {
 					shadow_clientwindow(cw, ps->o.bindings_miwMouse[button]);
