@@ -727,12 +727,12 @@ shadow_clientwindow(ClientWin* cw, enum cliop op) {
 }
 
 int
-close_clientwindow(ClientWin* cw) {
+close_clientwindow(ClientWin* cw, enum cliop op) {
 	MainWin *mw = cw->mainwin;
 	session_t *ps = mw->ps;
 
 	clientwin_unmap(cw);
-	clientwin_action(cw, CLIENTOP_CLOSE_EWMH);
+	clientwin_action(cw, op);
 	XFlush(ps->dpy);
 	usleep(10000);
 	XFlush(ps->dpy);
@@ -817,7 +817,7 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 				shadow_clientwindow(cw, CLIENTOP_SHADE_EWMH);
 			}
 			else if (arr_keycodes_includes(mw->keycodes_Close, evk->keycode)) {
-				return close_clientwindow(cw);
+				return close_clientwindow(cw, CLIENTOP_CLOSE_EWMH);
 			}
 		}
 		else
@@ -837,7 +837,7 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 				if (ps->o.bindings_miwMouse[button] == CLIENTOP_DESTROY
 				 || ps->o.bindings_miwMouse[button] == CLIENTOP_CLOSE_EWMH
 				 || ps->o.bindings_miwMouse[button] == CLIENTOP_CLOSE_ICCCM)
-					return close_clientwindow(cw);
+					return close_clientwindow(cw, ps->o.bindings_miwMouse[button]);
 				else if(ps->o.bindings_miwMouse[button] == CLIENTOP_ICONIFY
 					 || ps->o.bindings_miwMouse[button] == CLIENTOP_SHADE_EWMH) {
 					shadow_clientwindow(cw, ps->o.bindings_miwMouse[button]);
