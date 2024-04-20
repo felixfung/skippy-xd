@@ -494,11 +494,14 @@ mainwin_handle(MainWin *mw, XEvent *ev) {
 	printfdf(false, "(): ");
 	session_t *ps = mw->ps;
 
-	if (!mw->clientondesktop)
+	if (!mw->clientondesktop) {
+		printfdf(false, "(): No client windows to display");
 		return 1;
+	}
 
 	switch(ev->type) {
 		case EnterNotify:
+			printfdf(false, "(): EnterNotify");
 			if (!mw->client_to_focus)
 				XSetInputFocus(ps->dpy, mw->window, RevertToParent, CurrentTime);
 			break;
