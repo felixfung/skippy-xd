@@ -1040,6 +1040,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 		// Main window destruction, before poll()
 		if (mw && die) {
+			printfdf(false,"(): selecting/canceling and returning to background");
 			// Unmap the main window and all clients, to make sure focus doesn't fall out
 			// when we start setting focus on client window
 			mainwin_unmap(mw);
@@ -1053,26 +1054,24 @@ mainloop(session_t *ps, bool activate_on_start) {
 				if (layout == LAYOUTMODE_PAGING) {
 					if (!mw->refocus)
 						new_desktop = mw->client_to_focus->slots;
-					else {
-						if(mw->client_to_focus_on_cancel)
-							childwin_focus(mw->client_to_focus_on_cancel);
-					}
+					else
+						childwin_focus(mw->client_to_focus_on_cancel);
 					if (new_desktop == wm_get_current_desktop(ps)) {
 						new_desktop = -1;
-						if(mw->client_to_focus_on_cancel)
-							childwin_focus(mw->client_to_focus_on_cancel);
+						childwin_focus(mw->client_to_focus_on_cancel);
 					}
 				}
 				else {
 					if (!mw->refocus)
 						childwin_focus(mw->client_to_focus);
-					else if(mw->client_to_focus_on_cancel)
+					else
 						childwin_focus(mw->client_to_focus_on_cancel);
 				}
-				mw->refocus = false;
-				mw->client_to_focus = NULL;
-				pending_damage = false;
 			}
+
+			mw->refocus = false;
+			mw->client_to_focus = NULL;
+			pending_damage = false;
 
 			// Cleanup
 			dlist_free(mw->clientondesktop);
