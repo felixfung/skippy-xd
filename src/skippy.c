@@ -1366,8 +1366,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 		timeout -= time_offset;
 		if (timeout < 0)
 			timeout = 0;
-		if (pending_damage)
-			timeout = 0;
 		poll(r_fd, (r_fd[1].fd >= 0 ? 2: 1), timeout);
 
 		// Handle daemon commands
