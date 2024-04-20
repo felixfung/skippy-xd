@@ -34,3 +34,9 @@ skippy-xd --paging
 ```
 
 Also check the wiki for detailed how to use, config options, and other info.
+
+And please! If you share our love for skippy-xd, please consider:
+
+* Use it! Nothing is more rewarding to developers than widespread adoption of the app.
+* Share it! Tell others about the app. Showcase screenshots and videos. Package it for your distros.
+* Improve it! Make suggestions on feature improvements. Report bugs and they will be fixed. If you are a coder, start hacking!
