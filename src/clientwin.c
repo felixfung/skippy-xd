@@ -712,6 +712,11 @@ shadow_clientwindow(ClientWin* cw, enum cliop op) {
 	MainWin *mw = cw->mainwin;
 	session_t *ps = mw->ps;
 
+	if (cw == mw->client_to_focus)
+		mw->client_to_focus = NULL;
+	if (cw == mw->client_to_focus_on_cancel)
+		mw->client_to_focus_on_cancel = NULL;
+
 	clientwin_action(cw, op);
 	clientwin_unmap(cw);
 
