@@ -1040,6 +1040,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 		// Main window destruction, before poll()
 		if (mw && die) {
+			printfdf(false,"(): selecting/canceling and returning to background");
 			// Unmap the main window and all clients, to make sure focus doesn't fall out
 			// when we start setting focus on client window
 			mainwin_unmap(mw);
