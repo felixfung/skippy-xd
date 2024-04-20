@@ -1070,10 +1070,11 @@ mainloop(session_t *ps, bool activate_on_start) {
 					else if(mw->client_to_focus_on_cancel)
 						childwin_focus(mw->client_to_focus_on_cancel);
 				}
-				mw->refocus = false;
-				mw->client_to_focus = NULL;
-				pending_damage = false;
 			}
+
+			mw->refocus = false;
+			mw->client_to_focus = NULL;
+			pending_damage = false;
 
 			// Cleanup
 			dlist_free(mw->clientondesktop);
