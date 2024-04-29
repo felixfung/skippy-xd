@@ -15,7 +15,10 @@ skippy-xd = {
 Then use the overlay somewhere in your config:
 
 ```nix
-{inputs, ...}: {nixpkgs.overlays = [inputs.skippy-xd.overlays.default];}
+{inputs, pkgs, ...}: {
+  nixpkgs.overlays = [inputs.skippy-xd.overlays.default];
+  environment.systemPackages = with pkgs; [skippy-xd];
+}
 ```
 
 ## Building binary
