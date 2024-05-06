@@ -313,7 +313,7 @@ wm_find_client(session_t *ps, Window wid) {
 		}
 		dlist_free(stack);
 		if (result) {
-			free(stack2);
+			dlist_free(stack2);
 			break;
 		}
 		else {

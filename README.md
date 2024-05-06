@@ -4,19 +4,25 @@ Skippy-xd is a lightweight, window-manager-agnostic window selector on X server.
 
 Switch is similar to Alt-Tab:
 
-![](https://github.com/felixfung/skippy-xd/blob/master/gifs/switch.gif)
+![](https://github.com/felixfung/skippy-xd-gifs/blob/main/switch.gif)
 
 Expose is inspired from Mac:
 
-![](https://github.com/felixfung/skippy-xd/blob/master/gifs/expose.gif)
+![](https://github.com/felixfung/skippy-xd-gifs/blob/main/expose.gif)
 
 Paging shows you your entire desktop:
 
-![](https://github.com/felixfung/skippy-xd/blob/master/gifs/paging.gif)
+![](https://github.com/felixfung/skippy-xd-gifs/blob/main/paging.gif)
 
 If you want to fly around your daily window flow, if you want cool window motions that adds to your productivity, if you want to manage your windows like a boss, skippy-xd might be the thing for you.
 
-Checkout the youtube videos https://youtu.be/R__zua04xe0, https://youtu.be/reUDapFGnmQ, https://youtu.be/lS33Z2s8xrs.
+Checkout the youtube videos:
+
+[![Skippy-xd window selector!](https://img.youtube.com/vi/R__zua04xe0/hqdefault.jpg)](https://youtu.be/R__zua04xe0)
+
+[![Skippy-xd and tiling managers](https://img.youtube.com/vi/reUDapFGnmQ/hqdefault.jpg)](https://youtu.be/reUDapFGnmQ)
+
+[![Skippy-xd advanced uses and config options](https://img.youtube.com/vi/lS33Z2s8xrs/hqdefault.jpg)](https://youtu.be/lS33Z2s8xrs)
 
 skippy-xd works on anything X. See https://github.com/felixfung/skippy-xd/wiki/Adoption#compatible-desktop-environmentswindow-managers for details.
 
@@ -34,3 +40,9 @@ skippy-xd --paging
 ```
 
 Also check the wiki for detailed how to use, config options, and other info.
+
+And please! If you share our love for skippy-xd, please consider:
+
+* Use it! Nothing is more rewarding to developers than widespread adoption of the app.
+* Share it! Tell others about the app. Showcase screenshots and videos. Package it for your distros.
+* Improve it! Make suggestions on feature improvements. Report bugs and they will be fixed. If you are a coder, start hacking!
