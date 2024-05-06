@@ -91,13 +91,9 @@ install: ${BINS} skippy-xd.sample.rc
 ifneq ("$(wildcard skippy-xd.rc)","")
 	@echo "your custom skippy config file will be installed to: ${DESTDIR}/etc/xdg/skippy-xd.rc"
 	install -m 644 skippy-xd.rc "${DESTDIR}/etc/xdg/skippy-xd.rc"
-
-	@echo "skippy's sample config file will be installed to: ${DESTDIR}/etc/xdg/skippy-xd.sample.rc"
-	install -m 644 skippy-xd.sample.rc "${DESTDIR}/etc/xdg/skippy-xd.sample.rc"
 else
 	@echo "skippy's default config file will be installed to: ${DESTDIR}/etc/xdg/skippy-xd.rc"
 	install -m 644 skippy-xd.sample.rc "${DESTDIR}/etc/xdg/skippy-xd.rc"
-	install -m 644 skippy-xd.sample.rc "${DESTDIR}/etc/xdg/skippy-xd.sample.rc"
 endif
 
 uninstall:
