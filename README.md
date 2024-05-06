@@ -18,11 +18,11 @@ If you want to fly around your daily window flow, if you want cool window motion
 
 Checkout the youtube videos:
 
-[![Watch the video](https://img.youtube.com/vi/R__zua04xe0.jpg)](https://youtu.be/R__zua04xe0)
+[![Skippy-xd window selector!](https://img.youtube.com/vi/R__zua04xe0/hqdefault.jpg)](https://youtu.be/R__zua04xe0)
 
-[![Watch the video](https://img.youtube.com/vi/reUDapFGnmQ.jpg)](https://youtu.be/reUDapFGnmQ)
+[![Skippy-xd and tiling managers](https://img.youtube.com/vi/reUDapFGnmQ/hqdefault.jpg)](https://youtu.be/reUDapFGnmQ)
 
-[![Watch the video](https://img.youtube.com/vi/lS33Z2s8xrs.jpg)](https://youtu.be/lS33Z2s8xrs)
+[![Skippy-xd advanced uses and config options](https://img.youtube.com/vi/lS33Z2s8xrs/hqdefault.jpg)](https://youtu.be/lS33Z2s8xrs)
 
 skippy-xd works on anything X. See https://github.com/felixfung/skippy-xd/wiki/Adoption#compatible-desktop-environmentswindow-managers for details.
 
