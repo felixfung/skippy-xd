@@ -4,15 +4,15 @@ Skippy-xd is a lightweight, window-manager-agnostic window selector on X server.
 
 Switch is similar to Alt-Tab:
 
-![](https://github.com/felixfung/skippy-xd/blob/master/gifs/switch.gif)
+![](https://github.com/felixfung/skippy-xd-gifs/blob/main/switch.gif)
 
 Expose is inspired from Mac:
 
-![](https://github.com/felixfung/skippy-xd/blob/master/gifs/expose.gif)
+![](https://github.com/felixfung/skippy-xd-gifs/blob/main/expose.gif)
 
 Paging shows you your entire desktop:
 
-![](https://github.com/felixfung/skippy-xd/blob/master/gifs/paging.gif)
+![](https://github.com/felixfung/skippy-xd-gifs/blob/main/paging.gif)
 
 If you want to fly around your daily window flow, if you want cool window motions that adds to your productivity, if you want to manage your windows like a boss, skippy-xd might be the thing for you.
 
