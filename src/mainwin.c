@@ -66,7 +66,7 @@ mainwin_create(session_t *ps) {
 	mw->xin_info = mw->xin_active = 0;
 	mw->xin_screens = 0;
 #endif /* CFG_XINERAMA */
-	
+
 	// mw->pressed = mw->focus = 0;
 	mw->pressed = mw->client_to_focus = 0;
 	mw->clientondesktop = 0;
@@ -185,7 +185,7 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	check_keybindings_conflict(ps->o.config_path, "keysNext", mw->keysyms_Next, "keysCancel", mw->keysyms_Cancel);
 	check_keybindings_conflict(ps->o.config_path, "keysNext", mw->keysyms_Next, "keysSelect", mw->keysyms_Select);
 	check_keybindings_conflict(ps->o.config_path, "keysCancel", mw->keysyms_Cancel, "keysSelect", mw->keysyms_Select);
-	
+
 	if (ps->o.updateFreq != 0.0)
 		mw->poll_time = (1.0 / ps->o.updateFreq) * 1000.0;
 	else
@@ -287,16 +287,16 @@ mainwin_update_background(MainWin *mw) {
 
 	Pixmap root = wm_get_root_pmap(ps->dpy);
 	XRenderPictureAttributes pa;
-	
+
 	if(mw->bg_pixmap)
 		XFreePixmap(ps->dpy, mw->bg_pixmap);
 	if(mw->background)
 		XRenderFreePicture(ps->dpy, mw->background);
-	
+
 	mw->bg_pixmap = XCreatePixmap(ps->dpy, mw->window, mw->width, mw->height, mw->depth);
 	pa.repeat = True;
 	mw->background = XRenderCreatePicture(ps->dpy, mw->bg_pixmap, mw->format, CPRepeat, &pa);
-	
+
 	if (ps->o.background) {
 		Picture from = XRenderCreatePicture(ps->dpy, root, XRenderFindVisualFormat(ps->dpy, DefaultVisual(ps->dpy, ps->screen)), 0, 0);
 		XRenderComposite(ps->dpy, PictOpSrc, from, None, mw->background, mw->x, mw->y, 0, 0, 0, 0, mw->width, mw->height);
@@ -311,7 +311,7 @@ mainwin_update_background(MainWin *mw) {
 		XRenderComposite(ps->dpy, PictOpSrc, from, None, mw->background, mw->x, mw->y, 0, 0, 0, 0, mw->width, mw->height);
 		XRenderFreePicture(ps->dpy, from);
 	}
-	
+
 	XSetWindowBackgroundPixmap(ps->dpy, mw->window, mw->bg_pixmap);
 	XClearWindow(ps->dpy, mw->window);
 }
@@ -334,17 +334,17 @@ mainwin_update(MainWin *mw)
 		mw->xin_info = XineramaQueryScreens(ps->dpy, &mw->xin_screens);
 		printfdf(false, "(): Xinerama is enabled (%d screens).", mw->xin_screens);
 	}
-	
+
 	if(! mw->xin_info || ! mw->xin_screens)
 	{
 		mainwin_update_background(mw);
 		return;
 	}
-	
+
 	printfdf(false, "(): XINERAMA --> querying pointer... ");
 	XQueryPointer(ps->dpy, ps->root, &dummy_w, &dummy_w, &root_x, &root_y, &dummy_i, &dummy_i, &dummy_u);
 	printfdf(false, "(): XINERAMA +%i+%i\n", root_x, root_y);
-	
+
 	printfdf(false, "(): XINERAMA --> figuring out which screen we're on... ");
 	iter = mw->xin_info;
 	for(i = 0; i < mw->xin_screens; ++i)
@@ -409,7 +409,7 @@ mainwin_unmap(MainWin *mw)
 
 void
 mainwin_destroy(MainWin *mw) {
-	session_t *ps = mw->ps; 
+	session_t *ps = mw->ps;
 
 	// Free all clients associated with this main window
 	dlist_free_with_func(mw->clients, (dlist_free_func) clientwin_destroy);
@@ -419,29 +419,29 @@ mainwin_destroy(MainWin *mw) {
 
 	if(mw->background != None)
 		XRenderFreePicture(ps->dpy, mw->background);
-	
+
 	if(mw->bg_pixmap != None)
 		XFreePixmap(ps->dpy, mw->bg_pixmap);
-	
+
 	if(mw->normalPicture != None)
 		XRenderFreePicture(ps->dpy, mw->normalPicture);
-	
+
 	if(mw->highlightPicture != None)
 		XRenderFreePicture(ps->dpy, mw->highlightPicture);
-	
+
 	if(mw->normalPixmap != None)
 		XFreePixmap(ps->dpy, mw->normalPixmap);
-	
+
 	if(mw->highlightPixmap != None)
 		XFreePixmap(ps->dpy, mw->highlightPixmap);
-	
+
 	XDestroyWindow(ps->dpy, mw->window);
-	
+
 #ifdef CFG_XINERAMA
 	if(mw->xin_info)
 		XFree(mw->xin_info);
 #endif /* CFG_XINERAMA */
-	
+
 	free(mw->keysyms_Up);
 	free(mw->keysyms_Down);
 	free(mw->keysyms_Left);
@@ -496,6 +496,7 @@ mainwin_handle(MainWin *mw, XEvent *ev) {
 
 	switch(ev->type) {
 		case EnterNotify:
+			printfdf(false, "(): EnterNotify");
 			if (!mw->client_to_focus)
 				XSetInputFocus(ps->dpy, mw->window, RevertToParent, CurrentTime);
 			break;
@@ -511,7 +512,7 @@ mainwin_handle(MainWin *mw, XEvent *ev) {
 			// }
 			// else
 			// {
-			// 	printfdf(false, "(): mw->client_to_focus == NULL");				
+			// 	printfdf(false, "(): mw->client_to_focus == NULL");
 			// }
 			break;
 		case ButtonPress:
