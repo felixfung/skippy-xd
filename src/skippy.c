@@ -464,7 +464,7 @@ daemon_count_clients(MainWin *mw)
 
 	// given the client table, update the clientondesktop
 	// the difference between mw->clients and mw->clientondesktop
-	// is that mw->clients is all the client windows 
+	// is that mw->clients is all the client windows
 	// while mw->clientondesktop is only those in current virtual desktop
 	// if that option is user supplied
 	if (mw->clientondesktop) {
@@ -854,7 +854,7 @@ desktopwin_map(ClientWin *cw)
 	}
 
 	cw->focused = cw == mw->client_to_focus;
-	
+
 	clientwin_render(cw);
 
 	if (ps->o.tooltip_show) {
@@ -1124,7 +1124,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 			else if (layout == LAYOUTMODE_PAGING && mw->keycodes_PivotPaging) {
 				pivotTerminate = !pivoting(ps, mw->keycodes_PivotPaging);
 			}
-			
+
 			if (pivotTerminate) {
 				die = true;
 				ps->o.focus_initial = 0;

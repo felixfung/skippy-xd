@@ -37,6 +37,8 @@ skippy-xd --expose
 skippy-xd --paging
 ```
 
+For NixOS users see [nix](./NIX.md)
+
 Also check the wiki for detailed how to use, config options, and other info.
 
 And please! If you share our love for skippy-xd, please consider:

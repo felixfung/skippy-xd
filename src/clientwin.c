@@ -510,7 +510,7 @@ clientwin_repair(ClientWin *cw) {
 
 	if (rects)
 		XFree(rects);
-	
+
 	cw->damaged = false;
 }
 
@@ -576,7 +576,7 @@ clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 	XSetWindowBackgroundPixmap(cw->mainwin->ps->dpy, cw->mini.window, cw->pixmap);
 
 	cw->destination = XRenderCreatePicture(cw->mainwin->ps->dpy, cw->pixmap, cw->mini.format, 0, 0);
-	
+
 	clientwin_round_corners(cw);
 }
 
@@ -584,7 +584,7 @@ void
 clientwin_map(ClientWin *cw) {
 	session_t *ps = cw->mainwin->ps;
 	free_damage(ps, &cw->damage);
-	
+
 	if (!cw->mode)
 		return;
 
