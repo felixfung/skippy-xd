@@ -1,0 +1,16 @@
+libX11.so.6()(64bit)
+libXcomposite.so.1()(64bit)
+libXdamage.so.1()(64bit)
+libXfixes.so.3()(64bit)
+libXft.so.2()(64bit)
+libXinerama.so.1()(64bit)
+libXrender.so.1()(64bit)
+libc.so.6()(64bit)
+libc.so.6(GLIBC_2.17)(64bit)
+libm.so.6()(64bit)
+libm.so.6(GLIBC_2.17)(64bit)
+rpmlib(CompressedFileNames) <= 3.0.4-1
+rpmlib(FileDigests) <= 4.6.0-1
+rpmlib(PayloadFilesHavePrefix) <= 4.0-1
+rpmlib(PayloadIsXz) <= 5.2-1
+rtld(GNU_HASH) 

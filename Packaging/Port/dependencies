@@ -1,0 +1,29 @@
+Build dependencies:
+
+        gmake>=4.3 : devel/gmake
+        pkgconf>=1.3.0_1 : devel/pkgconf
+        x11.pc : x11/libX11
+        xcomposite.pc : x11/libXcomposite
+        xdamage.pc : x11/libXdamage
+        xext.pc : x11/libXext
+        xfixes.pc : x11/libXfixes
+        xft.pc : x11-fonts/libXft
+        xinerama.pc : x11/libXinerama
+        xrender.pc : x11/libXrender
+
+Runtime dependencies:
+
+        x11.pc : x11/libX11
+        xcomposite.pc : x11/libXcomposite
+        xdamage.pc : x11/libXdamage
+        xext.pc : x11/libXext
+        xfixes.pc : x11/libXfixes
+        xft.pc : x11-fonts/libXft
+        xinerama.pc : x11/libXinerama
+        xrender.pc : x11/libXrender
+
+Library dependencies:
+
+        libgif.so : graphics/giflib
+        libpng.so : graphics/png
+        libjpeg.so : graphics/jpeg-turbo
