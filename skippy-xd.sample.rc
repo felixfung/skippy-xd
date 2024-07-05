@@ -13,10 +13,10 @@
 # opacity is an integer in the range of 0-255
 #
 
-# for system config options, stop and then start new skippy daemon
-# to reload config options
-# all other config options can be reloaded on the fly
-# with skippy-xd --config-reload
+# For system config options, stop and then start new skippy daemon
+# To reload config options
+# All other config options can be reloaded on the fly
+# With skippy-xd --config-reload
 
 [system]
 
@@ -162,6 +162,12 @@ keysIconify = 1
 keysShade = 2
 keysClose = 3
 
+# The "pivot" keys are the Alt in Alt-Tab
+# The key has to be held for skippy-xd to activate
+# And when the key is released, skippy-xd selects the highlighted window.
+# If there are no entries to the pivot key,
+# The behaviour is to toggle skippy-xd activation
+# And no keys need to be held or released
 keysPivotSwitch = Alt_L
 keysPivotExpose = 
 keysPivotPaging = 
