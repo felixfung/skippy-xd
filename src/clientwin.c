@@ -59,16 +59,22 @@ clientwin_filter_func(dlist *l, void *data) {
 	CARD32 w_desktop = wm_get_window_desktop(ps, cw->wid_client);
 	bool filtered_in = true;
 
-	if (ps->o.mode == PROGMODE_PAGING)
-		filtered_in = w_desktop != -1? true: ps->o.showSticky;
-	else if (w_desktop == -1)
-		filtered_in = ps->o.mode == PROGMODE_SWITCH? true: ps->o.showSticky;
-	else if (ps->o.mode == PROGMODE_SWITCH)
-		filtered_in = (w_desktop == current_desktop)
-			|| ps->o.switchShowAllDesktops;
-	else if (ps->o.mode == PROGMODE_EXPOSE)
-		filtered_in = (w_desktop == current_desktop)
-			|| ps->o.exposeShowAllDesktops;
+	if (w_desktop == -1) {
+		if (ps->o.mode == PROGMODE_SWITCH)
+			filtered_in = true;
+		else
+			filtered_in = ps->o.showSticky;
+	}
+	else {
+		if (ps->o.mode == PROGMODE_SWITCH)
+			filtered_in = (w_desktop == current_desktop)
+				|| ps->o.switchShowAllDesktops;
+		else if (ps->o.mode == PROGMODE_EXPOSE)
+			filtered_in = (w_desktop == current_desktop)
+				|| ps->o.exposeShowAllDesktops;
+		if (ps->o.mode == PROGMODE_PAGING)
+			filtered_in = true;
+	}
 
 	if (filtered_in)
 		return wm_validate_window(mw->ps, cw->wid_client);
