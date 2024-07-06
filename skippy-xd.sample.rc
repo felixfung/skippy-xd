@@ -65,6 +65,9 @@ showOnlyCurrentMonitor = false
 # windows that are minimized, shaded, or on other virtual desktops
 showShadow = true
 
+# Choose whether to always display sticky windows
+showSticky = true
+
 # For switch and expose,
 # Whether to limit window select on current virtual desktop
 # Or allow window selection on all virtual desktops
