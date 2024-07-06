@@ -712,6 +712,8 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 		ClientWin *cw = (ClientWin *) iter->data;
 		int win_desktop = wm_get_window_desktop(mw->ps, cw->wid_client);
 		int current_desktop = wm_get_current_desktop(mw->ps);
+		if (win_desktop == -1)
+			win_desktop = current_desktop;
 
 		int win_desktop_x = win_desktop % screenwidth;
 		int win_desktop_y = win_desktop / screenwidth;
