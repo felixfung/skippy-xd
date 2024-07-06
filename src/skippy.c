@@ -473,7 +473,7 @@ daemon_count_clients(MainWin *mw)
 	}
 	{
 		dlist *tmp = dlist_first(dlist_find_all(mw->clients,
-				(dlist_match_func) clientwin_validate_func, &desktop));
+				(dlist_match_func) clientwin_filter_func, &desktop));
 		mw->clientondesktop = tmp;
 	}
 
