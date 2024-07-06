@@ -43,7 +43,7 @@ clientwin_validate_panel(dlist *l, void *data) {
 }
 
 int
-clientwin_validate_func(dlist *l, void *data) {
+clientwin_filter_func(dlist *l, void *data) {
 	ClientWin *cw = l->data;
 	MainWin *mw = cw->mainwin;
 	session_t *ps = mw->ps;
@@ -55,16 +55,31 @@ clientwin_validate_func(dlist *l, void *data) {
 		return false;
 #endif
 
-	if ((!ps->o.switchShowAllDesktops && ps->o.mode == PROGMODE_SWITCH)
-			|| (!ps->o.exposeShowAllDesktops && ps->o.mode == PROGMODE_EXPOSE)) {
-		CARD32 desktop = (*(CARD32 *)data),
-			w_desktop = wm_get_window_desktop(ps, cw->wid_client);
+	CARD32 current_desktop = (*(CARD32 *)data);
+	CARD32 w_desktop = wm_get_window_desktop(ps, cw->wid_client);
+	bool filtered_in = true;
 
-		if (!(w_desktop == (CARD32) -1 || desktop == w_desktop))
-			return false;
+	if (w_desktop == -1) {
+		if (ps->o.mode == PROGMODE_SWITCH)
+			filtered_in = true;
+		else
+			filtered_in = ps->o.showSticky;
+	}
+	else {
+		if (ps->o.mode == PROGMODE_SWITCH)
+			filtered_in = (w_desktop == current_desktop)
+				|| ps->o.switchShowAllDesktops;
+		else if (ps->o.mode == PROGMODE_EXPOSE)
+			filtered_in = (w_desktop == current_desktop)
+				|| ps->o.exposeShowAllDesktops;
+		if (ps->o.mode == PROGMODE_PAGING)
+			filtered_in = true;
 	}
 
-	return wm_validate_window(mw->ps, cw->wid_client);
+	if (filtered_in)
+		return wm_validate_window(mw->ps, cw->wid_client);
+	else
+		return false;
 }
 
 int

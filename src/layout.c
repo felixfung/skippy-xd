@@ -256,6 +256,8 @@ layout_boxy(MainWin *mw, dlist *windows,
 
 			int win_desktop = wm_get_window_desktop(mw->ps, cw->wid_client);
 			int current_desktop = wm_get_current_desktop(mw->ps);
+			if (win_desktop == -1)
+				win_desktop = current_desktop;
 
 			int win_desktop_x = win_desktop % desktop_dim;
 			int win_desktop_y = win_desktop / desktop_dim;

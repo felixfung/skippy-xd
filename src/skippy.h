@@ -203,6 +203,7 @@ typedef struct {
 	bool switchShowAllDesktops;
 	bool exposeShowAllDesktops;
 	bool showShadow;
+	bool showSticky;
 	int cornerRadius;
 	int preferredIconSize;
 	client_disp_mode_t *clientDisplayModes;
@@ -288,6 +289,7 @@ typedef struct {
 	.switchShowAllDesktops = true, \
 	.exposeShowAllDesktops = false, \
 	.showShadow = true, \
+	.showSticky = true, \
 	.buttonImgs = { NULL }, \
 	.background = NULL, \
 	.xinerama_showAll = true, \

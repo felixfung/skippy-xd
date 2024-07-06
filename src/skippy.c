@@ -473,7 +473,7 @@ daemon_count_clients(MainWin *mw)
 	}
 	{
 		dlist *tmp = dlist_first(dlist_find_all(mw->clients,
-				(dlist_match_func) clientwin_validate_func, &desktop));
+				(dlist_match_func) clientwin_filter_func, &desktop));
 		mw->clientondesktop = tmp;
 	}
 
@@ -712,6 +712,8 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 		ClientWin *cw = (ClientWin *) iter->data;
 		int win_desktop = wm_get_window_desktop(mw->ps, cw->wid_client);
 		int current_desktop = wm_get_current_desktop(mw->ps);
+		if (win_desktop == -1)
+			win_desktop = current_desktop;
 
 		int win_desktop_x = win_desktop % screenwidth;
 		int win_desktop_y = win_desktop / screenwidth;
@@ -1950,6 +1952,7 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "filter", "switchShowAllDesktops", &ps->o.switchShowAllDesktops);
     config_get_bool_wrap(config, "filter", "exposeShowAllDesktops", &ps->o.exposeShowAllDesktops);
     config_get_bool_wrap(config, "filter", "showShadow", &ps->o.showShadow);
+    config_get_bool_wrap(config, "filter", "showSticky", &ps->o.showSticky);
     config_get_bool_wrap(config, "display", "movePointer", &ps->o.movePointer);
     config_get_bool_wrap(config, "filter", "showOnlyCurrentMonitor", &ps->o.xinerama_showAll);
 	ps->o.xinerama_showAll = !ps->o.xinerama_showAll;
