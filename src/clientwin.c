@@ -62,7 +62,7 @@ clientwin_filter_func(dlist *l, void *data) {
 	if (ps->o.mode == PROGMODE_PAGING)
 		filtered_in = w_desktop != -1? true: ps->o.showSticky;
 	else if (w_desktop == -1)
-		filtered_in = ps->o.showSticky;
+		filtered_in = ps->o.mode == PROGMODE_SWITCH? true: ps->o.showSticky;
 	else if (ps->o.mode == PROGMODE_SWITCH)
 		filtered_in = (w_desktop == current_desktop)
 			|| ps->o.switchShowAllDesktops;
