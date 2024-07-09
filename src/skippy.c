@@ -588,27 +588,27 @@ panel_overlapping_offset(MainWin *mw, dlist *windows,
 	calculatePanelBorders(mw, &x1, &y1, &x2, &y2);
 
 	if (x1) {
-		*newwidth += mw->distance + x1;
+		*newwidth += x1;
 		foreach_dlist(windows) {
 			ClientWin *cw = iter->data;
-			cw->x += x1 + mw->distance;
+			cw->x += x1;
 		}
 	}
 
 	if (y1) {
-		*newheight += mw->distance + y1;
+		*newheight += y1;
 		foreach_dlist(windows) {
 			ClientWin *cw = iter->data;
-			cw->y += y1 + mw->distance;
+			cw->y += y1;
 		}
 	}
 
 	if (x2) {
-		*newwidth += mw->distance + x2;
+		*newwidth += x2;
 	}
 
 	if (y2) {
-		*newheight += mw->distance + y2;
+		*newheight += y2;
 	}
 }
 
@@ -825,6 +825,19 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 				}
 			}
 			k++;
+		}
+	}
+
+	if (!mw->ps->o.panel_allow_overlap)
+	{
+		int x1=0, y1=0, x2=0, y2=0;
+		calculatePanelBorders(mw, &x1, &y1, &x2, &y2);
+
+		foreach_dlist(mw->dminis) {
+			ClientWin *cw = iter->data;
+			cw->x += x1 * mw->multiplier;
+			cw->y += y1 * mw->multiplier;
+			clientwin_move(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
 		}
 	}
 
