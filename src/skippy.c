@@ -533,70 +533,71 @@ static void
 panel_overlapping_offset(MainWin *mw,
 		float multiplier, unsigned int *newwidth, unsigned int *newheight)
 {
-	if (!mw->ps->o.panel_allow_overlap) {
-        // use heuristics to find panel borders
-        // e.g. a panel on the bottom
-		bool top_panel = false, bottom_panel = false,
-			 left_panel = false, right_panel = false;
-		int x1=0, y1=0, x2=mw->width, y2=mw->height;
-		foreach_dlist(mw->panels) {
-			ClientWin *cw = iter->data;
-			// assumed horizontal panel
-			if (cw->src.width >= cw->src.height) {
-				// assumed top panel
-				if (cw->src.y < mw->height / 2.0) {
-					top_panel = true;
-					y1 = MAX(y1, cw->src.y + cw->src.height);
-				}
-				// assumed bottom panel
-				else {
-					bottom_panel = true;
-					y2 = MIN(y2, cw->src.y);
-				}
+	if (mw->ps->o.panel_allow_overlap)
+		return;
+
+	// use heuristics to find panel borders
+	// e.g. a panel on the bottom
+	bool top_panel = false, bottom_panel = false,
+		 left_panel = false, right_panel = false;
+	int x1=0, y1=0, x2=mw->width, y2=mw->height;
+	foreach_dlist(mw->panels) {
+		ClientWin *cw = iter->data;
+		// assumed horizontal panel
+		if (cw->src.width >= cw->src.height) {
+			// assumed top panel
+			if (cw->src.y < mw->height / 2.0) {
+				top_panel = true;
+				y1 = MAX(y1, cw->src.y + cw->src.height);
 			}
-			// assumed vertical panel
+			// assumed bottom panel
 			else {
-				// assumed left panel
-				if (cw->src.x < mw->width / 2.0) {
-					left_panel = true;
-					x1 = MAX(x1, cw->src.x + cw->src.width);
-				}
-				// assumed right panel
-				else {
-					right_panel = true;
-					x2 = MIN(x2, cw->src.x);
-				}
+				bottom_panel = true;
+				y2 = MIN(y2, cw->src.y);
 			}
 		}
-
-		x2 = mw->width - x2;
-		y2 = mw->height - y2;
-
-		printfdf(false,"() panel framing calculations: (%d,%d) (%d,%d)", x1, y1, x2, y2);
-
-		if (left_panel) {
-			*newwidth += mw->distance + x1 / multiplier;
-			foreach_dlist(mw->clientondesktop) {
-				ClientWin *cw = iter->data;
-				cw->x += x1 / multiplier + mw->distance;
+		// assumed vertical panel
+		else {
+			// assumed left panel
+			if (cw->src.x < mw->width / 2.0) {
+				left_panel = true;
+				x1 = MAX(x1, cw->src.x + cw->src.width);
+			}
+			// assumed right panel
+			else {
+				right_panel = true;
+				x2 = MIN(x2, cw->src.x);
 			}
 		}
+	}
 
-		if (top_panel) {
-			*newheight += mw->distance + y1 / multiplier;
-			foreach_dlist(mw->clientondesktop) {
-				ClientWin *cw = iter->data;
-				cw->y += y1 / multiplier + mw->distance;
-			}
-		}
+	x2 = mw->width - x2;
+	y2 = mw->height - y2;
 
-		if (right_panel) {
-			*newwidth += mw->distance + x2 / multiplier;
-		}
+	printfdf(false,"() panel framing calculations: (%d,%d) (%d,%d)", x1, y1, x2, y2);
 
-		if (bottom_panel) {
-			*newheight += mw->distance + y2 / multiplier;
+	if (left_panel) {
+		*newwidth += mw->distance + x1 / multiplier;
+		foreach_dlist(mw->clientondesktop) {
+			ClientWin *cw = iter->data;
+			cw->x += x1 / multiplier + mw->distance;
 		}
+	}
+
+	if (top_panel) {
+		*newheight += mw->distance + y1 / multiplier;
+		foreach_dlist(mw->clientondesktop) {
+			ClientWin *cw = iter->data;
+			cw->y += y1 / multiplier + mw->distance;
+		}
+	}
+
+	if (right_panel) {
+		*newwidth += mw->distance + x2 / multiplier;
+	}
+
+	if (bottom_panel) {
+		*newheight += mw->distance + y2 / multiplier;
 	}
 }
 
