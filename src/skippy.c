@@ -578,7 +578,7 @@ calculatePanelBorders(MainWin *mw,
 }
 
 static void
-panel_overlapping_offset(MainWin *mw, dlist *windows,
+panel_overlapping_offset(MainWin *mw,
 		unsigned int *newwidth, unsigned int *newheight)
 {
 	if (mw->ps->o.panel_allow_overlap)
@@ -589,7 +589,7 @@ panel_overlapping_offset(MainWin *mw, dlist *windows,
 
 	if (x1) {
 		*newwidth += x1;
-		foreach_dlist(windows) {
+		foreach_dlist(mw->clientondesktop) {
 			ClientWin *cw = iter->data;
 			cw->x += x1;
 		}
@@ -597,7 +597,7 @@ panel_overlapping_offset(MainWin *mw, dlist *windows,
 
 	if (y1) {
 		*newheight += y1;
-		foreach_dlist(windows) {
+		foreach_dlist(mw->clientondesktop) {
 			ClientWin *cw = iter->data;
 			cw->y += y1;
 		}
@@ -619,7 +619,7 @@ init_layout(MainWin *mw, enum layoutmode layout, Window leader)
 	if (mw->clientondesktop)
 		layout_run(mw, mw->clientondesktop, &newwidth, &newheight, layout);
 
-	panel_overlapping_offset(mw, mw->clientondesktop, &newwidth, &newheight);
+	panel_overlapping_offset(mw, &newwidth, &newheight);
 
 	float multiplier = (float) (mw->width - 2 * mw->distance) / newwidth;
 	if (multiplier * newheight > mw->height - 2 * mw->distance)
@@ -710,7 +710,7 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 
 	unsigned int totalwidth = screenwidth * (desktop_width + mw->distance) - mw->distance;
 	unsigned int totalheight = screenheight * (desktop_height + mw->distance) - mw->distance;
-	panel_overlapping_offset(mw, mw->clientondesktop, &totalwidth, &totalheight);
+	panel_overlapping_offset(mw, &totalwidth, &totalheight);
 
     {
 		float multiplier = (float) (mw->width - 1 * mw->distance) / (float) totalwidth;
