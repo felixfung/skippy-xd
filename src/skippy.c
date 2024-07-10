@@ -620,12 +620,6 @@ init_layout(MainWin *mw, enum layoutmode layout, Window leader)
 	if (!mw->ps->o.allowUpscale)
 		multiplier = MIN(multiplier, 1.0f);
 
-	multiplier = (float) (mw->width - 2 * mw->distance) / newwidth;
-	if (multiplier * newheight > mw->height - 2 * mw->distance)
-		multiplier = (float) (mw->height - 2 * mw->distance) / newheight;
-	if (!mw->ps->o.allowUpscale)
-		multiplier = MIN(multiplier, 1.0f);
-
 	int xoff = (mw->width - (float) newwidth * multiplier) / 2;
 	int yoff = (mw->height - (float) newheight * multiplier) / 2;
 
@@ -707,10 +701,6 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 
     {
 		float multiplier = (float) (mw->width - 1 * mw->distance) / (float) totalwidth;
-		if (multiplier * totalheight > mw->height - 1 * mw->distance)
-			multiplier = (float) (mw->height - 1 * mw->distance) / (float) totalheight;
-
-		multiplier = (float) (mw->width - 1 * mw->distance) / (float) totalwidth;
 		if (multiplier * totalheight > mw->height - 1 * mw->distance)
 			multiplier = (float) (mw->height - 1 * mw->distance) / (float) totalheight;
 
