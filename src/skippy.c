@@ -588,7 +588,6 @@ panel_overlapping_offset(MainWin *mw,
 	calculatePanelBorders(mw, &x1, &y1, &x2, &y2);
 
 	if (x1) {
-		*newwidth += x1;
 		foreach_dlist(mw->clientondesktop) {
 			ClientWin *cw = iter->data;
 			cw->x += x1;
@@ -596,20 +595,14 @@ panel_overlapping_offset(MainWin *mw,
 	}
 
 	if (y1) {
-		*newheight += y1;
 		foreach_dlist(mw->clientondesktop) {
 			ClientWin *cw = iter->data;
 			cw->y += y1;
 		}
 	}
 
-	if (x2) {
-		*newwidth += x2;
-	}
-
-	if (y2) {
-		*newheight += y2;
-	}
+	*newwidth += x1 + x2;
+	*newheight += y1 + y2;
 }
 
 static bool
