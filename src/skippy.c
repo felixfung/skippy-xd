@@ -539,17 +539,17 @@ calculatePanelBorders(MainWin *mw,
 	// e.g. a panel on the bottom
 	bool top_panel = false, bottom_panel = false,
 		 left_panel = false, right_panel = false;
-	*x1=0;
-	*y1=0;
-	*x2=mw->width;
-	*y2=mw->height;
+	*x1 = 0;
+	*y1 = 0;
+	*x2 = mw->x + mw->width;
+	*y2 = mw->y + mw->height;
 
 	foreach_dlist(mw->panels) {
 		ClientWin *cw = iter->data;
 		// assumed horizontal panel
 		if (cw->src.width >= cw->src.height) {
 			// assumed top panel
-			if (cw->src.y < mw->height / 2.0) {
+			if (cw->src.y < mw->y + mw->height / 2.0) {
 				top_panel = true;
 				*y1 = MAX(*y1, cw->src.y + cw->src.height);
 			}
@@ -562,7 +562,7 @@ calculatePanelBorders(MainWin *mw,
 		// assumed vertical panel
 		else {
 			// assumed left panel
-			if (cw->src.x < mw->width / 2.0) {
+			if (cw->src.x < mw->x + mw->width / 2.0) {
 				left_panel = true;
 				*x1 = MAX(*x1, cw->src.x + cw->src.width);
 			}
@@ -574,8 +574,8 @@ calculatePanelBorders(MainWin *mw,
 		}
 	}
 
-	*x2 = mw->width - *x2;
-	*y2 = mw->height - *y2;
+	*x2 = mw->x + mw->width - *x2;
+	*y2 = mw->y + mw->height - *y2;
 
 	printfdf(false,"() panel framing calculations: (%d,%d) (%d,%d)", *x1, *y1, *x2, *y2);
 }
