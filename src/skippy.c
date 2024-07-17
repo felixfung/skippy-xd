@@ -532,6 +532,9 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 static void
 calculatePanelBorders(MainWin *mw,
 		int *x1, int *y1, int *x2, int *y2) {
+	if (mw->ps->o.panel_allow_overlap)
+		return;
+
 	// use heuristics to find panel borders
 	// e.g. a panel on the bottom
 	bool top_panel = false, bottom_panel = false,
@@ -577,34 +580,6 @@ calculatePanelBorders(MainWin *mw,
 	printfdf(false,"() panel framing calculations: (%d,%d) (%d,%d)", *x1, *y1, *x2, *y2);
 }
 
-static void
-panel_overlapping_offset(MainWin *mw,
-		unsigned int *newwidth, unsigned int *newheight)
-{
-	if (mw->ps->o.panel_allow_overlap)
-		return;
-
-	int x1=0, y1=0, x2=0, y2=0;
-	calculatePanelBorders(mw, &x1, &y1, &x2, &y2);
-
-	if (x1) {
-		foreach_dlist(mw->clientondesktop) {
-			ClientWin *cw = iter->data;
-			cw->x += x1;
-		}
-	}
-
-	if (y1) {
-		foreach_dlist(mw->clientondesktop) {
-			ClientWin *cw = iter->data;
-			cw->y += y1;
-		}
-	}
-
-	*newwidth += x1 + x2;
-	*newheight += y1 + y2;
-}
-
 static bool
 init_layout(MainWin *mw, enum layoutmode layout, Window leader)
 {
@@ -612,7 +587,10 @@ init_layout(MainWin *mw, enum layoutmode layout, Window leader)
 	if (mw->clientondesktop)
 		layout_run(mw, mw->clientondesktop, &newwidth, &newheight, layout);
 
-	panel_overlapping_offset(mw, &newwidth, &newheight);
+	int x1=0, y1=0, x2=0, y2=0;
+	calculatePanelBorders(mw, &x1, &y1, &x2, &y2);
+	newwidth += x1 + x2;
+	newheight += y1 + y2;
 
 	float multiplier = (float) (mw->width - 2 * mw->distance) / newwidth;
 	if (multiplier * newheight > mw->height - 2 * mw->distance)
@@ -624,8 +602,8 @@ init_layout(MainWin *mw, enum layoutmode layout, Window leader)
 	int yoff = (mw->height - (float) newheight * multiplier) / 2;
 
 	mw->multiplier = multiplier;
-	mw->xoff = xoff;
-	mw->yoff = yoff;
+	mw->xoff = xoff + x1;
+	mw->yoff = yoff + y1;
 
 	init_focus(mw, layout, leader);
 
@@ -697,9 +675,12 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 
 	unsigned int totalwidth = screenwidth * (desktop_width + mw->distance) - mw->distance;
 	unsigned int totalheight = screenheight * (desktop_height + mw->distance) - mw->distance;
-	panel_overlapping_offset(mw, &totalwidth, &totalheight);
 
     {
+		int x1=0, y1=0, x2=0, y2=0;
+		calculatePanelBorders(mw, &x1, &y1, &x2, &y2);
+		totalwidth += x1 + x2;
+		totalheight += y1 + y2;
 		float multiplier = (float) (mw->width - 1 * mw->distance) / (float) totalwidth;
 		if (multiplier * totalheight > mw->height - 1 * mw->distance)
 			multiplier = (float) (mw->height - 1 * mw->distance) / (float) totalheight;
@@ -708,8 +689,9 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 		int yoff = (mw->height - (float) totalheight * multiplier) / 2;
 
 		mw->multiplier = multiplier;
-		mw->xoff = xoff;
-		mw->yoff = yoff;
+		mw->multiplier = multiplier;
+		mw->xoff = xoff + x1 * multiplier;
+		mw->yoff = yoff + y1 * multiplier;
 
 		mw->desktoptransform.matrix[0][0] = 1.0;
 		mw->desktoptransform.matrix[0][1] = 0.0;
@@ -808,19 +790,6 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 				}
 			}
 			k++;
-		}
-	}
-
-	if (!mw->ps->o.panel_allow_overlap)
-	{
-		int x1=0, y1=0, x2=0, y2=0;
-		calculatePanelBorders(mw, &x1, &y1, &x2, &y2);
-
-		foreach_dlist(mw->dminis) {
-			ClientWin *cw = iter->data;
-			cw->x += x1 * mw->multiplier;
-			cw->y += y1 * mw->multiplier;
-			clientwin_move(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
 		}
 	}
 
