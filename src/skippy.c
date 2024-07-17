@@ -677,12 +677,11 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 		cw->src.y += (win_desktop_y - current_desktop_y) * (desktop_height + mw->distance);
 	}
 
-	unsigned int totalwidth = screenwidth * (desktop_width + mw->distance) - mw->distance;
-	unsigned int totalheight = screenheight * (desktop_height + mw->distance) - mw->distance;
-
     {
 		int x1=0, y1=0, x2=0, y2=0;
 		calculatePanelBorders(mw, &x1, &y1, &x2, &y2);
+		unsigned int totalwidth = screenwidth * (desktop_width + mw->distance) - mw->distance;
+		unsigned int totalheight = screenheight * (desktop_height + mw->distance) - mw->distance;
 		totalwidth += x1 + x2;
 		totalheight += y1 + y2;
 		float multiplier = (float) (mw->width - 2 * mw->distance - x1 - x2)
