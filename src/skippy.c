@@ -684,10 +684,10 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 		unsigned int totalheight = screenheight * (desktop_height + mw->distance) - mw->distance;
 		totalwidth += x1 + x2;
 		totalheight += y1 + y2;
-		float multiplier = (float) (mw->width - 2 * mw->distance - x1 - x2)
+		float multiplier = (float) (mw->width - 1 * mw->distance - x1 - x2)
 			/ (float) totalwidth;
-		if (multiplier * totalheight > mw->height - 2 * mw->distance - y1 - y2)
-			multiplier = (float) (mw->height - 2 * mw->distance - y1 - y2)
+		if (multiplier * totalheight > mw->height - 1 * mw->distance - y1 - y2)
+			multiplier = (float) (mw->height - 1 * mw->distance - y1 - y2)
 				/ (float) totalheight;
 
 		int xoff = (mw->width - x1 - x2 - (float)(totalwidth
