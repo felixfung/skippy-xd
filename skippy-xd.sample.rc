@@ -66,6 +66,7 @@ showOnlyCurrentMonitor = false
 showShadow = true
 
 # Choose whether to always display sticky windows
+# Switch shows sticky windows regardless of configuration
 showSticky = true
 
 # For switch and expose,
@@ -165,16 +166,6 @@ keysIconify = 1
 keysShade = 2
 keysClose = 3
 
-# The "pivot" keys are the Alt in Alt-Tab
-# The key has to be held for skippy-xd to activate
-# And when the key is released, skippy-xd selects the highlighted window.
-# If there are no entries to the pivot key,
-# The behaviour is to toggle skippy-xd activation
-# And no keys need to be held or released
-keysPivotSwitch = Alt_L
-keysPivotExpose = 
-keysPivotPaging = 
-
 # mouse button bindings, options include
 # "no": do nothing
 # "focus": select window
@@ -191,3 +182,13 @@ miwMouse2 = close-ewmh
 miwMouse3 = iconify
 miwMouse4 = keysNext
 miwMouse5 = keysPrev
+
+# The "pivot" keys are the Alt in Alt-Tab
+# The key has to be held for skippy-xd to activate
+# And when the key is released, skippy-xd selects the highlighted window.
+# If there are no entries to the pivot key,
+# The behaviour is to toggle skippy-xd activation
+# And no keys need to be held or released
+keysPivotSwitch = Alt_L
+keysPivotExpose = 
+keysPivotPaging = 
