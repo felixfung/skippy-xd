@@ -530,74 +530,54 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 }
 
 static void
-panel_overlapping_offset(MainWin *mw,
-		float multiplier, unsigned int *newwidth, unsigned int *newheight)
-{
-	if (!mw->ps->o.panel_allow_overlap) {
-        // use heuristics to find panel borders
-        // e.g. a panel on the bottom
-		bool top_panel = false, bottom_panel = false,
-			 left_panel = false, right_panel = false;
-		int x1=0, y1=0, x2=mw->width, y2=mw->height;
-		foreach_dlist(mw->panels) {
-			ClientWin *cw = iter->data;
-			// assumed horizontal panel
-			if (cw->src.width >= cw->src.height) {
-				// assumed top panel
-				if (cw->src.y < mw->height / 2.0) {
-					top_panel = true;
-					y1 = MAX(y1, cw->src.y + cw->src.height);
-				}
-				// assumed bottom panel
-				else {
-					bottom_panel = true;
-					y2 = MIN(y2, cw->src.y);
-				}
+calculatePanelBorders(MainWin *mw,
+		int *x1, int *y1, int *x2, int *y2) {
+	if (mw->ps->o.panel_allow_overlap)
+		return;
+
+	// use heuristics to find panel borders
+	// e.g. a panel on the bottom
+	bool top_panel = false, bottom_panel = false,
+		 left_panel = false, right_panel = false;
+	*x1 = 0;
+	*y1 = 0;
+	*x2 = mw->x + mw->width;
+	*y2 = mw->y + mw->height;
+
+	foreach_dlist(mw->panels) {
+		ClientWin *cw = iter->data;
+		// assumed horizontal panel
+		if (cw->src.width >= cw->src.height) {
+			// assumed top panel
+			if (cw->src.y < mw->y + mw->height / 2.0) {
+				top_panel = true;
+				*y1 = MAX(*y1, cw->src.y + cw->src.height);
 			}
-			// assumed vertical panel
+			// assumed bottom panel
 			else {
-				// assumed left panel
-				if (cw->src.x < mw->width / 2.0) {
-					left_panel = true;
-					x1 = MAX(x1, cw->src.x + cw->src.width);
-				}
-				// assumed right panel
-				else {
-					right_panel = true;
-					x2 = MIN(x2, cw->src.x);
-				}
+				bottom_panel = true;
+				*y2 = MIN(*y2, cw->src.y);
 			}
 		}
-
-		x2 = mw->width - x2;
-		y2 = mw->height - y2;
-
-		printfdf(false,"() panel framing calculations: (%d,%d) (%d,%d)", x1, y1, x2, y2);
-
-		if (left_panel) {
-			*newwidth += mw->distance + x1 / multiplier;
-			foreach_dlist(mw->clientondesktop) {
-				ClientWin *cw = iter->data;
-				cw->x += x1 / multiplier + mw->distance;
+		// assumed vertical panel
+		else {
+			// assumed left panel
+			if (cw->src.x < mw->x + mw->width / 2.0) {
+				left_panel = true;
+				*x1 = MAX(*x1, cw->src.x + cw->src.width);
 			}
-		}
-
-		if (top_panel) {
-			*newheight += mw->distance + y1 / multiplier;
-			foreach_dlist(mw->clientondesktop) {
-				ClientWin *cw = iter->data;
-				cw->y += y1 / multiplier + mw->distance;
+			// assumed right panel
+			else {
+				right_panel = true;
+				*x2 = MIN(*x2, cw->src.x);
 			}
-		}
-
-		if (right_panel) {
-			*newwidth += mw->distance + x2 / multiplier;
-		}
-
-		if (bottom_panel) {
-			*newheight += mw->distance + y2 / multiplier;
 		}
 	}
+
+	*x2 = mw->x + mw->width - *x2;
+	*y2 = mw->y + mw->height - *y2;
+
+	printfdf(false,"() panel framing calculations: (%d,%d) (%d,%d)", *x1, *y1, *x2, *y2);
 }
 
 static bool
@@ -607,26 +587,27 @@ init_layout(MainWin *mw, enum layoutmode layout, Window leader)
 	if (mw->clientondesktop)
 		layout_run(mw, mw->clientondesktop, &newwidth, &newheight, layout);
 
-	float multiplier = (float) (mw->width - 2 * mw->distance) / newwidth;
+	int x1=0, y1=0, x2=0, y2=0;
+	calculatePanelBorders(mw, &x1, &y1, &x2, &y2);
+	newwidth += x1 + x2;
+	newheight += y1 + y2;
+
+	float multiplier = (float) (mw->width - 2 * mw->distance
+			- x1 - x2) / newwidth;
 	if (multiplier * newheight > mw->height - 2 * mw->distance)
-		multiplier = (float) (mw->height - 2 * mw->distance) / newheight;
+		multiplier = (float) (mw->height - 2 * mw->distance
+				- y1 - y2) / newheight;
 	if (!mw->ps->o.allowUpscale)
 		multiplier = MIN(multiplier, 1.0f);
 
-	panel_overlapping_offset(mw, multiplier, &newwidth, &newheight);
-
-	multiplier = (float) (mw->width - 2 * mw->distance) / newwidth;
-	if (multiplier * newheight > mw->height - 2 * mw->distance)
-		multiplier = (float) (mw->height - 2 * mw->distance) / newheight;
-	if (!mw->ps->o.allowUpscale)
-		multiplier = MIN(multiplier, 1.0f);
-
-	int xoff = (mw->width - (float) newwidth * multiplier) / 2;
-	int yoff = (mw->height - (float) newheight * multiplier) / 2;
+	int xoff = (mw->width - x1 - x2 - (float)(newwidth
+				- x1 - x2) * multiplier) / 2;
+	int yoff = (mw->height - y1 - y2 - (float)(newheight
+				- y1 - y2) * multiplier) / 2;
 
 	mw->multiplier = multiplier;
-	mw->xoff = xoff;
-	mw->yoff = yoff;
+	mw->xoff = xoff + x1;
+	mw->yoff = yoff + y1;
 
 	init_focus(mw, layout, leader);
 
@@ -676,38 +657,6 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 	int screenwidth = desktop_dim;
 	int screenheight = ceil((float)screencount / (float)screenwidth);
 
-    {
-		unsigned int totalwidth = screenwidth * (desktop_width + mw->distance) - mw->distance;
-		unsigned int totalheight = screenheight * (desktop_height + mw->distance) - mw->distance;
-
-		float multiplier = (float) (mw->width - 1 * mw->distance) / (float) totalwidth;
-		if (multiplier * totalheight > mw->height - 1 * mw->distance)
-			multiplier = (float) (mw->height - 1 * mw->distance) / (float) totalheight;
-
-		panel_overlapping_offset(mw, multiplier, &totalwidth, &totalheight);
-
-		multiplier = (float) (mw->width - 1 * mw->distance) / (float) totalwidth;
-		if (multiplier * totalheight > mw->height - 1 * mw->distance)
-			multiplier = (float) (mw->height - 1 * mw->distance) / (float) totalheight;
-
-		int xoff = (mw->width - (float) totalwidth * multiplier) / 2;
-		int yoff = (mw->height - (float) totalheight * multiplier) / 2;
-
-		mw->multiplier = multiplier;
-		mw->xoff = xoff;
-		mw->yoff = yoff;
-
-		mw->desktoptransform.matrix[0][0] = 1.0;
-		mw->desktoptransform.matrix[0][1] = 0.0;
-		mw->desktoptransform.matrix[0][2] = xoff;
-		mw->desktoptransform.matrix[1][0] = 0.0;
-		mw->desktoptransform.matrix[1][1] = 1.0;
-		mw->desktoptransform.matrix[1][2] = yoff;
-		mw->desktoptransform.matrix[2][0] = 0.0;
-		mw->desktoptransform.matrix[2][1] = 0.0;
-		mw->desktoptransform.matrix[2][2] = 1.0;
-	}
-
 	foreach_dlist (mw->clients) {
 		ClientWin *cw = (ClientWin *) iter->data;
 		int win_desktop = wm_get_window_desktop(mw->ps, cw->wid_client);
@@ -726,6 +675,39 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 
 		cw->src.x += (win_desktop_x - current_desktop_x) * (desktop_width + mw->distance);
 		cw->src.y += (win_desktop_y - current_desktop_y) * (desktop_height + mw->distance);
+	}
+
+    {
+		int x1=0, y1=0, x2=0, y2=0;
+		calculatePanelBorders(mw, &x1, &y1, &x2, &y2);
+		unsigned int totalwidth = screenwidth * (desktop_width + mw->distance) - mw->distance;
+		unsigned int totalheight = screenheight * (desktop_height + mw->distance) - mw->distance;
+		totalwidth += x1 + x2;
+		totalheight += y1 + y2;
+		float multiplier = (float) (mw->width - 1 * mw->distance - x1 - x2)
+			/ (float) totalwidth;
+		if (multiplier * totalheight > mw->height - 1 * mw->distance - y1 - y2)
+			multiplier = (float) (mw->height - 1 * mw->distance - y1 - y2)
+				/ (float) totalheight;
+
+		int xoff = (mw->width - x1 - x2 - (float)(totalwidth
+					- x1 - x2)* multiplier) / 2;
+		int yoff = (mw->height - y1 - y2 - (float)(totalheight
+					- y1 - y2) * multiplier) / 2;
+
+		mw->multiplier = multiplier;
+		mw->xoff = xoff + x1;
+		mw->yoff = yoff + y1;
+
+		mw->desktoptransform.matrix[0][0] = 1.0;
+		mw->desktoptransform.matrix[0][1] = 0.0;
+		mw->desktoptransform.matrix[0][2] = xoff;
+		mw->desktoptransform.matrix[1][0] = 0.0;
+		mw->desktoptransform.matrix[1][1] = 1.0;
+		mw->desktoptransform.matrix[1][2] = yoff;
+		mw->desktoptransform.matrix[2][0] = 0.0;
+		mw->desktoptransform.matrix[2][1] = 0.0;
+		mw->desktoptransform.matrix[2][2] = 1.0;
 	}
 
 	// create windows which represent each virtual desktop
