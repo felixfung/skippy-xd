@@ -1318,21 +1318,36 @@ mainloop(session_t *ps, bool activate_on_start) {
 					ClientWin *cw = (ClientWin *) iter->data;
 					if (cw->mini.window == wid) {
 						if (ps->o.panel_allow_click) {
-							if (ev.type == ButtonPress)
-								cw->mainwin->pressed_mouse = true;
-							if (ev.type == ButtonRelease
-								&& cw->mainwin->pressed_mouse) {
-									printfdf(true,
-											"(): panel click redirection %#010x -> %#010x (%d,%d)",
-											ev.xbutton.window,
-											cw->wid_client,
-											ev.xbutton.x, ev.xbutton.y);
+							if (ev.type == ButtonPress) {
+								printfdf(true,
+										"(): panel button (%d) redirection %#010x -> %#010x (%d,%d)",
+										ev.xbutton.button,
+										ev.xbutton.window,
+										cw->wid_client,
+										ev.xbutton.x, ev.xbutton.y);
+								ev.xbutton.window = cw->wid_client;
 
-									ev.xbutton.window = cw->wid_client;
-									XSendEvent(ps->dpy, cw->wid_client,
-											False, ButtonReleaseMask, &ev);
-									XFlush(ps->dpy);
-									cw->mainwin->pressed_mouse = false;
+								XSendEvent(ps->dpy, cw->wid_client,
+										True, ButtonReleaseMask, &ev);
+
+								XFlush(ps->dpy);
+								cw->mainwin->pressed_mouse = true;
+							}
+							else if (ev.type == ButtonRelease
+							&& cw->mainwin->pressed_mouse) {
+								printfdf(true,
+										"(): button release (%d) redirection %#010x -> %#010x (%d,%d)",
+										ev.xbutton.button,
+										ev.xbutton.window,
+										cw->wid_client,
+										ev.xbutton.x, ev.xbutton.y);
+								ev.xbutton.window = cw->wid_client;
+
+								XSendEvent(ps->dpy, cw->wid_client,
+										True, ButtonReleaseMask, &ev);
+
+								XFlush(ps->dpy);
+								cw->mainwin->pressed_mouse = false;
 							}
 						}
 						else {
