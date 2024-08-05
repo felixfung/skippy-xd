@@ -1,0 +1,23 @@
+Looking for a deb?
+
+Go to https://github.com/tonywhatever/deb_build4skippy
+
+There in the README.md you find:
+
+    a link to download an installable debian binary.
+
+    two very simple recipes to create your very own installable
+    debian-binary if you so wish.
+
+Distros supported:
+
+    Debian: will also work for Devuan, MX-Linux, Antix, SpiralLinux etc.
+    Architecture: i386 and amd64
+
+    Ubuntu: will work for all flavours/editions of
+    Ubuntu and Linux Mint
+    Architecture: amd64
+
+All available binaries have been tested and work as they should.
+
+    Antony DC antonydc047@gmail.com
