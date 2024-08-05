@@ -876,6 +876,7 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 							ps->o.bindings_miwMouse[button]);
 				}
 			}
+			cw->mainwin->pressed_mouse = false;
 		}
 		else
 			printfdf(false, "(): ButtonRelease %u ignored.", button);

@@ -560,6 +560,7 @@ mainwin_handle(MainWin *mw, XEvent *ev) {
 						return 0;
 					}
 				}
+				mw->pressed_mouse = false;
 				printfdf(false, "(): Detected mouse button release on main window, "
 						"exiting.");
 				return 1;

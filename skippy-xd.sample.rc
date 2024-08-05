@@ -132,6 +132,7 @@ show = true
 showDesktop = false
 backgroundTinting = true
 allowOverlap = true
+allowClick = false
 
 [tooltip]
 show = true

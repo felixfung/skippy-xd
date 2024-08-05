@@ -38,6 +38,7 @@
 #include <X11/Xmd.h>
 #include <X11/Xatom.h>
 #include <X11/Xft/Xft.h>
+#include <X11/Xutil.h>
 
 #include <X11/extensions/Xrender.h>
 #include <X11/extensions/Xcomposite.h>
@@ -232,6 +233,7 @@ typedef struct {
 	bool panel_show_desktop;
 	bool panel_tinting;
 	bool panel_allow_overlap;
+	bool panel_allow_click;
 
 	bool tooltip_show;
 	bool tooltip_showDesktop;
@@ -306,6 +308,7 @@ typedef struct {
 	.panel_show_desktop = false, \
 	.panel_tinting = true, \
 	.panel_allow_overlap = true, \
+	.panel_allow_click = false, \
 	.tooltip_show = true, \
 	.tooltip_showDesktop = true, \
 	.tooltip_showMonitor = true, \
