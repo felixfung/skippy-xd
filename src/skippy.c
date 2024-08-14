@@ -1412,7 +1412,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					else if (mw && ps->o.focus_initial == 0) {
 						printfdf(false, "(): toggling skippy off");
 
-						KeyCode *pivotkey = NULL; // mw->keycodes_PivotExpose;
+						KeyCode *pivotkey = NULL;
 						if (layout == LAYOUTMODE_SWITCH)
 							pivotkey = mw->keycodes_PivotSwitch;
 						else if (layout == LAYOUTMODE_EXPOSE)
