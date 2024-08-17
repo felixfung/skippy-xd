@@ -39,7 +39,8 @@ int
 clientwin_validate_panel(dlist *l, void *data) {
 	ClientWin *cw = l->data;
 	MainWin *mw = cw->mainwin;
-	return wm_identify_panel(mw->ps, cw->wid_client);
+	cw->paneltype = wm_identify_panel(mw->ps, cw->wid_client);
+	return cw->paneltype != WINTYPE_WINDOW;
 }
 
 int
@@ -436,7 +437,7 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 					cw->destination, s_x, s_y, 0, 0, s_x, s_y, s_w, s_h);
 		}
 
-		if (cw->panel && ps->o.panel_tinting && ps->o.background)
+		if (cw->paneltype != WINTYPE_WINDOW && ps->o.panel_tinting && ps->o.background)
 			XRenderComposite(ps->dpy, PictOpOver, ps->o.background->pict, None,
 					cw->destination, s_x, s_y, 0, 0, s_x, s_y, s_w, s_h);
 
@@ -605,13 +606,13 @@ clientwin_map(ClientWin *cw) {
 
 	if (cw->origin) {
 		cw->damage = XDamageCreate(ps->dpy, cw->src.window, XDamageReportDeltaRectangles);
-		if (!cw->panel)
+		if (cw->paneltype == WINTYPE_WINDOW)
 			XRenderSetPictureTransform(ps->dpy, cw->origin, &cw->mainwin->transform);
 	}
 
 	if (cw->shadow) {
 		cw->damage = XDamageCreate(ps->dpy, cw->src.window, XDamageReportDeltaRectangles);
-		if (!cw->panel)
+		if (cw->paneltype == WINTYPE_WINDOW)
 			XRenderSetPictureTransform(ps->dpy, cw->shadow, &cw->mainwin->transform);
 	}
 
@@ -620,7 +621,8 @@ clientwin_map(ClientWin *cw) {
 	XMapWindow(ps->dpy, cw->mini.window);
 	XRaiseWindow(ps->dpy, cw->mini.window);
 
-	if (ps->o.tooltip_show && ps->o.mode != PROGMODE_PAGING && !cw->panel) {
+	if (ps->o.tooltip_show && ps->o.mode != PROGMODE_PAGING
+			&& cw->paneltype == WINTYPE_WINDOW) {
 		clientwin_tooltip(cw);
 		tooltip_handle(cw->tooltip);
 	}

@@ -546,6 +546,8 @@ calculatePanelBorders(MainWin *mw,
 
 	foreach_dlist(mw->panels) {
 		ClientWin *cw = iter->data;
+		if (cw->paneltype != WINTYPE_PANEL)
+			continue;
 		// assumed horizontal panel
 		if (cw->src.width >= cw->src.height) {
 			// assumed top panel
@@ -890,7 +892,7 @@ skippy_activate(MainWin *mw, enum layoutmode layout)
 		ClientWin *cw = iter->data;
 		cw->x *= mw->multiplier;
 		cw->y *= mw->multiplier;
-		cw->panel = false;
+		cw->paneltype = WINTYPE_WINDOW;
 		if (!mw->ps->o.pseudoTrans)
 		{
 			cw->x += cw->mainwin->x;
@@ -901,7 +903,7 @@ skippy_activate(MainWin *mw, enum layoutmode layout)
 	foreach_dlist(mw->panels) {
 		ClientWin *cw = iter->data;
 		cw->factor = 1;
-		cw->panel = true;
+		cw->paneltype = wm_identify_panel(mw->ps, cw->wid_client);
 		clientwin_update(cw);
 		clientwin_update2(cw);
 	}
