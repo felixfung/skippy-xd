@@ -1391,6 +1391,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 					if (!mw || !mw->mapped)
 					{
+						printfdf(false, "(): skippy activating, mode=%d", layout);
 						animating = activate = true;
 						if ((piped_input | PIPECMD_PREV | PIPECMD_NEXT)
 								== (PIPECMD_SWITCH | PIPECMD_PREV | PIPECMD_NEXT)) {
@@ -1407,13 +1408,25 @@ mainloop(session_t *ps, bool activate_on_start) {
 							ps->o.mode = PROGMODE_PAGING;
 							layout = LAYOUTMODE_PAGING;
 						}
-						printfdf(false, "(): skippy activating, mode=%d", layout);
 					}
+					// parameter == 0, toggle
+					// otherwise shift window focus
 					else if (mw && ps->o.focus_initial == 0) {
-						// parameter == 0, toggle
-						// otherwise shift window focus
-						mw->refocus = die = true;
 						printfdf(false, "(): toggling skippy off");
+
+						KeyCode *pivotkey = NULL;
+						if (layout == LAYOUTMODE_SWITCH)
+							pivotkey = mw->keycodes_PivotSwitch;
+						else if (layout == LAYOUTMODE_EXPOSE)
+							pivotkey = mw->keycodes_PivotExpose;
+						else if (layout == LAYOUTMODE_PAGING)
+							pivotkey = mw->keycodes_PivotPaging;
+
+						if (!pivotkey)
+							mw->refocus = die = true;
+						else if (pivotkey && !pivoting(ps, pivotkey))
+							die = true;
+
 						break;
 					}
 					else if (mw && mw->mapped)
