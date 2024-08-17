@@ -180,6 +180,12 @@ typedef enum {
 	CLIDISP_THUMBNAIL_ICON,
 } client_disp_mode_t;
 
+typedef enum {
+	WINTYPE_WINDOW,
+	WINTYPE_PANEL,
+	WINTYPE_DESKTOP
+} wintype_t;
+
 /// @brief Option structure.
 typedef struct {
 	char *config_path;

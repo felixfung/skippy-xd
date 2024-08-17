@@ -614,17 +614,17 @@ wm_set_fullscreen(session_t *ps, Window window,
 	}
 }
 
-bool
+wintype_t
 wm_identify_panel(session_t *ps, Window wid) {
-	bool result = false;
+	wintype_t result = WINTYPE_WINDOW;
 	// Check _NET_WM_WINDOW_TYPE
 	winprop_t prop = wid_get_prop(ps, wid, _NET_WM_WINDOW_TYPE, 1, XA_ATOM, 32);
 	{
 		long v = winprop_get_int(&prop);
 		if (_NET_WM_WINDOW_TYPE_DOCK == v)
-			result = true;
+			result = WINTYPE_PANEL;
 		if (ps->o.panel_show_desktop && _NET_WM_WINDOW_TYPE_DESKTOP == v)
-			result = true;
+			result = WINTYPE_DESKTOP;
 	}
 	free_winprop(&prop);
 

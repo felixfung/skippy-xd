@@ -55,7 +55,7 @@ struct _clientwin_t {
 	bool damaged;
 
 	bool zombie;
-	bool panel;
+	wintype_t paneltype;
 	/* XserverRegion repair; */
 	
 	/* These are virtual positions set by the layout routine */
