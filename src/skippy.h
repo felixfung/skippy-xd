@@ -309,7 +309,7 @@ typedef struct {
 	.shadow_tintOpacity = 0, \
 	.shadow_opacity = 160, \
 	.panel_show = true, \
-	.panel_show_desktop = false, \
+	.panel_show_desktop = true, \
 	.panel_tinting = true, \
 	.panel_allow_overlap = true, \
 	.tooltip_show = true, \
