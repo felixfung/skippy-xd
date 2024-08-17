@@ -1942,6 +1942,7 @@ load_config_file(session_t *ps)
     config_get_int_wrap(config, "layout", "switchWaitDuration", &ps->o.switchWaitDuration, 0, 2000);
     config_get_int_wrap(config, "layout", "animationDuration", &ps->o.animationDuration, 0, 2000);
     config_get_bool_wrap(config, "system", "pseudoTrans", &ps->o.pseudoTrans);
+    config_get_bool_wrap(config, "display", "showDesktop", &ps->o.panel_show_desktop);
     config_get_bool_wrap(config, "display", "includeFrame", &ps->o.includeFrame);
     config_get_bool_wrap(config, "layout", "allowUpscale", &ps->o.allowUpscale);
 	config_get_int_wrap(config, "display", "cornerRadius", &ps->o.cornerRadius, 0, INT_MAX);
@@ -1960,7 +1961,6 @@ load_config_file(session_t *ps)
     config_get_int_wrap(config, "shadow", "tintOpacity", &ps->o.shadow_tintOpacity, 0, 256);
     config_get_int_wrap(config, "shadow", "opacity", &ps->o.shadow_opacity, 0, 256);
     config_get_bool_wrap(config, "panel", "show", &ps->o.panel_show);
-    config_get_bool_wrap(config, "panel", "showDesktop", &ps->o.panel_show_desktop);
     config_get_bool_wrap(config, "panel", "backgroundTinting", &ps->o.panel_tinting);
     config_get_bool_wrap(config, "panel", "allowOverlap", &ps->o.panel_allow_overlap);
     config_get_bool_wrap(config, "tooltip", "show", &ps->o.tooltip_show);
