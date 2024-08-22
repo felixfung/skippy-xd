@@ -1319,7 +1319,42 @@ mainloop(session_t *ps, bool activate_on_start) {
 				for (iter = mw->panels; iter && processing; iter = iter->next) {
 					ClientWin *cw = (ClientWin *) iter->data;
 					if (cw->mini.window == wid) {
-						die = mainwin_handle(mw, &ev);
+						if (ps->o.panel_allow_click) {
+							if (ev.type == ButtonPress) {
+								printfdf(true,
+										"(): panel button (%d) redirection %#010x -> %#010x (%d,%d)",
+										ev.xbutton.button,
+										ev.xbutton.window,
+										cw->wid_client,
+										ev.xbutton.x, ev.xbutton.y);
+								ev.xbutton.window = cw->wid_client;
+
+								XSendEvent(ps->dpy, cw->wid_client,
+										True, ButtonReleaseMask, &ev);
+
+								XFlush(ps->dpy);
+								cw->mainwin->pressed_mouse = true;
+							}
+							else if (ev.type == ButtonRelease
+							&& cw->mainwin->pressed_mouse) {
+								printfdf(true,
+										"(): button release (%d) redirection %#010x -> %#010x (%d,%d)",
+										ev.xbutton.button,
+										ev.xbutton.window,
+										cw->wid_client,
+										ev.xbutton.x, ev.xbutton.y);
+								ev.xbutton.window = cw->wid_client;
+
+								XSendEvent(ps->dpy, cw->wid_client,
+										True, ButtonReleaseMask, &ev);
+
+								XFlush(ps->dpy);
+								cw->mainwin->pressed_mouse = false;
+							}
+						}
+						else {
+							die = mainwin_handle(mw, &ev);
+						}
 						processing = false;
 					}
 				}
@@ -1963,6 +1998,7 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "panel", "show", &ps->o.panel_show);
     config_get_bool_wrap(config, "panel", "backgroundTinting", &ps->o.panel_tinting);
     config_get_bool_wrap(config, "panel", "allowOverlap", &ps->o.panel_allow_overlap);
+    config_get_bool_wrap(config, "panel", "allowClick", &ps->o.panel_allow_click);
     config_get_bool_wrap(config, "tooltip", "show", &ps->o.tooltip_show);
     config_get_bool_wrap(config, "tooltip", "showDesktop", &ps->o.tooltip_showDesktop);
     config_get_bool_wrap(config, "tooltip", "showMonitor", &ps->o.tooltip_showMonitor);
