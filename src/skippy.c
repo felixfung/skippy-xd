@@ -1070,7 +1070,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 			foreach_dlist (mw->desktopwins) {
 				XDestroyWindow(ps->dpy, (Window) (iter->data));
-				//XSelectInput(ps->dpy, (Window) (iter->data), 0);
 			}
 			dlist_free(mw->desktopwins);
 			mw->desktopwins = NULL;
@@ -1306,6 +1305,11 @@ mainloop(session_t *ps, bool activate_on_start) {
 								 && ev.type != MotionNotify
 								 && ev.type != EnterNotify
 								 && ev.type != LeaveNotify
+								 && ev.type != CreateNotify
+								 && ev.type != CirculateNotify
+								 && ev.type != ConfigureNotify
+								 && ev.type != GravityNotify
+								 && ev.type != ReparentNotify
 								))) {
 							die = clientwin_handle(cw, &ev);
 							if (layout == LAYOUTMODE_PAGING) {
@@ -2122,7 +2126,7 @@ int main(int argc, char *argv[]) {
 	}
 	ps->mainwin = mw;
 
-	XSelectInput(ps->dpy, ps->root, PropertyChangeMask);
+	XSelectInput(ps->dpy, ps->root, PropertyChangeMask | SubstructureNotifyMask);
 
 	// Daemon mode
 	if (ps->o.runAsDaemon) {
