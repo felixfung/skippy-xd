@@ -221,6 +221,13 @@ clientwin_update(ClientWin *cw) {
 		}
 		cw->src.width = wattr.width;
 		cw->src.height = wattr.height;
+
+		if (wattr.width == 0 && wattr.height == 0) {
+			XWindowAttributes wattr2 = { };
+			XGetWindowAttributes(ps->dpy, cw->wid_client, &wattr2);
+			cw->src.width = wattr2.width;
+			cw->src.height = wattr2.height;
+		}
 		cw->src.format = XRenderFindVisualFormat(ps->dpy, wattr.visual);
 	}
 
