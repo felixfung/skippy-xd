@@ -213,22 +213,29 @@ clientwin_update(ClientWin *cw) {
 	XGetWindowAttributes(ps->dpy, cw->src.window, &wattr);
 
 	{
-		{
-			Window tmpwin = None;
-			XTranslateCoordinates(ps->dpy, cw->src.window, wattr.root,
+		Window tmpwin = None;
+		XTranslateCoordinates(ps->dpy, cw->src.window, wattr.root,
+				-wattr.border_width, -wattr.border_width,
+				&cw->src.x, &cw->src.y, &tmpwin);
+
+		if (wattr.width == 0 && wattr.height == 0) {
+			XGetWindowAttributes(ps->dpy, cw->wid_client, &wattr);
+			XTranslateCoordinates(ps->dpy, cw->wid_client, wattr.root,
 					-wattr.border_width, -wattr.border_width,
 					&cw->src.x, &cw->src.y, &tmpwin);
 		}
-		cw->src.width = wattr.width;
-		cw->src.height = wattr.height;
-		cw->src.format = XRenderFindVisualFormat(ps->dpy, wattr.visual);
 	}
 
-	if (ps->o.tooltip_show && !cw->tooltip)
-		cw->tooltip = tooltip_create(cw->mainwin);
+	cw->src.width = wattr.width;
+	cw->src.height = wattr.height;
 
 	bool isViewable = wattr.map_state == IsViewable;
 	cw->zombie = !isViewable;
+
+	cw->src.format = XRenderFindVisualFormat(ps->dpy, wattr.visual);
+
+	if (ps->o.tooltip_show && !cw->tooltip)
+		cw->tooltip = tooltip_create(cw->mainwin);
 
 	if (isViewable) {
 		static XRenderPictureAttributes pa = { .subwindow_mode = IncludeInferiors };

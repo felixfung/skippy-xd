@@ -174,7 +174,7 @@ tooltip_map(Tooltip *tt, ClientWin *cw, FcChar8 *text, int len)
 	
 	XftTextExtentsUtf8(ps->dpy, tt->font, text, len, &tt->extents);
 	
-	while (tt->extents.width > max_width) {
+	while (tt->extents.width > max_width && len > 3) {
 		ptr = text + len - 1;
 		*ptr-- = '\0';
 		*ptr-- = '.';
