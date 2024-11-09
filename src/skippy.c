@@ -1935,8 +1935,8 @@ load_config_file(session_t *ps)
     ps->o.bindings_keysDown = mstrdup(config_get(config, "bindings", "keysDown", "Down"));
     ps->o.bindings_keysLeft = mstrdup(config_get(config, "bindings", "keysLeft", "Left"));
     ps->o.bindings_keysRight = mstrdup(config_get(config, "bindings", "keysRight", "Right"));
-    ps->o.bindings_keysPrev = mstrdup(config_get(config, "bindings", "keysPrev", "p"));
-    ps->o.bindings_keysNext = mstrdup(config_get(config, "bindings", "keysNext", "n"));
+    ps->o.bindings_keysNext = mstrdup(config_get(config, "bindings", "keysNext", "Tab"));
+    ps->o.bindings_masksReverse = mstrdup(config_get(config, "bindings", "keysReverse", "ShiftMask"));
     ps->o.bindings_keysCancel = mstrdup(config_get(config, "bindings", "keysCancel", "Escape"));
     ps->o.bindings_keysSelect = mstrdup(config_get(config, "bindings", "keysSelect", "Return space"));
     ps->o.bindings_keysIconify = mstrdup(config_get(config, "bindings", "keysIconify", "1"));
@@ -1948,7 +1948,7 @@ load_config_file(session_t *ps)
     check_keysyms(ps->o.config_path, ": [bindings] keysDown =", ps->o.bindings_keysDown);
     check_keysyms(ps->o.config_path, ": [bindings] keysLeft =", ps->o.bindings_keysLeft);
     check_keysyms(ps->o.config_path, ": [bindings] keysRight =", ps->o.bindings_keysRight);
-    check_keysyms(ps->o.config_path, ": [bindings] keysPrev =", ps->o.bindings_keysPrev);
+    check_keysyms(ps->o.config_path, ": [bindings] keysReverse =", ps->o.bindings_masksReverse);
     check_keysyms(ps->o.config_path, ": [bindings] keysNext =", ps->o.bindings_keysNext);
     check_keysyms(ps->o.config_path, ": [bindings] keysCancel =", ps->o.bindings_keysCancel);
     check_keysyms(ps->o.config_path, ": [bindings] keysSelect =", ps->o.bindings_keysSelect);
@@ -2252,7 +2252,7 @@ main_end:
 			free(ps->o.bindings_keysDown);
 			free(ps->o.bindings_keysLeft);
 			free(ps->o.bindings_keysRight);
-			free(ps->o.bindings_keysPrev);
+			free(ps->o.bindings_masksReverse);
 			free(ps->o.bindings_keysNext);
 			free(ps->o.bindings_keysCancel);
 			free(ps->o.bindings_keysSelect);

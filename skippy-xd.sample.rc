@@ -177,8 +177,8 @@ keysRight = Right
 
 keysSelect = Return space
 keysCancel = Escape
-keysNext = n
-keysPrev = p
+keysNext = Tab
+keysReverse = ShiftMask
 
 keysIconify = 1
 keysShade = 2

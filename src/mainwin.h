@@ -54,7 +54,6 @@ struct _mainwin_t {
 	KeySym *keysyms_Down;
 	KeySym *keysyms_Left;
 	KeySym *keysyms_Right;
-	KeySym *keysyms_Prev;
 	KeySym *keysyms_Next;
 	KeySym *keysyms_Cancel;
 	KeySym *keysyms_Select;
@@ -72,7 +71,6 @@ struct _mainwin_t {
 	KeyCode *keycodes_Down;
 	KeyCode *keycodes_Left;
 	KeyCode *keycodes_Right;
-	KeyCode *keycodes_Prev;
 	KeyCode *keycodes_Next;
 	KeyCode *keycodes_Cancel;
 	KeyCode *keycodes_Select;
@@ -85,6 +83,8 @@ struct _mainwin_t {
 	KeyCode *keycodes_TapExpose;
 	KeyCode *keycodes_PivotPaging;
 	KeyCode *keycodes_TapPaging;
+
+	int *keymasks_Reverse;
 
 	bool refocus;
 	bool mapped;

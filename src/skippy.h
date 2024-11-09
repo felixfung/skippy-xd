@@ -257,8 +257,8 @@ typedef struct {
 	char *bindings_keysDown;
 	char *bindings_keysLeft;
 	char *bindings_keysRight;
-	char *bindings_keysPrev;
 	char *bindings_keysNext;
+	char *bindings_masksReverse;
 	char *bindings_keysCancel;
 	char *bindings_keysSelect;
 	char *bindings_keysIconify;

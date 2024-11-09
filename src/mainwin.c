@@ -134,7 +134,6 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keys_str_syms(ps->o.bindings_keysDown, &mw->keysyms_Down);
 	keys_str_syms(ps->o.bindings_keysLeft, &mw->keysyms_Left);
 	keys_str_syms(ps->o.bindings_keysRight, &mw->keysyms_Right);
-	keys_str_syms(ps->o.bindings_keysPrev, &mw->keysyms_Prev);
 	keys_str_syms(ps->o.bindings_keysNext, &mw->keysyms_Next);
 	keys_str_syms(ps->o.bindings_keysCancel, &mw->keysyms_Cancel);
 	keys_str_syms(ps->o.bindings_keysSelect, &mw->keysyms_Select);
@@ -153,7 +152,6 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keysyms_arr_keycodes(dpy, mw->keysyms_Down, &mw->keycodes_Down);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Left, &mw->keycodes_Left);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Right, &mw->keycodes_Right);
-	keysyms_arr_keycodes(dpy, mw->keysyms_Prev, &mw->keycodes_Prev);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Next, &mw->keycodes_Next);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Cancel, &mw->keycodes_Cancel);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Select, &mw->keycodes_Select);
@@ -166,6 +164,8 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keysyms_arr_keycodes(dpy, mw->keysyms_TapExpose, &mw->keycodes_TapExpose);
 	keysyms_arr_keycodes(dpy, mw->keysyms_PivotPaging, &mw->keycodes_PivotPaging);
 	keysyms_arr_keycodes(dpy, mw->keysyms_TapPaging, &mw->keycodes_TapPaging);
+
+	modkeymasks_str_enums(ps->o.bindings_masksReverse, &mw->keymasks_Reverse);
 
 	// we check all possible pairs, one pair at a time. This is in a specific order, to give a more helpful error msg
 	check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysDown", mw->keysyms_Down);
@@ -183,11 +183,6 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	check_keybindings_conflict(ps->o.config_path, "keysLeft", mw->keysyms_Left, "keysCancel", mw->keysyms_Cancel);
 	check_keybindings_conflict(ps->o.config_path, "keysLeft", mw->keysyms_Left, "keysSelect", mw->keysyms_Select);
 	//check_keybindings_conflict(ps->o.config_path, "keysLeft", mw->keysyms_Left, "keysPivot", mw->keysyms_Pivot);
-	check_keybindings_conflict(ps->o.config_path, "keysRight", mw->keysyms_Prev, "keysCancel", mw->keysyms_Cancel);
-	check_keybindings_conflict(ps->o.config_path, "keysRight", mw->keysyms_Prev, "keysSelect", mw->keysyms_Select);
-	//check_keybindings_conflict(ps->o.config_path, "keysRight", mw->keysyms_Prev, "keysPivot", mw->keysyms_Pivot);
-	check_keybindings_conflict(ps->o.config_path, "keysPrev", mw->keysyms_Prev, "keysCancel", mw->keysyms_Cancel);
-	check_keybindings_conflict(ps->o.config_path, "keysPrev", mw->keysyms_Prev, "keysSelect", mw->keysyms_Select);
 	check_keybindings_conflict(ps->o.config_path, "keysNext", mw->keysyms_Next, "keysCancel", mw->keysyms_Cancel);
 	check_keybindings_conflict(ps->o.config_path, "keysNext", mw->keysyms_Next, "keysSelect", mw->keysyms_Select);
 	check_keybindings_conflict(ps->o.config_path, "keysCancel", mw->keysyms_Cancel, "keysSelect", mw->keysyms_Select);
@@ -473,7 +468,6 @@ mainwin_destroy(MainWin *mw) {
 	free(mw->keysyms_Down);
 	free(mw->keysyms_Left);
 	free(mw->keysyms_Right);
-	free(mw->keysyms_Prev);
 	free(mw->keysyms_Next);
 	free(mw->keysyms_Cancel);
 	free(mw->keysyms_Select);
@@ -491,7 +485,6 @@ mainwin_destroy(MainWin *mw) {
 	free(mw->keycodes_Down);
 	free(mw->keycodes_Left);
 	free(mw->keycodes_Right);
-	free(mw->keycodes_Prev);
 	free(mw->keycodes_Next);
 	free(mw->keycodes_Cancel);
 	free(mw->keycodes_Select);
@@ -504,6 +497,8 @@ mainwin_destroy(MainWin *mw) {
 	free(mw->keycodes_TapExpose);
 	free(mw->keycodes_PivotPaging);
 	free(mw->keycodes_TapPaging);
+
+	free(mw->keymasks_Reverse);
 
 	free(mw);
 }

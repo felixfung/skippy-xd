@@ -823,10 +823,12 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 			focus_left(cw->mainwin->client_to_focus);
 		else if (arr_keycodes_includes(cw->mainwin->keycodes_Right, evk->keycode))
 			focus_right(cw->mainwin->client_to_focus);
-		else if (arr_keycodes_includes(cw->mainwin->keycodes_Prev, evk->keycode))
-			focus_miniw_prev(ps, cw->mainwin->client_to_focus);
-		else if (arr_keycodes_includes(cw->mainwin->keycodes_Next, evk->keycode))
-			focus_miniw_next(ps, cw->mainwin->client_to_focus);
+		else if (arr_keycodes_includes(cw->mainwin->keycodes_Next, evk->keycode)) {
+			if (arr_modkeymasks_includes(cw->mainwin->keymasks_Reverse, evk->state))
+				focus_miniw_prev(ps, cw->mainwin->client_to_focus);
+			else
+				focus_miniw_next(ps, cw->mainwin->client_to_focus);
+		}
 		else if (arr_keycodes_includes(cw->mainwin->keycodes_Cancel, evk->keycode))
 		{
 			mw->refocus = true;
