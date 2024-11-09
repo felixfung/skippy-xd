@@ -973,6 +973,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 	bool pending_damage = false;
 	long last_rendered = 0L;
 	enum layoutmode layout = LAYOUTMODE_EXPOSE;
+	bool toggling = true;
 	bool animating = activate;
 	long first_animated = 0L;
 	bool first_animating = false;
@@ -1097,7 +1098,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// the placement of this code allows MainWin not to map
 		// so that previews may not show for switch
 		// when the pivot key is held for only short time
-		if (mw)
+		if (mw && !toggling)
 		{
 			bool pivotTerminate = false;
 			if (layout == LAYOUTMODE_SWITCH && mw->keycodes_PivotSwitch) {
@@ -1384,6 +1385,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				if (switchTrigger) {
 					animating = activate = true;
 					layout = LAYOUTMODE_SWITCH;
+					toggling = false;
 					if (ps->mainwin->keycodes_TapSwitch)
 						ps->o.focus_initial = 1;
 				}
@@ -1397,6 +1399,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				if (exposeTrigger) {
 					animating = activate = true;
 					layout = LAYOUTMODE_EXPOSE;
+					toggling = false;
 					if (ps->mainwin->keycodes_TapExpose)
 						ps->o.focus_initial = 1;
 				}
@@ -1410,6 +1413,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				if (pagingTrigger) {
 					animating = activate = true;
 					layout = LAYOUTMODE_PAGING;
+					toggling = false;
 					if (ps->mainwin->keycodes_TapPaging)
 						ps->o.focus_initial = 1;
 				}
@@ -1439,6 +1443,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					{
 						printfdf(false, "(): skippy activating, mode=%d", layout);
 						animating = activate = true;
+						toggling = true;
 						if ((piped_input | PIPECMD_PREV | PIPECMD_NEXT)
 								== (PIPECMD_SWITCH | PIPECMD_PREV | PIPECMD_NEXT)) {
 							ps->o.mode = PROGMODE_SWITCH;
