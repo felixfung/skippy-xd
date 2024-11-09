@@ -142,8 +142,11 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keys_str_syms(ps->o.bindings_keysShade, &mw->keysyms_Shade);
 	keys_str_syms(ps->o.bindings_keysClose, &mw->keysyms_Close);
 	keys_str_syms(ps->o.bindings_keysPivotSwitch, &mw->keysyms_PivotSwitch);
+	keys_str_syms(ps->o.bindings_keysTapSwitch, &mw->keysyms_TapSwitch);
 	keys_str_syms(ps->o.bindings_keysPivotExpose, &mw->keysyms_PivotExpose);
+	keys_str_syms(ps->o.bindings_keysTapExpose, &mw->keysyms_TapExpose);
 	keys_str_syms(ps->o.bindings_keysPivotPaging, &mw->keysyms_PivotPaging);
+	keys_str_syms(ps->o.bindings_keysTapPaging, &mw->keysyms_TapPaging);
 
 	// convert the arrays of KeySyms into arrays of KeyCodes, for this specific Display
 	keysyms_arr_keycodes(dpy, mw->keysyms_Up, &mw->keycodes_Up);
@@ -158,8 +161,11 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keysyms_arr_keycodes(dpy, mw->keysyms_Shade, &mw->keycodes_Shade);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Close, &mw->keycodes_Close);
 	keysyms_arr_keycodes(dpy, mw->keysyms_PivotSwitch, &mw->keycodes_PivotSwitch);
+	keysyms_arr_keycodes(dpy, mw->keysyms_TapSwitch, &mw->keycodes_TapSwitch);
 	keysyms_arr_keycodes(dpy, mw->keysyms_PivotExpose, &mw->keycodes_PivotExpose);
+	keysyms_arr_keycodes(dpy, mw->keysyms_TapExpose, &mw->keycodes_TapExpose);
 	keysyms_arr_keycodes(dpy, mw->keysyms_PivotPaging, &mw->keycodes_PivotPaging);
+	keysyms_arr_keycodes(dpy, mw->keysyms_TapPaging, &mw->keycodes_TapPaging);
 
 	// we check all possible pairs, one pair at a time. This is in a specific order, to give a more helpful error msg
 	check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysDown", mw->keysyms_Down);
@@ -475,8 +481,11 @@ mainwin_destroy(MainWin *mw) {
 	free(mw->keysyms_Shade);
 	free(mw->keysyms_Close);
 	free(mw->keysyms_PivotSwitch);
+	free(mw->keysyms_TapSwitch);
 	free(mw->keysyms_PivotExpose);
+	free(mw->keysyms_TapExpose);
 	free(mw->keysyms_PivotPaging);
+	free(mw->keysyms_TapPaging);
 
 	free(mw->keycodes_Up);
 	free(mw->keycodes_Down);
@@ -490,8 +499,11 @@ mainwin_destroy(MainWin *mw) {
 	free(mw->keycodes_Shade);
 	free(mw->keycodes_Close);
 	free(mw->keycodes_PivotSwitch);
+	free(mw->keycodes_TapSwitch);
 	free(mw->keycodes_PivotExpose);
+	free(mw->keycodes_TapExpose);
 	free(mw->keycodes_PivotPaging);
+	free(mw->keycodes_TapPaging);
 
 	free(mw);
 }

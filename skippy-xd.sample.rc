@@ -150,6 +150,21 @@ text = #ffffff
 textShadow = black
 font = fixed-11:weight=bold
 
+[hotkeys]
+
+# The "pivot" keys are the Alt in Alt-Tab
+# The key has to be held for skippy-xd to activate
+# And when the key is released, skippy-xd selects the highlighted window.
+# If there are no entries to the pivot key,
+# The behaviour is to toggle skippy-xd activation
+# And no keys need to be held or released
+switchPivot = Alt_L
+switchTap = Tab
+exposePivot = 
+exposeTap = 
+pagingPivot = 
+pagingTap = 
+
 [bindings]
 
 # key* = is a list of valid XWindows KeySym identifiers, case
@@ -185,13 +200,3 @@ miwMouse2 = close-ewmh
 miwMouse3 = iconify
 miwMouse4 = keysNext
 miwMouse5 = keysPrev
-
-# The "pivot" keys are the Alt in Alt-Tab
-# The key has to be held for skippy-xd to activate
-# And when the key is released, skippy-xd selects the highlighted window.
-# If there are no entries to the pivot key,
-# The behaviour is to toggle skippy-xd activation
-# And no keys need to be held or released
-keysPivotSwitch = Alt_L
-keysPivotExpose = 
-keysPivotPaging = 

@@ -62,8 +62,11 @@ struct _mainwin_t {
 	KeySym *keysyms_Shade;
 	KeySym *keysyms_Close;
 	KeySym *keysyms_PivotSwitch;
+	KeySym *keysyms_TapSwitch;
 	KeySym *keysyms_PivotExpose;
+	KeySym *keysyms_TapExpose;
 	KeySym *keysyms_PivotPaging;
+	KeySym *keysyms_TapPaging;
 
 	KeyCode *keycodes_Up;
 	KeyCode *keycodes_Down;
@@ -77,8 +80,11 @@ struct _mainwin_t {
 	KeyCode *keycodes_Shade;
 	KeyCode *keycodes_Close;
 	KeyCode *keycodes_PivotSwitch;
+	KeyCode *keycodes_TapSwitch;
 	KeyCode *keycodes_PivotExpose;
+	KeyCode *keycodes_TapExpose;
 	KeyCode *keycodes_PivotPaging;
+	KeyCode *keycodes_TapPaging;
 
 	bool refocus;
 	bool mapped;
