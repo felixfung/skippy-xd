@@ -1383,6 +1383,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					switchTrigger = switchTrigger
 							&& pivoting(ps, ps->mainwin->keycodes_TapSwitch);
 				if (switchTrigger) {
+					ps->o.mode = PROGMODE_SWITCH;
 					animating = activate = true;
 					layout = LAYOUTMODE_SWITCH;
 					toggling = false;
@@ -1397,6 +1398,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					exposeTrigger = Expose
 							&& pivoting(ps, ps->mainwin->keycodes_TapExpose);
 				if (exposeTrigger) {
+					ps->o.mode = PROGMODE_EXPOSE;
 					animating = activate = true;
 					layout = LAYOUTMODE_EXPOSE;
 					toggling = false;
@@ -1411,6 +1413,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					pagingTrigger = pagingTrigger
 							&& pivoting(ps, ps->mainwin->keycodes_TapPaging);
 				if (pagingTrigger) {
+					ps->o.mode = PROGMODE_PAGING;
 					animating = activate = true;
 					layout = LAYOUTMODE_PAGING;
 					toggling = false;
