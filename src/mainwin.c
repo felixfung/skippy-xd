@@ -125,6 +125,34 @@ mainwin_create_err:
 	return NULL;
 }
 
+static
+int keycode2mask(KeySym keycode)
+{
+	switch (keycode) {
+		case XK_Shift_L:
+		case XK_Shift_R:
+			return ShiftMask;
+		case XK_Caps_Lock:
+			return LockMask;
+		case XK_Control_L:
+		case XK_Control_R:
+			return ControlMask;
+		case XK_Alt_L:
+		case XK_Alt_R:
+		case XK_Meta_L:
+			return Mod1Mask;
+		case XK_Num_Lock:
+			return Mod2Mask;
+		case XK_Super_L:
+		case XK_Super_R:
+			return Mod4Mask;
+		case XK_ISO_Level3_Shift:
+		case XK_Mode_switch:
+			return Mod5Mask;
+	}
+	return AnyModifier;
+}
+
 void
 mainwin_grab_pivot_keys(session_t *ps, MainWin *mw) {
 	Display * const dpy = ps->dpy;
@@ -132,40 +160,69 @@ mainwin_grab_pivot_keys(session_t *ps, MainWin *mw) {
 	XUngrabKey(ps->dpy, AnyKey, AnyModifier, DefaultRootWindow(dpy));
 
 	if (mw->keycodes_PivotSwitch) {
-		for (int i=0; mw->keycodes_PivotSwitch[i] != '\0'; i++) {
-			int keycode = mw->keycodes_PivotSwitch[i];
-			int grabkey_status =
-					XGrabKey(ps->dpy, keycode, AnyModifier,
-							DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
-			if (grabkey_status != 1) {
-				printfef(true, "(): grabbing pivot key %s failed",
-						mw->ps->o.bindings_keysPivotSwitch);
+		if (mw->keycodes_TapSwitch) {
+			int modifiermask = 0;
+			for (int i=0; mw->keycodes_PivotSwitch[i] != '\0'; i++)
+				modifiermask |= keycode2mask(mw->keysyms_PivotSwitch[i]);
+			for (int i=0; mw->keycodes_TapSwitch[i] != '\0'; i++) {
+				int keycode = mw->keycodes_TapSwitch[i];
+				XGrabKey(ps->dpy, keycode,
+						modifiermask,
+						DefaultRootWindow(dpy), True,
+						GrabModeAsync, GrabModeAsync);
+			}
+		}
+		else {
+			for (int i=0; mw->keycodes_PivotSwitch[i] != '\0'; i++) {
+				int keycode = mw->keycodes_PivotSwitch[i];
+				XGrabKey(ps->dpy, keycode,
+						AnyModifier,
+						DefaultRootWindow(dpy), True,
+						GrabModeAsync, GrabModeAsync);
 			}
 		}
 	}
 
 	if (mw->keycodes_PivotExpose) {
-		for (int i=0; mw->keycodes_PivotExpose[i] != '\0'; i++) {
-			int keycode = mw->keycodes_PivotExpose[i];
-			int grabkey_status =
-					XGrabKey(ps->dpy, keycode, AnyModifier,
-							DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
-			if (grabkey_status != 1) {
-				printfef(true, "(): grabbing pivot key %s failed",
-						mw->ps->o.bindings_keysPivotExpose);
+		if (mw->keycodes_TapExpose) {
+			int modifiermask = 0;
+			for (int i=0; mw->keycodes_PivotExpose[i] != '\0'; i++)
+				modifiermask |= keycode2mask(mw->keysyms_PivotExpose[i]);
+			for (int i=0; mw->keycodes_TapExpose[i] != '\0'; i++) {
+				int keycode = mw->keycodes_TapExpose[i];
+				XGrabKey(ps->dpy, keycode,
+						modifiermask,
+						DefaultRootWindow(dpy), True,
+						GrabModeAsync, GrabModeAsync);
+			}
+		}
+		else {
+			for (int i=0; mw->keycodes_PivotExpose[i] != '\0'; i++) {
+				int keycode = mw->keycodes_PivotExpose[i];
+				XGrabKey(ps->dpy, keycode, AnyModifier,
+						DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
 			}
 		}
 	}
 
 	if (mw->keycodes_PivotPaging) {
-		for (int i=0; mw->keycodes_PivotPaging[i] != '\0'; i++) {
-			int keycode = mw->keycodes_PivotPaging[i];
-			int grabkey_status =
-					XGrabKey(ps->dpy, keycode, AnyModifier,
-							DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
-			if (grabkey_status != 1) {
-				printfef(true, "(): grabbing pivot key %s failed",
-						mw->ps->o.bindings_keysPivotPaging);
+		if (mw->keycodes_TapPaging) {
+			int modifiermask = 0;
+			for (int i=0; mw->keycodes_PivotPaging[i] != '\0'; i++)
+				modifiermask |= keycode2mask(mw->keysyms_PivotPaging[i]);
+			for (int i=0; mw->keycodes_TapPaging[i] != '\0'; i++) {
+				int keycode = mw->keycodes_TapPaging[i];
+				XGrabKey(ps->dpy, keycode,
+						modifiermask,
+						DefaultRootWindow(dpy), True,
+						GrabModeAsync, GrabModeAsync);
+			}
+		}
+		else {
+			for (int i=0; mw->keycodes_PivotPaging[i] != '\0'; i++) {
+				int keycode = mw->keycodes_PivotPaging[i];
+				XGrabKey(ps->dpy, keycode, AnyModifier,
+						DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
 			}
 		}
 	}

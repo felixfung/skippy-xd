@@ -1205,7 +1205,14 @@ mainloop(session_t *ps, bool activate_on_start) {
 #endif
 			Window wid = ev_window(ps, &ev);
 
-			if (mw && MotionNotify == ev.type)
+			if (mw && ev.type == KeyPress
+					&& wid == DefaultRootWindow(ps->dpy)) {
+				// pivot tapping scenario
+				XKeyEvent * const evk = &ev.xkey;
+				if (arr_keycodes_includes(mw->keycodes_TapSwitch, evk->keycode))
+					die = mainwin_handle(mw, &ev);
+			}
+			else if (mw && MotionNotify == ev.type)
 			{
 				// when mouse move within a client window, focus on it
 				if (wid) {
