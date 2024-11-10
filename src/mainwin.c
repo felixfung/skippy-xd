@@ -165,6 +165,8 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keysyms_arr_keycodes(dpy, mw->keysyms_PivotPaging, &mw->keycodes_PivotPaging);
 	keysyms_arr_keycodes(dpy, mw->keysyms_TapPaging, &mw->keycodes_TapPaging);
 
+	XUngrabKey(ps->dpy, AnyKey, AnyModifier, DefaultRootWindow(dpy));
+
 	if (mw->keycodes_PivotSwitch) {
 		for (int i=0; mw->keycodes_PivotSwitch[i] != '\0'; i++) {
 			int keycode = mw->keycodes_PivotSwitch[i];
