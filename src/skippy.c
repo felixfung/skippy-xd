@@ -34,9 +34,6 @@ enum pipe_cmd_t {
 	PIPECMD_SWITCH = 1,
 	PIPECMD_EXPOSE,
 	PIPECMD_PAGING,
-	// these two are flags
-	PIPECMD_PREV = 4,
-	PIPECMD_NEXT = 8,
 };
 
 session_t *ps_g = NULL;
@@ -1440,65 +1437,29 @@ mainloop(session_t *ps, bool activate_on_start) {
 					unlink(ps->o.pipePath);
 					return;
 				default:
-					ps->o.focus_initial = -((piped_input & PIPECMD_PREV) > 0)
-						+ ((piped_input & PIPECMD_NEXT) > 0);
-
 					if (!mw || !mw->mapped)
 					{
 						printfdf(false, "(): skippy activating, mode=%d", layout);
 						animating = activate = true;
 						toggling = true;
-						if ((piped_input | PIPECMD_PREV | PIPECMD_NEXT)
-								== (PIPECMD_SWITCH | PIPECMD_PREV | PIPECMD_NEXT)) {
+						if (piped_input == PIPECMD_SWITCH) {
 							ps->o.mode = PROGMODE_SWITCH;
 							layout = LAYOUTMODE_SWITCH;
 						}
-						else if ((piped_input | PIPECMD_PREV | PIPECMD_NEXT)
-								== (PIPECMD_EXPOSE | PIPECMD_PREV | PIPECMD_NEXT)) {
+						else if (piped_input == PIPECMD_EXPOSE) {
 							ps->o.mode = PROGMODE_EXPOSE;
 							layout = LAYOUTMODE_EXPOSE;
 						}
-						else if ((piped_input | PIPECMD_PREV | PIPECMD_NEXT)
-								== (PIPECMD_PAGING | PIPECMD_PREV | PIPECMD_NEXT)) {
+						else if (piped_input == PIPECMD_PAGING) {
 							ps->o.mode = PROGMODE_PAGING;
 							layout = LAYOUTMODE_PAGING;
 						}
 					}
 					// parameter == 0, toggle
 					// otherwise shift window focus
-					else if (mw && ps->o.focus_initial == 0) {
+					else if (mw) {
 						printfdf(false, "(): toggling skippy off");
-
-						KeyCode *pivotkey = NULL;
-						if (layout == LAYOUTMODE_SWITCH)
-							pivotkey = mw->keycodes_PivotSwitch;
-						else if (layout == LAYOUTMODE_EXPOSE)
-							pivotkey = mw->keycodes_PivotExpose;
-						else if (layout == LAYOUTMODE_PAGING)
-							pivotkey = mw->keycodes_PivotPaging;
-
-						if (!pivotkey)
-							mw->refocus = die = true;
-						else if (pivotkey && !pivoting(ps, pivotkey))
-							die = true;
-
-						break;
-					}
-					else if (mw && mw->mapped)
-					{
-						printfdf(false, "(): cycling window");
-						fflush(stdout);fflush(stderr);
-
-						if (ps->o.focus_initial < 0)
-							ps->o.focus_initial = dlist_len(mw->focuslist) + ps->o.focus_initial;
-
-						while (ps->o.focus_initial > 0 && mw->client_to_focus) {
-							focus_miniw_next(ps, mw->client_to_focus);
-							ps->o.focus_initial--;
-						}
-
-						if (mw->client_to_focus)
-							clientwin_render(mw->client_to_focus);
+						mw->refocus = die = true;
 					}
 					break;
 			}
@@ -1542,35 +1503,22 @@ exit_daemon(const char *pipePath) {
 	send_command_to_daemon_via_fifo(PIPECMD_EXIT_DAEMON, pipePath);
 }
 
-static inline char
-char2pipe(char focus_initial) {
-	char res = 0;
-	if (focus_initial > 0)
-	   res = PIPECMD_NEXT;
-	else if (focus_initial < 0)
-		res = PIPECMD_PREV;
-	return res;
-}
-
 static inline void
 activate_switch(session_t *ps, const char *pipePath) {
 	printfdf(false, "(): Activating switch...");
-	send_command_to_daemon_via_fifo(PIPECMD_SWITCH
-			| char2pipe(ps->o.focus_initial), pipePath);
+	send_command_to_daemon_via_fifo(PIPECMD_SWITCH, pipePath);
 }
 
 static inline void
 activate_expose(session_t *ps, const char *pipePath) {
 	printfdf(false, "(): Activating expose...");
-	send_command_to_daemon_via_fifo(PIPECMD_EXPOSE
-			| char2pipe(ps->o.focus_initial), pipePath);
+	send_command_to_daemon_via_fifo(PIPECMD_EXPOSE, pipePath);
 }
 
 static inline void
 activate_paging(session_t *ps, const char *pipePath) {
 	printfdf(false, "(): Activating paging...");
-	send_command_to_daemon_via_fifo(PIPECMD_PAGING
-			| char2pipe(ps->o.focus_initial), pipePath);
+	send_command_to_daemon_via_fifo(PIPECMD_PAGING, pipePath);
 }
 
 /**
@@ -1662,9 +1610,6 @@ show_help() {
 			"  --expose            - connects to daemon and activate expose.\n"
 			"  --paging            - connects to daemon and activate paging.\n"
 			// "  --test                      - Temporary development testing. To be removed.\n"
-			"\n"
-			"  --prev              - focus on the previous window.\n"
-			"  --next              - focus on the next window.\n"
 			"\n"
 			, stdout);
 #ifdef CFG_LIBPNG
@@ -1796,8 +1741,6 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		OPT_ACTV_PAGING,
 		OPT_DM_START,
 		OPT_DM_STOP,
-		OPT_PREV,
-		OPT_NEXT,
 	};
 	static const char * opts_short = "hS";
 	static const struct option opts_long[] = {
@@ -1809,8 +1752,6 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		{ "paging",                   no_argument,       NULL, OPT_ACTV_PAGING },
 		{ "start-daemon",             no_argument,       NULL, OPT_DM_START },
 		{ "stop-daemon",              no_argument,       NULL, OPT_DM_STOP },
-		{ "prev",                     no_argument,       NULL, OPT_PREV },
-		{ "next",                     no_argument,       NULL, OPT_NEXT },
 		// { "test",                     no_argument,       NULL, 't' },
 		{ NULL, no_argument, NULL, 0 }
 	};
@@ -1862,12 +1803,6 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 				break;
 			case OPT_DM_STOP:
 				ps->o.mode = PROGMODE_DM_STOP;
-				break;
-			case OPT_PREV:
-				ps->o.focus_initial--;
-				break;
-			case OPT_NEXT:
-				ps->o.focus_initial++;
 				break;
 			T_CASEBOOL(OPT_DM_START, runAsDaemon);
 #undef T_CASEBOOL
