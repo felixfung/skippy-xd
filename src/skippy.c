@@ -1376,6 +1376,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 		poll(r_fd, (r_fd[1].fd >= 0 ? 2: 1), timeout);
 
 		// pivot triggering
+		if (!mw)
 		{
 			if (ps->mainwin->keycodes_PivotSwitch) {
 				bool switchTrigger = pivoting(ps, ps->mainwin->keycodes_PivotSwitch);
