@@ -152,12 +152,22 @@ font = fixed-11:weight=bold
 
 [hotkeys]
 
-# The "pivot" keys are the Alt in Alt-Tab
-# The key has to be held for skippy-xd to activate
-# And when the key is released, skippy-xd selects the highlighted window.
-# If there are no entries to the pivot key,
-# The behaviour is to toggle skippy-xd activation
-# And no keys need to be held or released
+# This section set up hot keys for pivot mode
+# When both the pivot and tap keys are set
+# Then holding the pivot key while tapping the tap key
+# Would trigger pivot mode and highlight the next window
+# Releasing the pivot key would select the highlighted window
+# When only the pivot key is set
+# Then holding the pivot key would trigger pivot mode
+# Releasing the pivot key would select the highlighted window
+
+# Pivot mode is independent of toggling mode
+# Which is triggered/toggled through command line interface
+# `skippy-xd --expose`
+# `skippy-xd --paging`
+# And no pivot keys need to be held
+# So that you can have different set ups for pivot and toggling
+
 switchPivot = Alt_L
 switchTap = Tab
 exposePivot = 
