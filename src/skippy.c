@@ -1951,7 +1951,7 @@ load_config_file(session_t *ps)
     check_keysyms(ps->o.config_path, ": [bindings] keysDown =", ps->o.bindings_keysDown);
     check_keysyms(ps->o.config_path, ": [bindings] keysLeft =", ps->o.bindings_keysLeft);
     check_keysyms(ps->o.config_path, ": [bindings] keysRight =", ps->o.bindings_keysRight);
-    check_keysyms(ps->o.config_path, ": [bindings] keysReverse =", ps->o.bindings_masksReverse);
+    check_modmasks(ps->o.config_path, ": [bindings] keysReverse =", ps->o.bindings_masksReverse);
     check_keysyms(ps->o.config_path, ": [bindings] keysNext =", ps->o.bindings_keysNext);
     check_keysyms(ps->o.config_path, ": [bindings] keysCancel =", ps->o.bindings_keysCancel);
     check_keysyms(ps->o.config_path, ": [bindings] keysSelect =", ps->o.bindings_keysSelect);
