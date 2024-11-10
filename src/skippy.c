@@ -1933,6 +1933,13 @@ load_config_file(session_t *ps)
     ps->o.bindings_keysPivotPaging = mstrdup(config_get(config, "hotkeys", "pagingPivot", ""));
     ps->o.bindings_keysTapPaging = mstrdup(config_get(config, "hotkeys", "pagingTap", ""));
 
+    check_keysyms(ps->o.config_path, ": [hotkeys] switchPivot =", ps->o.bindings_keysPivotSwitch);
+    check_keysyms(ps->o.config_path, ": [hotkeys] switchTap =", ps->o.bindings_keysTapSwitch);
+    check_keysyms(ps->o.config_path, ": [hotkeys] exposePivot =", ps->o.bindings_keysPivotExpose);
+    check_keysyms(ps->o.config_path, ": [hotkeys] exposeTap =", ps->o.bindings_keysTapExpose);
+    check_keysyms(ps->o.config_path, ": [hotkeys] pagingPivot =", ps->o.bindings_keysPivotPaging);
+    check_keysyms(ps->o.config_path, ": [hotkeys] pagingTap =", ps->o.bindings_keysTapPaging);
+
     // load keybindings settings
     ps->o.bindings_keysUp = mstrdup(config_get(config, "bindings", "keysUp", "Up"));
     ps->o.bindings_keysDown = mstrdup(config_get(config, "bindings", "keysDown", "Down"));
@@ -1958,13 +1965,6 @@ load_config_file(session_t *ps)
     check_keysyms(ps->o.config_path, ": [bindings] keysIconify =", ps->o.bindings_keysIconify);
     check_keysyms(ps->o.config_path, ": [bindings] keysShade =", ps->o.bindings_keysShade);
     check_keysyms(ps->o.config_path, ": [bindings] keysClose =", ps->o.bindings_keysClose);
-
-    check_keysyms(ps->o.config_path, ": [hotkeys] switchPivot =", ps->o.bindings_keysPivotSwitch);
-    check_keysyms(ps->o.config_path, ": [hotkeys] switchTap =", ps->o.bindings_keysTapSwitch);
-    check_keysyms(ps->o.config_path, ": [hotkeys] exposePivot =", ps->o.bindings_keysPivotExpose);
-    check_keysyms(ps->o.config_path, ": [hotkeys] exposeTap =", ps->o.bindings_keysTapExpose);
-    check_keysyms(ps->o.config_path, ": [hotkeys] pagingPivot =", ps->o.bindings_keysPivotPaging);
-    check_keysyms(ps->o.config_path, ": [hotkeys] pagingTap =", ps->o.bindings_keysTapPaging);
 
 	if (!parse_cliop(ps, config_get(config, "bindings", "miwMouse1", "focus"), &ps->o.bindings_miwMouse[1])
 			|| !parse_cliop(ps, config_get(config, "bindings", "miwMouse2", "close-ewmh"), &ps->o.bindings_miwMouse[2])

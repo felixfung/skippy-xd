@@ -165,6 +165,33 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keysyms_arr_keycodes(dpy, mw->keysyms_PivotPaging, &mw->keycodes_PivotPaging);
 	keysyms_arr_keycodes(dpy, mw->keysyms_TapPaging, &mw->keycodes_TapPaging);
 
+	if (mw->keycodes_PivotSwitch) {
+		for (int i=0; mw->keycodes_PivotSwitch[i] != '\0'; i++) {
+			int keycode = mw->keycodes_PivotSwitch[i];
+			int grabkey_status =
+					XGrabKey(ps->dpy, keycode, AnyModifier,
+							DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
+		}
+	}
+
+	if (mw->keycodes_PivotExpose) {
+		for (int i=0; mw->keycodes_PivotExpose[i] != '\0'; i++) {
+			int keycode = mw->keycodes_PivotExpose[i];
+			int grabkey_status =
+					XGrabKey(ps->dpy, keycode, AnyModifier,
+							DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
+		}
+	}
+
+	if (mw->keycodes_PivotPaging) {
+		for (int i=0; mw->keycodes_PivotPaging[i] != '\0'; i++) {
+			int keycode = mw->keycodes_PivotPaging[i];
+			int grabkey_status =
+					XGrabKey(ps->dpy, keycode, AnyModifier,
+							DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
+		}
+	}
+
 	modkeymasks_str_enums(ps->o.bindings_masksReverse, &mw->keymasks_Reverse);
 
 	// we check all possible pairs, one pair at a time. This is in a specific order, to give a more helpful error msg
