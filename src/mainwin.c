@@ -481,6 +481,8 @@ void
 mainwin_destroy(MainWin *mw) {
 	session_t *ps = mw->ps; 
 
+	XUngrabKey(ps->dpy, AnyKey, AnyModifier, DefaultRootWindow(ps->dpy));
+
 	// Free all clients associated with this main window
 	dlist_free_with_func(mw->clients, (dlist_free_func) clientwin_destroy);
 
