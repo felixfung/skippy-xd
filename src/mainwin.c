@@ -171,6 +171,10 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 			int grabkey_status =
 					XGrabKey(ps->dpy, keycode, AnyModifier,
 							DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
+			if (grabkey_status != 1) {
+				printfef(true, "(): grabbing pivot key %s failed",
+						mw->ps->o.bindings_keysPivotSwitch);
+			}
 		}
 	}
 
@@ -180,6 +184,10 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 			int grabkey_status =
 					XGrabKey(ps->dpy, keycode, AnyModifier,
 							DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
+			if (grabkey_status != 1) {
+				printfef(true, "(): grabbing pivot key %s failed",
+						mw->ps->o.bindings_keysPivotExpose);
+			}
 		}
 	}
 
@@ -189,6 +197,10 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 			int grabkey_status =
 					XGrabKey(ps->dpy, keycode, AnyModifier,
 							DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
+			if (grabkey_status != 1) {
+				printfef(true, "(): grabbing pivot key %s failed",
+						mw->ps->o.bindings_keysPivotPaging);
+			}
 		}
 	}
 
