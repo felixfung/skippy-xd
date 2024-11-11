@@ -1205,14 +1205,64 @@ mainloop(session_t *ps, bool activate_on_start) {
 #endif
 			Window wid = ev_window(ps, &ev);
 
-			if (mw && ev.type == KeyPress
-					&& wid == DefaultRootWindow(ps->dpy)) {
-				// pivot tapping scenario
-				XKeyEvent * const evk = &ev.xkey;
-				if (arr_keycodes_includes(mw->keycodes_TapSwitch, evk->keycode))
-					die = mainwin_handle(mw, &ev);
-			}
-			else if (mw && MotionNotify == ev.type)
+            if (ev.type == KeyPress && wid == DefaultRootWindow(ps->dpy))
+            {
+                if (mw) {
+                    // pivot tapping
+                    XKeyEvent * const evk = &ev.xkey;
+                    die = mainwin_handle(mw, &ev);
+                }
+                else {
+                    // pivot triggering
+                    {
+                        if (ps->mainwin->keycodes_PivotSwitch) {
+                            bool switchTrigger = pivoting(ps, ps->mainwin->keycodes_PivotSwitch);
+                            if (ps->mainwin->keycodes_TapSwitch)
+                                switchTrigger = switchTrigger
+                                        && pivoting(ps, ps->mainwin->keycodes_TapSwitch);
+                            if (switchTrigger) {
+                                ps->o.mode = PROGMODE_SWITCH;
+                                animating = activate = true;
+                                layout = LAYOUTMODE_SWITCH;
+                                toggling = false;
+                                if (ps->mainwin->keycodes_TapSwitch)
+                                    ps->o.focus_initial = 1;
+                            }
+                        }
+
+                        if (ps->mainwin->keycodes_PivotExpose) {
+                            bool exposeTrigger = pivoting(ps, ps->mainwin->keycodes_PivotExpose);
+                            if (ps->mainwin->keycodes_TapExpose)
+                                exposeTrigger = Expose
+                                        && pivoting(ps, ps->mainwin->keycodes_TapExpose);
+                            if (exposeTrigger) {
+                                ps->o.mode = PROGMODE_EXPOSE;
+                                animating = activate = true;
+                                layout = LAYOUTMODE_EXPOSE;
+                                toggling = false;
+                                if (ps->mainwin->keycodes_TapExpose)
+                                    ps->o.focus_initial = 1;
+                            }
+                        }
+
+                        if (ps->mainwin->keycodes_PivotPaging) {
+                            bool pagingTrigger = pivoting(ps, ps->mainwin->keycodes_PivotPaging);
+                            if (ps->mainwin->keycodes_TapPaging)
+                                pagingTrigger = pagingTrigger
+                                        && pivoting(ps, ps->mainwin->keycodes_TapPaging);
+                            if (pagingTrigger) {
+                                ps->o.mode = PROGMODE_PAGING;
+                                animating = activate = true;
+                                layout = LAYOUTMODE_PAGING;
+                                toggling = false;
+                                if (ps->mainwin->keycodes_TapPaging)
+                                    ps->o.focus_initial = 1;
+                            }
+                        }
+                    }
+                }
+            }
+            else if (mw && MotionNotify == ev.type)
 			{
 				// when mouse move within a client window, focus on it
 				if (wid) {
@@ -1378,55 +1428,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 		if (timeout < 0)
 			timeout = 0;
 		poll(r_fd, (r_fd[1].fd >= 0 ? 2: 1), timeout);
-
-		// pivot triggering
-		if (!mw)
-		{
-			if (ps->mainwin->keycodes_PivotSwitch) {
-				bool switchTrigger = pivoting(ps, ps->mainwin->keycodes_PivotSwitch);
-				if (ps->mainwin->keycodes_TapSwitch)
-					switchTrigger = switchTrigger
-							&& pivoting(ps, ps->mainwin->keycodes_TapSwitch);
-				if (switchTrigger) {
-					ps->o.mode = PROGMODE_SWITCH;
-					animating = activate = true;
-					layout = LAYOUTMODE_SWITCH;
-					toggling = false;
-					if (ps->mainwin->keycodes_TapSwitch)
-						ps->o.focus_initial = 1;
-				}
-			}
-
-			if (ps->mainwin->keycodes_PivotExpose) {
-				bool exposeTrigger = pivoting(ps, ps->mainwin->keycodes_PivotExpose);
-				if (ps->mainwin->keycodes_TapExpose)
-					exposeTrigger = Expose
-							&& pivoting(ps, ps->mainwin->keycodes_TapExpose);
-				if (exposeTrigger) {
-					ps->o.mode = PROGMODE_EXPOSE;
-					animating = activate = true;
-					layout = LAYOUTMODE_EXPOSE;
-					toggling = false;
-					if (ps->mainwin->keycodes_TapExpose)
-						ps->o.focus_initial = 1;
-				}
-			}
-
-			if (ps->mainwin->keycodes_PivotPaging) {
-				bool pagingTrigger = pivoting(ps, ps->mainwin->keycodes_PivotPaging);
-				if (ps->mainwin->keycodes_TapPaging)
-					pagingTrigger = pagingTrigger
-							&& pivoting(ps, ps->mainwin->keycodes_TapPaging);
-				if (pagingTrigger) {
-					ps->o.mode = PROGMODE_PAGING;
-					animating = activate = true;
-					layout = LAYOUTMODE_PAGING;
-					toggling = false;
-					if (ps->mainwin->keycodes_TapPaging)
-						ps->o.focus_initial = 1;
-				}
-			}
-		}
 
 		// Handle daemon commands
 		if (POLLIN & r_fd[1].revents) {

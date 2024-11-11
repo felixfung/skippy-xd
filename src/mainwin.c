@@ -168,7 +168,7 @@ mainwin_grab_pivot_keys(session_t *ps, MainWin *mw) {
 				int keycode = mw->keycodes_TapSwitch[i];
 				XGrabKey(ps->dpy, keycode,
 						modifiermask,
-						DefaultRootWindow(dpy), True,
+						DefaultRootWindow(ps->dpy), True,
 						GrabModeAsync, GrabModeAsync);
 			}
 		}
@@ -177,7 +177,7 @@ mainwin_grab_pivot_keys(session_t *ps, MainWin *mw) {
 				int keycode = mw->keycodes_PivotSwitch[i];
 				XGrabKey(ps->dpy, keycode,
 						AnyModifier,
-						DefaultRootWindow(dpy), True,
+						DefaultRootWindow(ps->dpy), True,
 						GrabModeAsync, GrabModeAsync);
 			}
 		}
@@ -192,7 +192,7 @@ mainwin_grab_pivot_keys(session_t *ps, MainWin *mw) {
 				int keycode = mw->keycodes_TapExpose[i];
 				XGrabKey(ps->dpy, keycode,
 						modifiermask,
-						DefaultRootWindow(dpy), True,
+						DefaultRootWindow(ps->dpy), True,
 						GrabModeAsync, GrabModeAsync);
 			}
 		}
@@ -200,7 +200,8 @@ mainwin_grab_pivot_keys(session_t *ps, MainWin *mw) {
 			for (int i=0; mw->keycodes_PivotExpose[i] != '\0'; i++) {
 				int keycode = mw->keycodes_PivotExpose[i];
 				XGrabKey(ps->dpy, keycode, AnyModifier,
-						DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
+						DefaultRootWindow(ps->dpy), True,
+						GrabModeAsync, GrabModeAsync);
 			}
 		}
 	}
@@ -214,7 +215,7 @@ mainwin_grab_pivot_keys(session_t *ps, MainWin *mw) {
 				int keycode = mw->keycodes_TapPaging[i];
 				XGrabKey(ps->dpy, keycode,
 						modifiermask,
-						DefaultRootWindow(dpy), True,
+						DefaultRootWindow(ps->dpy), True,
 						GrabModeAsync, GrabModeAsync);
 			}
 		}
@@ -222,7 +223,8 @@ mainwin_grab_pivot_keys(session_t *ps, MainWin *mw) {
 			for (int i=0; mw->keycodes_PivotPaging[i] != '\0'; i++) {
 				int keycode = mw->keycodes_PivotPaging[i];
 				XGrabKey(ps->dpy, keycode, AnyModifier,
-						DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
+						DefaultRootWindow(ps->dpy), True,
+						GrabModeAsync, GrabModeAsync);
 			}
 		}
 	}
