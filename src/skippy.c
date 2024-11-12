@@ -34,9 +34,10 @@ enum pipe_cmd_t {
 	PIPECMD_SWITCH = 1,
 	PIPECMD_EXPOSE,
 	PIPECMD_PAGING,
-	// these two are flags
+	// these three are flags
 	PIPECMD_PREV = 4,
 	PIPECMD_NEXT = 8,
+	PIPECMD_PIVOTING = 16,
 };
 
 session_t *ps_g = NULL;
@@ -973,6 +974,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 	bool pending_damage = false;
 	long last_rendered = 0L;
 	enum layoutmode layout = LAYOUTMODE_EXPOSE;
+	bool toggling = true;
 	bool animating = activate;
 	long first_animated = 0L;
 	bool first_animating = false;
@@ -1097,7 +1099,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// the placement of this code allows MainWin not to map
 		// so that previews may not show for switch
 		// when the pivot key is held for only short time
-		if (mw)
+		if (mw && !toggling)
 		{
 			bool pivotTerminate = false;
 			if (layout == LAYOUTMODE_SWITCH && mw->keycodes_PivotSwitch) {
@@ -1395,23 +1397,22 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 					if (!mw || !mw->mapped)
 					{
-						printfdf(false, "(): skippy activating, mode=%d", layout);
 						animating = activate = true;
-						if ((piped_input | PIPECMD_PREV | PIPECMD_NEXT)
-								== (PIPECMD_SWITCH | PIPECMD_PREV | PIPECMD_NEXT)) {
-							ps->o.mode = PROGMODE_SWITCH;
-							layout = LAYOUTMODE_SWITCH;
-						}
-						else if ((piped_input | PIPECMD_PREV | PIPECMD_NEXT)
-								== (PIPECMD_EXPOSE | PIPECMD_PREV | PIPECMD_NEXT)) {
-							ps->o.mode = PROGMODE_EXPOSE;
-							layout = LAYOUTMODE_EXPOSE;
-						}
-						else if ((piped_input | PIPECMD_PREV | PIPECMD_NEXT)
-								== (PIPECMD_PAGING | PIPECMD_PREV | PIPECMD_NEXT)) {
+						if ((piped_input & PIPECMD_PAGING) == PIPECMD_PAGING) {
 							ps->o.mode = PROGMODE_PAGING;
 							layout = LAYOUTMODE_PAGING;
 						}
+						else if ((piped_input & PIPECMD_EXPOSE) == PIPECMD_EXPOSE) {
+							ps->o.mode = PROGMODE_EXPOSE;
+							layout = LAYOUTMODE_EXPOSE;
+						}
+						else if ((piped_input & PIPECMD_SWITCH) == PIPECMD_SWITCH) {
+							ps->o.mode = PROGMODE_SWITCH;
+							layout = LAYOUTMODE_SWITCH;
+						}
+
+						toggling = !(piped_input & PIPECMD_PIVOTING);
+						printfdf(false, "(): skippy activating, mode=%d", layout);
 					}
 					// parameter == 0, toggle
 					// otherwise shift window focus
@@ -1505,21 +1506,27 @@ static inline void
 activate_switch(session_t *ps, const char *pipePath) {
 	printfdf(false, "(): Activating switch...");
 	send_command_to_daemon_via_fifo(PIPECMD_SWITCH
-			| char2pipe(ps->o.focus_initial), pipePath);
+			| char2pipe(ps->o.focus_initial)
+			| (ps->o.pivoting? PIPECMD_PIVOTING: 0),
+			pipePath);
 }
 
 static inline void
 activate_expose(session_t *ps, const char *pipePath) {
 	printfdf(false, "(): Activating expose...");
 	send_command_to_daemon_via_fifo(PIPECMD_EXPOSE
-			| char2pipe(ps->o.focus_initial), pipePath);
+			| char2pipe(ps->o.focus_initial)
+			| (ps->o.pivoting? PIPECMD_PIVOTING: 0),
+			pipePath);
 }
 
 static inline void
 activate_paging(session_t *ps, const char *pipePath) {
 	printfdf(false, "(): Activating paging...");
 	send_command_to_daemon_via_fifo(PIPECMD_PAGING
-			| char2pipe(ps->o.focus_initial), pipePath);
+			| char2pipe(ps->o.focus_initial)
+			| (ps->o.pivoting? PIPECMD_PIVOTING: 0),
+			pipePath);
 }
 
 /**
@@ -1611,6 +1618,8 @@ show_help() {
 			"  --expose            - connects to daemon and activate expose.\n"
 			"  --paging            - connects to daemon and activate paging.\n"
 			// "  --test                      - Temporary development testing. To be removed.\n"
+			"\n"
+			"  --pivot             - activates via pivot mode, as opposed to toggling mode.\n"
 			"\n"
 			"  --prev              - focus on the previous window.\n"
 			"  --next              - focus on the next window.\n"
@@ -1745,6 +1754,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		OPT_ACTV_PAGING,
 		OPT_DM_START,
 		OPT_DM_STOP,
+		OPT_PIVOTING,
 		OPT_PREV,
 		OPT_NEXT,
 	};
@@ -1758,6 +1768,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		{ "paging",                   no_argument,       NULL, OPT_ACTV_PAGING },
 		{ "start-daemon",             no_argument,       NULL, OPT_DM_START },
 		{ "stop-daemon",              no_argument,       NULL, OPT_DM_STOP },
+		{ "pivot",                    no_argument,       NULL, OPT_PIVOTING },
 		{ "prev",                     no_argument,       NULL, OPT_PREV },
 		{ "next",                     no_argument,       NULL, OPT_NEXT },
 		// { "test",                     no_argument,       NULL, 't' },
@@ -1811,6 +1822,9 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 				break;
 			case OPT_DM_STOP:
 				ps->o.mode = PROGMODE_DM_STOP;
+				break;
+			case OPT_PIVOTING:
+				ps->o.pivoting = true;
 				break;
 			case OPT_PREV:
 				ps->o.focus_initial--;
