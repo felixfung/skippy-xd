@@ -1427,9 +1427,9 @@ mainloop(session_t *ps, bool activate_on_start) {
 						else if (layout == LAYOUTMODE_PAGING)
 							pivotkey = mw->keycodes_PivotPaging;
 
-						if (!pivotkey)
+						if (toggling)
 							mw->refocus = die = true;
-						else if (pivotkey && !pivoting(ps, pivotkey))
+						else if (!toggling && pivotkey && !pivoting(ps, pivotkey))
 							die = true;
 
 						break;
