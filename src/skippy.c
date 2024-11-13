@@ -958,7 +958,7 @@ pivoting(session_t *ps, KeyCode *keycodes) {
 
 	for (int i=0; keycodes[i] != 0x00; i++) {
 		int slot = keycodes[i] / 8;
-		int mask = 1 << keycodes[i];
+		char mask = 1 << (keycodes[i] % 8);
 		result = result || (keys[slot] & mask);
 	}
 
