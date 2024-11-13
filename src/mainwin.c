@@ -125,6 +125,111 @@ mainwin_create_err:
 	return NULL;
 }
 
+static
+int keycode2mask(KeySym keycode)
+{
+	switch (keycode) {
+		case XK_Shift_L:
+		case XK_Shift_R:
+			return ShiftMask;
+		case XK_Caps_Lock:
+			return LockMask;
+		case XK_Control_L:
+		case XK_Control_R:
+			return ControlMask;
+		case XK_Alt_L:
+		case XK_Alt_R:
+		case XK_Meta_L:
+			return Mod1Mask;
+		case XK_Num_Lock:
+			return Mod2Mask;
+		case XK_Super_L:
+		case XK_Super_R:
+			return Mod4Mask;
+		case XK_ISO_Level3_Shift:
+		case XK_Mode_switch:
+			return Mod5Mask;
+	}
+	return AnyModifier;
+}
+
+void
+mainwin_grab_pivot_keys(session_t *ps, MainWin *mw) {
+	Display * const dpy = ps->dpy;
+
+	XUngrabKey(ps->dpy, AnyKey, AnyModifier, DefaultRootWindow(dpy));
+
+	if (mw->keycodes_PivotSwitch) {
+		if (mw->keycodes_TapSwitch) {
+			int modifiermask = 0;
+			for (int i=0; mw->keycodes_PivotSwitch[i] != '\0'; i++)
+				modifiermask |= keycode2mask(mw->keysyms_PivotSwitch[i]);
+			for (int i=0; mw->keycodes_TapSwitch[i] != '\0'; i++) {
+				int keycode = mw->keycodes_TapSwitch[i];
+				XGrabKey(ps->dpy, keycode,
+						modifiermask,
+						DefaultRootWindow(ps->dpy), True,
+						GrabModeAsync, GrabModeAsync);
+			}
+		}
+		else {
+			for (int i=0; mw->keycodes_PivotSwitch[i] != '\0'; i++) {
+				int keycode = mw->keycodes_PivotSwitch[i];
+				XGrabKey(ps->dpy, keycode,
+						AnyModifier,
+						DefaultRootWindow(ps->dpy), True,
+						GrabModeAsync, GrabModeAsync);
+			}
+		}
+	}
+
+	if (mw->keycodes_PivotExpose) {
+		if (mw->keycodes_TapExpose) {
+			int modifiermask = 0;
+			for (int i=0; mw->keycodes_PivotExpose[i] != '\0'; i++)
+				modifiermask |= keycode2mask(mw->keysyms_PivotExpose[i]);
+			for (int i=0; mw->keycodes_TapExpose[i] != '\0'; i++) {
+				int keycode = mw->keycodes_TapExpose[i];
+				XGrabKey(ps->dpy, keycode,
+						modifiermask,
+						DefaultRootWindow(ps->dpy), True,
+						GrabModeAsync, GrabModeAsync);
+			}
+		}
+		else {
+			for (int i=0; mw->keycodes_PivotExpose[i] != '\0'; i++) {
+				int keycode = mw->keycodes_PivotExpose[i];
+				XGrabKey(ps->dpy, keycode, AnyModifier,
+						DefaultRootWindow(ps->dpy), True,
+						GrabModeAsync, GrabModeAsync);
+			}
+		}
+	}
+
+	if (mw->keycodes_PivotPaging) {
+		if (mw->keycodes_TapPaging) {
+			int modifiermask = 0;
+			for (int i=0; mw->keycodes_PivotPaging[i] != '\0'; i++)
+				modifiermask |= keycode2mask(mw->keysyms_PivotPaging[i]);
+			for (int i=0; mw->keycodes_TapPaging[i] != '\0'; i++) {
+				int keycode = mw->keycodes_TapPaging[i];
+				XGrabKey(ps->dpy, keycode,
+						modifiermask,
+						DefaultRootWindow(ps->dpy), True,
+						GrabModeAsync, GrabModeAsync);
+			}
+		}
+		else {
+			for (int i=0; mw->keycodes_PivotPaging[i] != '\0'; i++) {
+				int keycode = mw->keycodes_PivotPaging[i];
+				XGrabKey(ps->dpy, keycode, AnyModifier,
+						DefaultRootWindow(ps->dpy), True,
+						GrabModeAsync, GrabModeAsync);
+			}
+		}
+	}
+}
+
 MainWin *
 mainwin_reload(session_t *ps, MainWin *mw) {
 	Display * const dpy = ps->dpy;
@@ -134,7 +239,6 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keys_str_syms(ps->o.bindings_keysDown, &mw->keysyms_Down);
 	keys_str_syms(ps->o.bindings_keysLeft, &mw->keysyms_Left);
 	keys_str_syms(ps->o.bindings_keysRight, &mw->keysyms_Right);
-	keys_str_syms(ps->o.bindings_keysPrev, &mw->keysyms_Prev);
 	keys_str_syms(ps->o.bindings_keysNext, &mw->keysyms_Next);
 	keys_str_syms(ps->o.bindings_keysCancel, &mw->keysyms_Cancel);
 	keys_str_syms(ps->o.bindings_keysSelect, &mw->keysyms_Select);
@@ -142,15 +246,17 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keys_str_syms(ps->o.bindings_keysShade, &mw->keysyms_Shade);
 	keys_str_syms(ps->o.bindings_keysClose, &mw->keysyms_Close);
 	keys_str_syms(ps->o.bindings_keysPivotSwitch, &mw->keysyms_PivotSwitch);
+	keys_str_syms(ps->o.bindings_keysTapSwitch, &mw->keysyms_TapSwitch);
 	keys_str_syms(ps->o.bindings_keysPivotExpose, &mw->keysyms_PivotExpose);
+	keys_str_syms(ps->o.bindings_keysTapExpose, &mw->keysyms_TapExpose);
 	keys_str_syms(ps->o.bindings_keysPivotPaging, &mw->keysyms_PivotPaging);
+	keys_str_syms(ps->o.bindings_keysTapPaging, &mw->keysyms_TapPaging);
 
 	// convert the arrays of KeySyms into arrays of KeyCodes, for this specific Display
 	keysyms_arr_keycodes(dpy, mw->keysyms_Up, &mw->keycodes_Up);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Down, &mw->keycodes_Down);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Left, &mw->keycodes_Left);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Right, &mw->keycodes_Right);
-	keysyms_arr_keycodes(dpy, mw->keysyms_Prev, &mw->keycodes_Prev);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Next, &mw->keycodes_Next);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Cancel, &mw->keycodes_Cancel);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Select, &mw->keycodes_Select);
@@ -158,8 +264,15 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keysyms_arr_keycodes(dpy, mw->keysyms_Shade, &mw->keycodes_Shade);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Close, &mw->keycodes_Close);
 	keysyms_arr_keycodes(dpy, mw->keysyms_PivotSwitch, &mw->keycodes_PivotSwitch);
+	keysyms_arr_keycodes(dpy, mw->keysyms_TapSwitch, &mw->keycodes_TapSwitch);
 	keysyms_arr_keycodes(dpy, mw->keysyms_PivotExpose, &mw->keycodes_PivotExpose);
+	keysyms_arr_keycodes(dpy, mw->keysyms_TapExpose, &mw->keycodes_TapExpose);
 	keysyms_arr_keycodes(dpy, mw->keysyms_PivotPaging, &mw->keycodes_PivotPaging);
+	keysyms_arr_keycodes(dpy, mw->keysyms_TapPaging, &mw->keycodes_TapPaging);
+
+	mainwin_grab_pivot_keys(ps, mw);
+
+	modkeymasks_str_enums(ps->o.bindings_masksReverse, &mw->keymasks_Reverse);
 
 	// we check all possible pairs, one pair at a time. This is in a specific order, to give a more helpful error msg
 	check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysDown", mw->keysyms_Down);
@@ -177,11 +290,6 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	check_keybindings_conflict(ps->o.config_path, "keysLeft", mw->keysyms_Left, "keysCancel", mw->keysyms_Cancel);
 	check_keybindings_conflict(ps->o.config_path, "keysLeft", mw->keysyms_Left, "keysSelect", mw->keysyms_Select);
 	//check_keybindings_conflict(ps->o.config_path, "keysLeft", mw->keysyms_Left, "keysPivot", mw->keysyms_Pivot);
-	check_keybindings_conflict(ps->o.config_path, "keysRight", mw->keysyms_Prev, "keysCancel", mw->keysyms_Cancel);
-	check_keybindings_conflict(ps->o.config_path, "keysRight", mw->keysyms_Prev, "keysSelect", mw->keysyms_Select);
-	//check_keybindings_conflict(ps->o.config_path, "keysRight", mw->keysyms_Prev, "keysPivot", mw->keysyms_Pivot);
-	check_keybindings_conflict(ps->o.config_path, "keysPrev", mw->keysyms_Prev, "keysCancel", mw->keysyms_Cancel);
-	check_keybindings_conflict(ps->o.config_path, "keysPrev", mw->keysyms_Prev, "keysSelect", mw->keysyms_Select);
 	check_keybindings_conflict(ps->o.config_path, "keysNext", mw->keysyms_Next, "keysCancel", mw->keysyms_Cancel);
 	check_keybindings_conflict(ps->o.config_path, "keysNext", mw->keysyms_Next, "keysSelect", mw->keysyms_Select);
 	check_keybindings_conflict(ps->o.config_path, "keysCancel", mw->keysyms_Cancel, "keysSelect", mw->keysyms_Select);
@@ -432,6 +540,8 @@ void
 mainwin_destroy(MainWin *mw) {
 	session_t *ps = mw->ps; 
 
+	XUngrabKey(ps->dpy, AnyKey, AnyModifier, DefaultRootWindow(ps->dpy));
+
 	// Free all clients associated with this main window
 	dlist_free_with_func(mw->clients, (dlist_free_func) clientwin_destroy);
 
@@ -467,7 +577,6 @@ mainwin_destroy(MainWin *mw) {
 	free(mw->keysyms_Down);
 	free(mw->keysyms_Left);
 	free(mw->keysyms_Right);
-	free(mw->keysyms_Prev);
 	free(mw->keysyms_Next);
 	free(mw->keysyms_Cancel);
 	free(mw->keysyms_Select);
@@ -475,14 +584,16 @@ mainwin_destroy(MainWin *mw) {
 	free(mw->keysyms_Shade);
 	free(mw->keysyms_Close);
 	free(mw->keysyms_PivotSwitch);
+	free(mw->keysyms_TapSwitch);
 	free(mw->keysyms_PivotExpose);
+	free(mw->keysyms_TapExpose);
 	free(mw->keysyms_PivotPaging);
+	free(mw->keysyms_TapPaging);
 
 	free(mw->keycodes_Up);
 	free(mw->keycodes_Down);
 	free(mw->keycodes_Left);
 	free(mw->keycodes_Right);
-	free(mw->keycodes_Prev);
 	free(mw->keycodes_Next);
 	free(mw->keycodes_Cancel);
 	free(mw->keycodes_Select);
@@ -490,8 +601,13 @@ mainwin_destroy(MainWin *mw) {
 	free(mw->keycodes_Shade);
 	free(mw->keycodes_Close);
 	free(mw->keycodes_PivotSwitch);
+	free(mw->keycodes_TapSwitch);
 	free(mw->keycodes_PivotExpose);
+	free(mw->keycodes_TapExpose);
 	free(mw->keycodes_PivotPaging);
+	free(mw->keycodes_TapPaging);
+
+	free(mw->keymasks_Reverse);
 
 	free(mw);
 }

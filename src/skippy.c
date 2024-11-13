@@ -34,9 +34,6 @@ enum pipe_cmd_t {
 	PIPECMD_SWITCH = 1,
 	PIPECMD_EXPOSE,
 	PIPECMD_PAGING,
-	// these two are flags
-	PIPECMD_PREV = 4,
-	PIPECMD_NEXT = 8,
 };
 
 session_t *ps_g = NULL;
@@ -973,6 +970,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 	bool pending_damage = false;
 	long last_rendered = 0L;
 	enum layoutmode layout = LAYOUTMODE_EXPOSE;
+	bool toggling = true;
 	bool animating = activate;
 	long first_animated = 0L;
 	bool first_animating = false;
@@ -1097,7 +1095,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// the placement of this code allows MainWin not to map
 		// so that previews may not show for switch
 		// when the pivot key is held for only short time
-		if (mw)
+		if (mw && !toggling)
 		{
 			bool pivotTerminate = false;
 			if (layout == LAYOUTMODE_SWITCH && mw->keycodes_PivotSwitch) {
@@ -1109,7 +1107,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 			else if (layout == LAYOUTMODE_PAGING && mw->keycodes_PivotPaging) {
 				pivotTerminate = !pivoting(ps, mw->keycodes_PivotPaging);
 			}
-			
+
 			if (pivotTerminate) {
 				die = true;
 				ps->o.focus_initial = 0;
@@ -1207,7 +1205,64 @@ mainloop(session_t *ps, bool activate_on_start) {
 #endif
 			Window wid = ev_window(ps, &ev);
 
-			if (mw && MotionNotify == ev.type)
+            if (ev.type == KeyPress && wid == DefaultRootWindow(ps->dpy))
+            {
+                if (mw) {
+                    // pivot tapping
+                    XKeyEvent * const evk = &ev.xkey;
+                    die = mainwin_handle(mw, &ev);
+                }
+                else {
+                    // pivot triggering
+                    {
+                        if (ps->mainwin->keycodes_PivotSwitch) {
+                            bool switchTrigger = pivoting(ps, ps->mainwin->keycodes_PivotSwitch);
+                            if (ps->mainwin->keycodes_TapSwitch)
+                                switchTrigger = switchTrigger
+                                        && pivoting(ps, ps->mainwin->keycodes_TapSwitch);
+                            if (switchTrigger) {
+                                ps->o.mode = PROGMODE_SWITCH;
+                                animating = activate = true;
+                                layout = LAYOUTMODE_SWITCH;
+                                toggling = false;
+                                if (ps->mainwin->keycodes_TapSwitch)
+                                    ps->o.focus_initial = 1;
+                            }
+                        }
+
+                        if (ps->mainwin->keycodes_PivotExpose) {
+                            bool exposeTrigger = pivoting(ps, ps->mainwin->keycodes_PivotExpose);
+                            if (ps->mainwin->keycodes_TapExpose)
+                                exposeTrigger = Expose
+                                        && pivoting(ps, ps->mainwin->keycodes_TapExpose);
+                            if (exposeTrigger) {
+                                ps->o.mode = PROGMODE_EXPOSE;
+                                animating = activate = true;
+                                layout = LAYOUTMODE_EXPOSE;
+                                toggling = false;
+                                if (ps->mainwin->keycodes_TapExpose)
+                                    ps->o.focus_initial = 1;
+                            }
+                        }
+
+                        if (ps->mainwin->keycodes_PivotPaging) {
+                            bool pagingTrigger = pivoting(ps, ps->mainwin->keycodes_PivotPaging);
+                            if (ps->mainwin->keycodes_TapPaging)
+                                pagingTrigger = pagingTrigger
+                                        && pivoting(ps, ps->mainwin->keycodes_TapPaging);
+                            if (pagingTrigger) {
+                                ps->o.mode = PROGMODE_PAGING;
+                                animating = activate = true;
+                                layout = LAYOUTMODE_PAGING;
+                                toggling = false;
+                                if (ps->mainwin->keycodes_TapPaging)
+                                    ps->o.focus_initial = 1;
+                            }
+                        }
+                    }
+                }
+            }
+            else if (mw && MotionNotify == ev.type)
 			{
 				// when mouse move within a client window, focus on it
 				if (wid) {
@@ -1390,64 +1445,29 @@ mainloop(session_t *ps, bool activate_on_start) {
 					unlink(ps->o.pipePath);
 					return;
 				default:
-					ps->o.focus_initial = -((piped_input & PIPECMD_PREV) > 0)
-						+ ((piped_input & PIPECMD_NEXT) > 0);
-
 					if (!mw || !mw->mapped)
 					{
 						printfdf(false, "(): skippy activating, mode=%d", layout);
 						animating = activate = true;
-						if ((piped_input | PIPECMD_PREV | PIPECMD_NEXT)
-								== (PIPECMD_SWITCH | PIPECMD_PREV | PIPECMD_NEXT)) {
+						toggling = true;
+						if (piped_input == PIPECMD_SWITCH) {
 							ps->o.mode = PROGMODE_SWITCH;
 							layout = LAYOUTMODE_SWITCH;
 						}
-						else if ((piped_input | PIPECMD_PREV | PIPECMD_NEXT)
-								== (PIPECMD_EXPOSE | PIPECMD_PREV | PIPECMD_NEXT)) {
+						else if (piped_input == PIPECMD_EXPOSE) {
 							ps->o.mode = PROGMODE_EXPOSE;
 							layout = LAYOUTMODE_EXPOSE;
 						}
-						else if ((piped_input | PIPECMD_PREV | PIPECMD_NEXT)
-								== (PIPECMD_PAGING | PIPECMD_PREV | PIPECMD_NEXT)) {
+						else if (piped_input == PIPECMD_PAGING) {
 							ps->o.mode = PROGMODE_PAGING;
 							layout = LAYOUTMODE_PAGING;
 						}
 					}
 					// parameter == 0, toggle
 					// otherwise shift window focus
-					else if (mw && ps->o.focus_initial == 0) {
+					else if (mw) {
 						printfdf(false, "(): toggling skippy off");
-
-						KeyCode *pivotkey = NULL;
-						if (layout == LAYOUTMODE_SWITCH)
-							pivotkey = mw->keycodes_PivotSwitch;
-						else if (layout == LAYOUTMODE_EXPOSE)
-							pivotkey = mw->keycodes_PivotExpose;
-						else if (layout == LAYOUTMODE_PAGING)
-							pivotkey = mw->keycodes_PivotPaging;
-
-						if (!pivotkey)
-							mw->refocus = die = true;
-						else if (pivotkey && !pivoting(ps, pivotkey))
-							die = true;
-
-						break;
-					}
-					else if (mw && mw->mapped)
-					{
-						printfdf(false, "(): cycling window");
-						fflush(stdout);fflush(stderr);
-
-						if (ps->o.focus_initial < 0)
-							ps->o.focus_initial = dlist_len(mw->focuslist) + ps->o.focus_initial;
-
-						while (ps->o.focus_initial > 0 && mw->client_to_focus) {
-							focus_miniw_next(ps, mw->client_to_focus);
-							ps->o.focus_initial--;
-						}
-
-						if (mw->client_to_focus)
-							clientwin_render(mw->client_to_focus);
+						mw->refocus = die = true;
 					}
 					break;
 			}
@@ -1491,35 +1511,22 @@ exit_daemon(const char *pipePath) {
 	send_command_to_daemon_via_fifo(PIPECMD_EXIT_DAEMON, pipePath);
 }
 
-static inline char
-char2pipe(char focus_initial) {
-	char res = 0;
-	if (focus_initial > 0)
-	   res = PIPECMD_NEXT;
-	else if (focus_initial < 0)
-		res = PIPECMD_PREV;
-	return res;
-}
-
 static inline void
 activate_switch(session_t *ps, const char *pipePath) {
 	printfdf(false, "(): Activating switch...");
-	send_command_to_daemon_via_fifo(PIPECMD_SWITCH
-			| char2pipe(ps->o.focus_initial), pipePath);
+	send_command_to_daemon_via_fifo(PIPECMD_SWITCH, pipePath);
 }
 
 static inline void
 activate_expose(session_t *ps, const char *pipePath) {
 	printfdf(false, "(): Activating expose...");
-	send_command_to_daemon_via_fifo(PIPECMD_EXPOSE
-			| char2pipe(ps->o.focus_initial), pipePath);
+	send_command_to_daemon_via_fifo(PIPECMD_EXPOSE, pipePath);
 }
 
 static inline void
 activate_paging(session_t *ps, const char *pipePath) {
 	printfdf(false, "(): Activating paging...");
-	send_command_to_daemon_via_fifo(PIPECMD_PAGING
-			| char2pipe(ps->o.focus_initial), pipePath);
+	send_command_to_daemon_via_fifo(PIPECMD_PAGING, pipePath);
 }
 
 /**
@@ -1611,9 +1618,6 @@ show_help() {
 			"  --expose            - connects to daemon and activate expose.\n"
 			"  --paging            - connects to daemon and activate paging.\n"
 			// "  --test                      - Temporary development testing. To be removed.\n"
-			"\n"
-			"  --prev              - focus on the previous window.\n"
-			"  --next              - focus on the next window.\n"
 			"\n"
 			, stdout);
 #ifdef CFG_LIBPNG
@@ -1745,8 +1749,6 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		OPT_ACTV_PAGING,
 		OPT_DM_START,
 		OPT_DM_STOP,
-		OPT_PREV,
-		OPT_NEXT,
 	};
 	static const char * opts_short = "hS";
 	static const struct option opts_long[] = {
@@ -1758,8 +1760,6 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		{ "paging",                   no_argument,       NULL, OPT_ACTV_PAGING },
 		{ "start-daemon",             no_argument,       NULL, OPT_DM_START },
 		{ "stop-daemon",              no_argument,       NULL, OPT_DM_STOP },
-		{ "prev",                     no_argument,       NULL, OPT_PREV },
-		{ "next",                     no_argument,       NULL, OPT_NEXT },
 		// { "test",                     no_argument,       NULL, 't' },
 		{ NULL, no_argument, NULL, 0 }
 	};
@@ -1811,12 +1811,6 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 				break;
 			case OPT_DM_STOP:
 				ps->o.mode = PROGMODE_DM_STOP;
-				break;
-			case OPT_PREV:
-				ps->o.focus_initial--;
-				break;
-			case OPT_NEXT:
-				ps->o.focus_initial++;
 				break;
 			T_CASEBOOL(OPT_DM_START, runAsDaemon);
 #undef T_CASEBOOL
@@ -1875,37 +1869,46 @@ load_config_file(session_t *ps)
     ps->o.tooltip_textShadow = mstrdup(config_get(config, "tooltip", "textShadow", "black"));
     ps->o.tooltip_font = mstrdup(config_get(config, "tooltip", "font", "fixed-11:weight=bold"));
 
+	// hot keys for pivot triggering
+    ps->o.bindings_keysPivotSwitch = mstrdup(config_get(config, "hotkeys", "switchPivot", "Alt_L"));
+    ps->o.bindings_keysTapSwitch = mstrdup(config_get(config, "hotkeys", "switchTap", "Tab"));
+    ps->o.bindings_keysPivotExpose = mstrdup(config_get(config, "hotkeys", "exposePivot", ""));
+    ps->o.bindings_keysTapExpose = mstrdup(config_get(config, "hotkeys", "exposeTap", ""));
+    ps->o.bindings_keysPivotPaging = mstrdup(config_get(config, "hotkeys", "pagingPivot", ""));
+    ps->o.bindings_keysTapPaging = mstrdup(config_get(config, "hotkeys", "pagingTap", ""));
+
+    check_keysyms(ps->o.config_path, ": [hotkeys] switchPivot =", ps->o.bindings_keysPivotSwitch);
+    check_keysyms(ps->o.config_path, ": [hotkeys] switchTap =", ps->o.bindings_keysTapSwitch);
+    check_keysyms(ps->o.config_path, ": [hotkeys] exposePivot =", ps->o.bindings_keysPivotExpose);
+    check_keysyms(ps->o.config_path, ": [hotkeys] exposeTap =", ps->o.bindings_keysTapExpose);
+    check_keysyms(ps->o.config_path, ": [hotkeys] pagingPivot =", ps->o.bindings_keysPivotPaging);
+    check_keysyms(ps->o.config_path, ": [hotkeys] pagingTap =", ps->o.bindings_keysTapPaging);
+
     // load keybindings settings
     ps->o.bindings_keysUp = mstrdup(config_get(config, "bindings", "keysUp", "Up"));
     ps->o.bindings_keysDown = mstrdup(config_get(config, "bindings", "keysDown", "Down"));
     ps->o.bindings_keysLeft = mstrdup(config_get(config, "bindings", "keysLeft", "Left"));
     ps->o.bindings_keysRight = mstrdup(config_get(config, "bindings", "keysRight", "Right"));
-    ps->o.bindings_keysPrev = mstrdup(config_get(config, "bindings", "keysPrev", "p"));
-    ps->o.bindings_keysNext = mstrdup(config_get(config, "bindings", "keysNext", "n"));
+    ps->o.bindings_keysNext = mstrdup(config_get(config, "bindings", "keysNext", "Tab"));
+    ps->o.bindings_masksReverse = mstrdup(config_get(config, "bindings", "keysReverse", "ShiftMask"));
     ps->o.bindings_keysCancel = mstrdup(config_get(config, "bindings", "keysCancel", "Escape"));
     ps->o.bindings_keysSelect = mstrdup(config_get(config, "bindings", "keysSelect", "Return space"));
     ps->o.bindings_keysIconify = mstrdup(config_get(config, "bindings", "keysIconify", "1"));
     ps->o.bindings_keysShade = mstrdup(config_get(config, "bindings", "keysShade", "2"));
     ps->o.bindings_keysClose = mstrdup(config_get(config, "bindings", "keysClose", "3"));
-    ps->o.bindings_keysPivotSwitch = mstrdup(config_get(config, "bindings", "keysPivotSwitch", "Alt_L"));
-    ps->o.bindings_keysPivotExpose = mstrdup(config_get(config, "bindings", "keysPivotExpose", ""));
-    ps->o.bindings_keysPivotPaging = mstrdup(config_get(config, "bindings", "keysPivotPaging", ""));
 
     // print an error message for any key bindings that aren't recognized
     check_keysyms(ps->o.config_path, ": [bindings] keysUp =", ps->o.bindings_keysUp);
     check_keysyms(ps->o.config_path, ": [bindings] keysDown =", ps->o.bindings_keysDown);
     check_keysyms(ps->o.config_path, ": [bindings] keysLeft =", ps->o.bindings_keysLeft);
     check_keysyms(ps->o.config_path, ": [bindings] keysRight =", ps->o.bindings_keysRight);
-    check_keysyms(ps->o.config_path, ": [bindings] keysPrev =", ps->o.bindings_keysPrev);
+    check_modmasks(ps->o.config_path, ": [bindings] keysReverse =", ps->o.bindings_masksReverse);
     check_keysyms(ps->o.config_path, ": [bindings] keysNext =", ps->o.bindings_keysNext);
     check_keysyms(ps->o.config_path, ": [bindings] keysCancel =", ps->o.bindings_keysCancel);
     check_keysyms(ps->o.config_path, ": [bindings] keysSelect =", ps->o.bindings_keysSelect);
     check_keysyms(ps->o.config_path, ": [bindings] keysIconify =", ps->o.bindings_keysIconify);
     check_keysyms(ps->o.config_path, ": [bindings] keysShade =", ps->o.bindings_keysShade);
     check_keysyms(ps->o.config_path, ": [bindings] keysClose =", ps->o.bindings_keysClose);
-    check_keysyms(ps->o.config_path, ": [bindings] keysPivotSwitch =", ps->o.bindings_keysPivotSwitch);
-    check_keysyms(ps->o.config_path, ": [bindings] keysPivotExpose =", ps->o.bindings_keysPivotExpose);
-    check_keysyms(ps->o.config_path, ": [bindings] keysPivotPaging =", ps->o.bindings_keysPivotPaging);
 
 	if (!parse_cliop(ps, config_get(config, "bindings", "miwMouse1", "focus"), &ps->o.bindings_miwMouse[1])
 			|| !parse_cliop(ps, config_get(config, "bindings", "miwMouse2", "close-ewmh"), &ps->o.bindings_miwMouse[2])
@@ -2196,7 +2199,7 @@ main_end:
 			free(ps->o.bindings_keysDown);
 			free(ps->o.bindings_keysLeft);
 			free(ps->o.bindings_keysRight);
-			free(ps->o.bindings_keysPrev);
+			free(ps->o.bindings_masksReverse);
 			free(ps->o.bindings_keysNext);
 			free(ps->o.bindings_keysCancel);
 			free(ps->o.bindings_keysSelect);
@@ -2204,8 +2207,11 @@ main_end:
 			free(ps->o.bindings_keysShade);
 			free(ps->o.bindings_keysClose);
 			free(ps->o.bindings_keysPivotSwitch);
+			free(ps->o.bindings_keysTapSwitch);
 			free(ps->o.bindings_keysPivotExpose);
+			free(ps->o.bindings_keysTapExpose);
 			free(ps->o.bindings_keysPivotPaging);
+			free(ps->o.bindings_keysTapPaging);
 		}
 
 		if (ps->fd_pipe >= 0)
