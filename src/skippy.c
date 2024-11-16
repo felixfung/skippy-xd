@@ -1936,7 +1936,9 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "general", "useNetWMFullscreen", &ps->o.useNetWMFullscreen);
 	{
 		ps->o.clientList = 0;
-		const char *tmp = config_get(config, "system", "clientList", NULL);
+		const char *tmp = config_get(config, "system", "clientList", 1);
+		if (tmp && strcmp(tmp, "XQueryTree") == 0)
+			ps->o.clientList = 0;
 		if (tmp && strcmp(tmp, "_NET_CLIENT_LIST") == 0)
 			ps->o.clientList = 1;
 		if (tmp && strcmp(tmp, "_WIN_CLIENT_LIST") == 0)
