@@ -135,6 +135,7 @@ opacity = 160
 show = true
 backgroundTinting = true
 allowOverlap = true
+allowClick = false
 
 [tooltip]
 show = true
