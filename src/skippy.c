@@ -1417,20 +1417,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 					// parameter == 0, toggle
 					// otherwise shift window focus
 					else if (mw && ps->o.focus_initial == 0) {
-						printfdf(false, "(): toggling skippy off");
-
-						KeyCode *pivotkey = NULL;
-						if (layout == LAYOUTMODE_SWITCH)
-							pivotkey = mw->keycodes_PivotSwitch;
-						else if (layout == LAYOUTMODE_EXPOSE)
-							pivotkey = mw->keycodes_PivotExpose;
-						else if (layout == LAYOUTMODE_PAGING)
-							pivotkey = mw->keycodes_PivotPaging;
-
-						if (toggling)
+						if (toggling) {
+							printfdf(false, "(): toggling skippy off");
 							mw->refocus = die = true;
-						else if (!toggling && pivotkey && !pivoting(ps, pivotkey))
-							die = true;
+						}
 
 						break;
 					}
