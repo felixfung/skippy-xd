@@ -191,6 +191,7 @@ typedef struct {
 	char *config_path;
 	enum progmode mode;
 	bool runAsDaemon;
+	bool pivoting;
 	char focus_initial;
 
 	int exposeLayout;
@@ -273,6 +274,7 @@ typedef struct {
 	.config_path = NULL, \
 	.mode = PROGMODE_NORMAL, \
 	.runAsDaemon = false, \
+	.pivoting = false, \
 \
 	.exposeLayout = LAYOUT_BOXY, \
 	.distance = 50, \
