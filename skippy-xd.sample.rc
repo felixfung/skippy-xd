@@ -187,7 +187,7 @@ miwMouse4 = keysNext
 miwMouse5 = keysPrev
 
 # The "pivot" keys are the Alt in Alt-Tab
-# The key has to be held for skippy-xd to activate
+# During pivot mode, the key has to be held
 # And when the key is released, skippy-xd selects the highlighted window.
 keysPivotSwitch = Alt_L
 keysPivotExpose = 
