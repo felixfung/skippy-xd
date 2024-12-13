@@ -1850,9 +1850,15 @@ load_config_file(session_t *ps)
     // less efficient, may introduce inconsistent default value, and
     // occupies a lot more memory for non-string types.
 	{
-	// Appending UID to the file name
-		// Dash-separated initial single-digit string
-		int xid = XConnectionNumber(ps->dpy), pipeStrLen = 3;
+		int pipeStrLen = 3;
+
+		int uid = getuid();
+		{
+			int num;
+			for (num = uid; num >= 10; num /= 10) pipeStrLen++;
+		}
+
+		int xid = XConnectionNumber(ps->dpy);
 		{
 			int num;
 			for (num = xid; num >= 10; num /= 10) pipeStrLen++;
@@ -1862,7 +1868,7 @@ load_config_file(session_t *ps)
 		pipeStrLen += strlen(path);
 
 		char * pipePath = malloc (pipeStrLen * sizeof(unsigned char));
-		sprintf(pipePath, "%s-%i", path, xid);
+		sprintf(pipePath, "%s-%i-%i", path, uid, xid);
 
 		ps->o.pipePath = pipePath;
 	}
