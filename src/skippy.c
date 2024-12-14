@@ -1388,9 +1388,12 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 			switch (piped_input) {
 				case PIPECMD_RELOAD_CONFIG:
-					if (ps->o.config_path)
-						free(ps->o.config_path);
-					ps->o.config_path = receive_string_in_daemon_via_fifo(ps, r_fd);
+					char *config_path = receive_string_in_daemon_via_fifo(ps, r_fd);
+					if (strlen(config_path) > 0) {
+						if (ps->o.config_path)
+							free(ps->o.config_path);
+						ps->o.config_path = config_path;
+					}
 					load_config_file(ps);
 					mainwin_reload(ps, ps->mainwin);
 					break;
@@ -1547,8 +1550,10 @@ receive_string_in_daemon_via_fifo(session_t *ps, struct pollfd *r_fd) {
 
 static inline void
 queue_reload_config(session_t *ps, const char *pipePath) {
-	printfdf(false, "(): Reload config file...");
-	send_string_command_to_daemon_via_fifo(PIPECMD_RELOAD_CONFIG, ps->o.config_path, pipePath);
+	char *config_path = "";
+	if (!ps->o.config_reload)
+		config_path = ps->o.config_path;
+	send_string_command_to_daemon_via_fifo(PIPECMD_RELOAD_CONFIG, config_path, pipePath);
 }
 
 static inline void
@@ -1695,7 +1700,8 @@ show_help() {
 			"  --help              - show this message.\n"
 			"  --debuglog          - enable debugging logs.\n"
 			"\n"
-			"  --config            - load/reload configuration file from path.\n"
+			"  --config            - load/reload configuration file from specifed path.\n"
+			"  --config-reload     - reload configuration file without changing path.\n"
 			"\n"
 			"  --start-daemon      - runs as daemon mode.\n"
 			"  --stop-daemon       - terminates skippy-xd daemon.\n"
@@ -1836,6 +1842,7 @@ static void
 parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 	enum options {
 		OPT_CONFIG,
+		OPT_CONFIG_RELOAD,
 		OPT_DEBUGLOG,
 		OPT_ACTV_SWITCH,
 		OPT_ACTV_EXPOSE,
@@ -1852,6 +1859,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		{ "help",                     no_argument,       NULL, 'h' },
 		{ "debuglog",                 no_argument,       NULL, OPT_DEBUGLOG },
 		{ "config",                   required_argument, NULL, OPT_CONFIG },
+		{ "config-reload",            no_argument,       NULL, OPT_CONFIG_RELOAD },
 		{ "switch",                   no_argument,       NULL, OPT_ACTV_SWITCH },
 		{ "expose",                   no_argument,       NULL, OPT_ACTV_EXPOSE },
 		{ "paging",                   no_argument,       NULL, OPT_ACTV_PAGING },
@@ -1868,6 +1876,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 	int o = 0;
 	optind = 1;
 	bool custom_config = false;
+	bool config_reload = false;
 
 	// Only parse --config in first pass
 	if (first_pass) {
@@ -1878,6 +1887,9 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 					if (ps->o.config_path)
 						free(ps->o.config_path);
 					ps->o.config_path = mstrdup(optarg);
+					break;
+				case OPT_CONFIG_RELOAD:
+					config_reload = true;
 					break;
 				case OPT_DEBUGLOG:
 					debuglog = true;
@@ -1902,6 +1914,9 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 			case OPT_DEBUGLOG: break;
 			case OPT_CONFIG:
 				custom_config = true;
+				break;
+			case OPT_CONFIG_RELOAD:
+				config_reload = true;
 				break;
 			case OPT_ACTV_SWITCH:
 				ps->o.mode = PROGMODE_SWITCH;
@@ -1938,6 +1953,11 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 
 	if (custom_config && !ps->o.runAsDaemon)
 		ps->o.mode = PROGMODE_RELOAD_CONFIG;
+
+	if (config_reload && !ps->o.runAsDaemon) {
+		ps->o.config_reload = true;
+		ps->o.mode = PROGMODE_RELOAD_CONFIG;
+	}
 }
 
 static bool

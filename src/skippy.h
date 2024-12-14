@@ -189,6 +189,7 @@ typedef enum {
 /// @brief Option structure.
 typedef struct {
 	char *config_path;
+	bool config_reload;
 	enum progmode mode;
 	bool runAsDaemon;
 	bool pivoting;
@@ -273,6 +274,7 @@ typedef struct {
 
 #define OPTIONST_INIT { \
 	.config_path = NULL, \
+	.config_reload = false, \
 	.mode = PROGMODE_NORMAL, \
 	.runAsDaemon = false, \
 	.pivoting = false, \
