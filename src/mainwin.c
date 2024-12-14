@@ -237,6 +237,16 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 
 	mw->distance = ps->o.distance;
 
+	if (ps->o.updatetooltip) {
+		foreach_dlist (mw->clients) {
+			ClientWin *cw = (ClientWin *) iter->data;
+			if (cw->tooltip)
+				tooltip_destroy(cw->tooltip);
+			cw->tooltip = tooltip_create(cw->mainwin);
+		}
+		ps->o.updatetooltip = false;
+	}
+
 	return mw;
 }
 

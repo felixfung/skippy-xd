@@ -252,6 +252,7 @@ typedef struct {
 	char *tooltip_text;
 	char *tooltip_textShadow;
 	char *tooltip_font;
+	bool updatetooltip;
 
 	enum cliop bindings_miwMouse[MAX_MOUSE_BUTTONS];
 	char *bindings_keysUp;

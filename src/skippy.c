@@ -1940,6 +1940,24 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		ps->o.mode = PROGMODE_RELOAD_CONFIG;
 }
 
+static bool
+update_and_flag(dlist *config,
+		char *config_section, char *config_option, char *defaultvalue,
+		char **ptr) {
+	char *temp = mstrdup(config_get(config,
+				config_section, config_option, defaultvalue));
+
+	bool updated = true;
+	if (*ptr && **ptr) {
+		updated = strcmp(*ptr, temp) != 0;
+		free(*ptr);
+	}
+
+	*ptr = temp;
+
+	return updated;
+}
+
 int
 load_config_file(session_t *ps)
 {
@@ -1985,14 +2003,19 @@ load_config_file(session_t *ps)
 
 		ps->o.pipePath = pipePath;
 	}
-    ps->o.normal_tint = mstrdup(config_get(config, "normal", "tint", "black"));
-    ps->o.highlight_tint = mstrdup(config_get(config, "highlight", "tint", "#101020"));
-    ps->o.shadow_tint = mstrdup(config_get(config, "shadow", "tint", "#010101"));
-    ps->o.tooltip_border = mstrdup(config_get(config, "tooltip", "border", "#e0e0e0"));
-    ps->o.tooltip_background = mstrdup(config_get(config, "tooltip", "background", "#404040"));
-    ps->o.tooltip_text = mstrdup(config_get(config, "tooltip", "text", "#e0e0e0"));
-    ps->o.tooltip_textShadow = mstrdup(config_get(config, "tooltip", "textShadow", "black"));
-    ps->o.tooltip_font = mstrdup(config_get(config, "tooltip", "font", "fixed-11:weight=bold"));
+
+	ps->o.normal_tint = mstrdup(config_get(config, "normal", "tint", "black"));
+	ps->o.highlight_tint = mstrdup(config_get(config, "highlight", "tint", "#101020"));
+	ps->o.shadow_tint = mstrdup(config_get(config, "shadow", "tint", "#010101"));
+
+	{
+		ps->o.updatetooltip = false;
+		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "border", "#e0e0e0", &ps->o.tooltip_border);
+		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "background", "#404040", &ps->o.tooltip_background);
+		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "text", "#e0e0e0", &ps->o.tooltip_text);
+		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "textShadow", "black", &ps->o.tooltip_textShadow);
+		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "font", "fixed-11:weight=bold", &ps->o.tooltip_font);
+	}
 
     // load keybindings settings
     ps->o.bindings_keysUp = mstrdup(config_get(config, "bindings", "keysUp", "Up"));
