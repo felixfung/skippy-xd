@@ -34,10 +34,11 @@ enum pipe_cmd_t {
 	PIPECMD_SWITCH = 1,
 	PIPECMD_EXPOSE,
 	PIPECMD_PAGING,
-	// these three are flags
+	// these four are flags
 	PIPECMD_PREV = 4,
 	PIPECMD_NEXT = 8,
 	PIPECMD_PIVOTING = 16,
+	PIPECMD_WM_CLASS = 32,
 };
 
 session_t *ps_g = NULL;
@@ -265,8 +266,8 @@ parse_pictspec_end:
 	return true;
 }
 
-static void
-receive_string_in_daemon_via_fifo(session_t *ps, struct pollfd *r_fd, char *str);
+static char*
+receive_string_in_daemon_via_fifo(session_t *ps, struct pollfd *r_fd);
 
 static inline const char *
 ev_dumpstr_type(const XEvent *ev) {
@@ -1387,7 +1388,9 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 			switch (piped_input) {
 				case PIPECMD_RELOAD_CONFIG:
-					receive_string_in_daemon_via_fifo(ps, r_fd, ps->o.config_path);
+					if (ps->o.config_path)
+						free(ps->o.config_path);
+					ps->o.config_path = receive_string_in_daemon_via_fifo(ps, r_fd);
 					load_config_file(ps);
 					mainwin_reload(ps, ps->mainwin);
 					break;
@@ -1413,6 +1416,20 @@ mainloop(session_t *ps, bool activate_on_start) {
 						else if ((piped_input & PIPECMD_SWITCH) == PIPECMD_SWITCH) {
 							ps->o.mode = PROGMODE_SWITCH;
 							layout = LAYOUTMODE_SWITCH;
+						}
+
+						if (!ps->o.persistentFiltering && ps->o.wm_class) {
+							free(ps->o.wm_class);
+							ps->o.wm_class = NULL;
+						}
+
+						if (piped_input & PIPECMD_WM_CLASS) {
+							if (ps->o.wm_class)
+								free(ps->o.wm_class);
+							ps->o.wm_class = receive_string_in_daemon_via_fifo(
+									ps, r_fd);
+							printfdf(false, "(): receiving newwm_class=%s",
+									ps->o.wm_class);
 						}
 
 						toggling = !(piped_input & PIPECMD_PIVOTING);
@@ -1504,10 +1521,12 @@ send_string_command_to_daemon_via_fifo(int command, char *str, const char *pipeP
 	fclose(fp);
 }
 
-static void
-receive_string_in_daemon_via_fifo(session_t *ps, struct pollfd *r_fd, char *str) {
+static char*
+receive_string_in_daemon_via_fifo(session_t *ps, struct pollfd *r_fd) {
 	char strlen = 0;
 	read_pipe(ps, r_fd, &strlen);
+
+	char *str = malloc(strlen);
 
 	int read_ret = read(ps->fd_pipe, str, strlen);
 
@@ -1523,6 +1542,7 @@ receive_string_in_daemon_via_fifo(session_t *ps, struct pollfd *r_fd, char *str)
 	str[strlen-1] = '\0';
 
 	printfdf(false, "(): received string %s", str);
+	return str;
 }
 
 static inline void
@@ -1550,28 +1570,49 @@ char2pipe(char focus_initial) {
 static inline void
 activate_switch(session_t *ps, const char *pipePath) {
 	printfdf(false, "(): Activating switch...");
-	send_command_to_daemon_via_fifo(PIPECMD_SWITCH
-			| char2pipe(ps->o.focus_initial)
-			| (ps->o.pivoting? PIPECMD_PIVOTING: 0),
-			pipePath);
+	if (ps->o.wm_class)
+		send_string_command_to_daemon_via_fifo(
+				PIPECMD_SWITCH
+				| PIPECMD_WM_CLASS
+				| (ps->o.pivoting? PIPECMD_PIVOTING: 0),
+				ps->o.wm_class, pipePath);
+	else
+		send_command_to_daemon_via_fifo(PIPECMD_SWITCH
+				| char2pipe(ps->o.focus_initial)
+				| (ps->o.pivoting? PIPECMD_PIVOTING: 0),
+				pipePath);
 }
 
 static inline void
 activate_expose(session_t *ps, const char *pipePath) {
 	printfdf(false, "(): Activating expose...");
-	send_command_to_daemon_via_fifo(PIPECMD_EXPOSE
-			| char2pipe(ps->o.focus_initial)
-			| (ps->o.pivoting? PIPECMD_PIVOTING: 0),
-			pipePath);
+	if (ps->o.wm_class)
+		send_string_command_to_daemon_via_fifo(
+				PIPECMD_EXPOSE
+				| PIPECMD_WM_CLASS
+				| (ps->o.pivoting? PIPECMD_PIVOTING: 0),
+				ps->o.wm_class, pipePath);
+	else
+		send_command_to_daemon_via_fifo(PIPECMD_EXPOSE
+				| char2pipe(ps->o.focus_initial)
+				| (ps->o.pivoting? PIPECMD_PIVOTING: 0),
+				pipePath);
 }
 
 static inline void
 activate_paging(session_t *ps, const char *pipePath) {
 	printfdf(false, "(): Activating paging...");
-	send_command_to_daemon_via_fifo(PIPECMD_PAGING
-			| char2pipe(ps->o.focus_initial)
-			| (ps->o.pivoting? PIPECMD_PIVOTING: 0),
-			pipePath);
+	if (ps->o.wm_class)
+		send_string_command_to_daemon_via_fifo(
+				PIPECMD_PAGING
+				| PIPECMD_WM_CLASS
+				| (ps->o.pivoting? PIPECMD_PIVOTING: 0),
+				ps->o.wm_class, pipePath);
+	else
+		send_command_to_daemon_via_fifo(PIPECMD_PAGING
+				| char2pipe(ps->o.focus_initial)
+				| (ps->o.pivoting? PIPECMD_PIVOTING: 0),
+				pipePath);
 }
 
 /**
@@ -1650,6 +1691,7 @@ show_help() {
 			"The available commands are:\n"
 			"\n"
 			"  [no command]        - activate expose once without daemon.\n"
+			"\n"
 			"  --help              - show this message.\n"
 			"  --debuglog          - enable debugging logs.\n"
 			"\n"
@@ -1662,6 +1704,8 @@ show_help() {
 			"  --expose            - connects to daemon and activate expose.\n"
 			"  --paging            - connects to daemon and activate paging.\n"
 			// "  --test                      - Temporary development testing. To be removed.\n"
+			"\n"
+			"  --wm-class          - displays only windows of specific class.\n"
 			"\n"
 			"  --pivot             - activates via pivot mode, as opposed to toggling mode.\n"
 			"\n"
@@ -1791,13 +1835,14 @@ get_cfg_path_found:
 static void
 parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 	enum options {
-		OPT_CONFIG = 256,
+		OPT_CONFIG,
 		OPT_DEBUGLOG,
 		OPT_ACTV_SWITCH,
 		OPT_ACTV_EXPOSE,
 		OPT_ACTV_PAGING,
 		OPT_DM_START,
 		OPT_DM_STOP,
+		OPT_WM_CLASS,
 		OPT_PIVOTING,
 		OPT_PREV,
 		OPT_NEXT,
@@ -1812,6 +1857,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		{ "paging",                   no_argument,       NULL, OPT_ACTV_PAGING },
 		{ "start-daemon",             no_argument,       NULL, OPT_DM_START },
 		{ "stop-daemon",              no_argument,       NULL, OPT_DM_STOP },
+		{ "wm-class",                 required_argument, NULL, OPT_WM_CLASS },
 		{ "pivot",                    no_argument,       NULL, OPT_PIVOTING },
 		{ "prev",                     no_argument,       NULL, OPT_PREV },
 		{ "next",                     no_argument,       NULL, OPT_NEXT },
@@ -1827,9 +1873,10 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 	if (first_pass) {
 		while ((o = getopt_long(argc, argv, opts_short, opts_long, NULL)) >= 0) {
 			switch (o) {
-#define T_CASEBOOL(idx, option) case idx: ps->o.option = true; break
 				case OPT_CONFIG:
 					custom_config = true;
+					if (ps->o.config_path)
+						free(ps->o.config_path);
 					ps->o.config_path = mstrdup(optarg);
 					break;
 				case OPT_DEBUGLOG:
@@ -1852,7 +1899,6 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 
 	while ((o = getopt_long(argc, argv, opts_short, opts_long, NULL)) >= 0) {
 		switch (o) {
-#define T_CASEBOOL(idx, option) case idx: ps->o.option = true; break
 			case OPT_DEBUGLOG: break;
 			case OPT_CONFIG:
 				custom_config = true;
@@ -1869,6 +1915,9 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 			case OPT_DM_STOP:
 				ps->o.mode = PROGMODE_DM_STOP;
 				break;
+			case OPT_WM_CLASS:
+				ps->o.wm_class = mstrdup(optarg);
+				break;
 			case OPT_PIVOTING:
 				ps->o.pivoting = true;
 				break;
@@ -1878,8 +1927,9 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 			case OPT_NEXT:
 				ps->o.focus_initial++;
 				break;
-			T_CASEBOOL(OPT_DM_START, runAsDaemon);
-#undef T_CASEBOOL
+			case OPT_DM_START:
+				ps->o.runAsDaemon = true;
+				break;
 			default:
 				printfef(false, "(0): Unimplemented option %d.", o);
 				exit(RET_UNKNOWN);
@@ -2024,6 +2074,7 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "filter", "exposeShowAllDesktops", &ps->o.exposeShowAllDesktops);
     config_get_bool_wrap(config, "filter", "showShadow", &ps->o.showShadow);
     config_get_bool_wrap(config, "filter", "showSticky", &ps->o.showSticky);
+    config_get_bool_wrap(config, "filter", "persistentFiltering", &ps->o.persistentFiltering);
     config_get_bool_wrap(config, "display", "movePointer", &ps->o.movePointer);
     config_get_bool_wrap(config, "filter", "showOnlyCurrentMonitor", &ps->o.xinerama_showAll);
 	ps->o.xinerama_showAll = !ps->o.xinerama_showAll;
@@ -2276,6 +2327,9 @@ main_end:
 			free(ps->o.bindings_keysPivotExpose);
 			free(ps->o.bindings_keysPivotPaging);
 		}
+
+		if(ps->o.wm_class)
+			free(ps->o.wm_class);
 
 		if (ps->fd_pipe >= 0)
 			close(ps->fd_pipe);

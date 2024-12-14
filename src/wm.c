@@ -18,6 +18,7 @@
  */
 
 #include "skippy.h"
+#include <regex.h>
 
 Atom
 	/* Root pixmap / wallpaper atoms */
@@ -675,6 +676,20 @@ wm_validate_window(session_t *ps, Window wid) {
 			if (winprop_get_int(&prop) & WIN_HINTS_SKIP_TASKBAR)
 				result = false;
 			free_winprop(&prop);
+		}
+	}
+
+	if (ps->o.wm_class) {
+		regex_t regex;
+		regcomp(&regex, ps->o.wm_class, 0);
+		XClassHint *hints = allocchk(XAllocClassHint());
+		if (hints){
+			XGetClassHint(ps->dpy, wid, hints);
+			int regmatch = regexec(&regex, hints->res_class, 0, NULL, 0);
+			if (regmatch != 0)
+				result = false;
+			XFree(hints->res_name);
+			XFree(hints->res_class);
 		}
 	}
 

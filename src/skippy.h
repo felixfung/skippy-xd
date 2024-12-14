@@ -222,6 +222,8 @@ typedef struct {
 	pictspec_t bg_spec;
 	Picture from;
 	bool xinerama_showAll;
+	char *wm_class;
+	bool persistentFiltering;
 
 	char *normal_tint;
 	int normal_tintOpacity;
@@ -301,6 +303,7 @@ typedef struct {
 	.buttonImgs = { NULL }, \
 	.background = NULL, \
 	.xinerama_showAll = true, \
+	.persistentFiltering = false, \
 	.normal_tint = NULL, \
 	.normal_tintOpacity = 0, \
 	.normal_opacity = 255, \
