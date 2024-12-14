@@ -1835,7 +1835,7 @@ get_cfg_path_found:
 static void
 parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 	enum options {
-		OPT_CONFIG = 256,
+		OPT_CONFIG,
 		OPT_DEBUGLOG,
 		OPT_ACTV_SWITCH,
 		OPT_ACTV_EXPOSE,
@@ -1873,7 +1873,6 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 	if (first_pass) {
 		while ((o = getopt_long(argc, argv, opts_short, opts_long, NULL)) >= 0) {
 			switch (o) {
-#define T_CASEBOOL(idx, option) case idx: ps->o.option = true; break
 				case OPT_CONFIG:
 					custom_config = true;
 					if (ps->o.config_path)
@@ -1900,7 +1899,6 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 
 	while ((o = getopt_long(argc, argv, opts_short, opts_long, NULL)) >= 0) {
 		switch (o) {
-#define T_CASEBOOL(idx, option) case idx: ps->o.option = true; break
 			case OPT_DEBUGLOG: break;
 			case OPT_CONFIG:
 				custom_config = true;
@@ -1929,8 +1927,9 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 			case OPT_NEXT:
 				ps->o.focus_initial++;
 				break;
-			T_CASEBOOL(OPT_DM_START, runAsDaemon);
-#undef T_CASEBOOL
+			case OPT_DM_START:
+				ps->o.runAsDaemon = true;
+				break;
 			default:
 				printfef(false, "(0): Unimplemented option %d.", o);
 				exit(RET_UNKNOWN);
