@@ -31,7 +31,7 @@ updateFreq = 60.0
 # XQueryTree, _NET_CLIENT_LIST, _WIN_CLIENT_LIST
 # If you see missing windows, or windows that you did not expect,
 # Try a different option
-clientList = XQueryTree
+clientList = _NET_CLIENT_LIST
 
 # when compositors such as picom are not used
 # turn on pseudo-transparency
@@ -107,7 +107,7 @@ includeFrame = true
 
 # Show window previews with rounded corners,
 # with corner radius in pixels
-cornerRadius = 5
+cornerRadius = 0
 
 # Icon parameters
 showIconsOnThumbnails = true

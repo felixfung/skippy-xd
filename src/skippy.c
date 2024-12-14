@@ -2055,10 +2055,12 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "general", "useNetWMFullscreen", &ps->o.useNetWMFullscreen);
 	{
 		ps->o.clientList = 0;
-		const char *tmp = config_get(config, "system", "clientList", NULL);
-		if (tmp && strcmp(tmp, "_NET_CLIENT_LIST") == 0)
+		const char *tmp = config_get(config, "system", "clientList", "_NET_CLIENT_LIST");
+		if (tmp && strcmp(tmp, "XQueryTree") == 0)
+			ps->o.clientList = 0;
+		else if (tmp && strcmp(tmp, "_NET_CLIENT_LIST") == 0)
 			ps->o.clientList = 1;
-		if (tmp && strcmp(tmp, "_WIN_CLIENT_LIST") == 0)
+		else if (tmp && strcmp(tmp, "_WIN_CLIENT_LIST") == 0)
 			ps->o.clientList = 2;
 	}
     config_get_double_wrap(config, "system", "updateFreq", &ps->o.updateFreq, -1000.0, 1000.0);
