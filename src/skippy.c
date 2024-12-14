@@ -1651,7 +1651,7 @@ show_help() {
 			"\n"
 			"  [no command]        - activate expose once without daemon.\n"
 			"  --help              - show this message.\n"
-			"  -S                  - enable debugging logs.\n"
+			"  --debuglog          - enable debugging logs.\n"
 			"\n"
 			"  --config            - load/reload configuration file from path.\n"
 			"\n"
@@ -1792,7 +1792,7 @@ static void
 parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 	enum options {
 		OPT_CONFIG = 256,
-		OPT_CONFIG_RELOAD,
+		OPT_DEBUGLOG,
 		OPT_ACTV_SWITCH,
 		OPT_ACTV_EXPOSE,
 		OPT_ACTV_PAGING,
@@ -1802,9 +1802,10 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		OPT_PREV,
 		OPT_NEXT,
 	};
-	static const char * opts_short = "hS";
+	static const char * opts_short = "h";
 	static const struct option opts_long[] = {
 		{ "help",                     no_argument,       NULL, 'h' },
+		{ "debuglog",                 no_argument,       NULL, OPT_DEBUGLOG },
 		{ "config",                   required_argument, NULL, OPT_CONFIG },
 		{ "switch",                   no_argument,       NULL, OPT_ACTV_SWITCH },
 		{ "expose",                   no_argument,       NULL, OPT_ACTV_EXPOSE },
@@ -1831,7 +1832,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 					custom_config = true;
 					ps->o.config_path = mstrdup(optarg);
 					break;
-				case 'S':
+				case OPT_DEBUGLOG:
 					debuglog = true;
 					break;
 				// case 't':
@@ -1852,7 +1853,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 	while ((o = getopt_long(argc, argv, opts_short, opts_long, NULL)) >= 0) {
 		switch (o) {
 #define T_CASEBOOL(idx, option) case idx: ps->o.option = true; break
-			case 'S': break;
+			case OPT_DEBUGLOG: break;
 			case OPT_CONFIG:
 				custom_config = true;
 				break;
