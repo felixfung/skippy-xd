@@ -1705,6 +1705,8 @@ show_help() {
 			"  --paging            - connects to daemon and activate paging.\n"
 			// "  --test                      - Temporary development testing. To be removed.\n"
 			"\n"
+			"  --wm-class          - displays only windows of specific class.\n"
+			"\n"
 			"  --pivot             - activates via pivot mode, as opposed to toggling mode.\n"
 			"\n"
 			"  --prev              - focus on the previous window.\n"
