@@ -265,6 +265,9 @@ parse_pictspec_end:
 	return true;
 }
 
+static void
+receive_string_in_daemon_via_fifo(session_t *ps, struct pollfd *r_fd, char *str);
+
 static inline const char *
 ev_dumpstr_type(const XEvent *ev) {
 	switch (ev->type) {
@@ -938,12 +941,12 @@ static inline int
 read_pipe(session_t *ps, struct pollfd *r_fd, char *piped_input) {
 	int read_ret = read(ps->fd_pipe, piped_input, 1);
 	if (0 == read_ret) {
-		printfef(false, "(): EOF reached on pipe \"%s\".", ps->o.pipePath);
+		printfef(true, "(): EOF reached on pipe \"%s\".", ps->o.pipePath);
 		open_pipe(ps, r_fd);
 	}
 	else if (-1 == read_ret) {
 		if (EAGAIN != errno)
-			printfef(false, "(): Reading pipe \"%s\" failed: %d", ps->o.pipePath, errno);
+			printfef(true, "(): Reading pipe \"%s\" failed: %d", ps->o.pipePath, errno);
 		//exit(1);
 	}
 
@@ -1384,6 +1387,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 			switch (piped_input) {
 				case PIPECMD_RELOAD_CONFIG:
+					receive_string_in_daemon_via_fifo(ps, r_fd, ps->o.config_path);
 					load_config_file(ps);
 					mainwin_reload(ps, ps->mainwin);
 					break;
@@ -1470,10 +1474,61 @@ send_command_to_daemon_via_fifo(int command, const char *pipePath) {
 	fclose(fp);
 }
 
+static void
+send_string_command_to_daemon_via_fifo(int command, char *str, const char *pipePath) {
+	{
+		int access_ret = 0;
+		if ((access_ret = access(pipePath, W_OK))) {
+			printfef(true, "(): Failed to access() pipe \"%s\": %d", pipePath, access_ret);
+			perror("access");
+			exit(1);
+		}
+	}
+
+	FILE *fp = fopen(pipePath, "a");
+	fputc(command, fp);
+
+	unsigned int strlen = 0;
+	for (int i=0; str[i] != '\0'; i++)
+		strlen++;
+	strlen++; // +1 for null terminator
+	if (strlen >= BUF_LEN)
+		printfef(true, "(): string length exceeds character limit. Aborting");
+
+	printfdf(false, "(): Sending string...");
+	fputc(strlen, fp);
+	for (int i=0; str[i] != '\0'; i++)
+		fputc(str[i], fp);
+	fputc('\0', fp);
+
+	fclose(fp);
+}
+
+static void
+receive_string_in_daemon_via_fifo(session_t *ps, struct pollfd *r_fd, char *str) {
+	char strlen = 0;
+	read_pipe(ps, r_fd, &strlen);
+
+	int read_ret = read(ps->fd_pipe, str, strlen);
+
+	if (0 == read_ret) {
+		printfef(true, "(): EOF reached on pipe \"%s\".", ps->o.pipePath);
+	}
+	else if (-1 == read_ret) {
+		if (EAGAIN != errno)
+			printfef(true, "(): Reading pipe \"%s\" failed: %d", ps->o.pipePath, errno);
+		//exit(1);
+	}
+
+	str[strlen-1] = '\0';
+
+	printfdf(false, "(): received string %s", str);
+}
+
 static inline void
-queue_reload_config(const char *pipePath) {
+queue_reload_config(session_t *ps, const char *pipePath) {
 	printfdf(false, "(): Reload config file...");
-	send_command_to_daemon_via_fifo(PIPECMD_RELOAD_CONFIG, pipePath);
+	send_string_command_to_daemon_via_fifo(PIPECMD_RELOAD_CONFIG, ps->o.config_path, pipePath);
 }
 
 static inline void
@@ -1596,10 +1651,9 @@ show_help() {
 			"\n"
 			"  [no command]        - activate expose once without daemon.\n"
 			"  --help              - show this message.\n"
-			"  -S                  - enable debugging logs.\n"
+			"  --debuglog          - enable debugging logs.\n"
 			"\n"
-			"  --config            - read configuration file from path.\n"
-			"  --config-reload     - reload configuration file from the previous path.\n"
+			"  --config            - load/reload configuration file from path.\n"
 			"\n"
 			"  --start-daemon      - runs as daemon mode.\n"
 			"  --stop-daemon       - terminates skippy-xd daemon.\n"
@@ -1738,7 +1792,7 @@ static void
 parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 	enum options {
 		OPT_CONFIG = 256,
-		OPT_CONFIG_RELOAD,
+		OPT_DEBUGLOG,
 		OPT_ACTV_SWITCH,
 		OPT_ACTV_EXPOSE,
 		OPT_ACTV_PAGING,
@@ -1748,11 +1802,11 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		OPT_PREV,
 		OPT_NEXT,
 	};
-	static const char * opts_short = "hS";
+	static const char * opts_short = "h";
 	static const struct option opts_long[] = {
 		{ "help",                     no_argument,       NULL, 'h' },
+		{ "debuglog",                 no_argument,       NULL, OPT_DEBUGLOG },
 		{ "config",                   required_argument, NULL, OPT_CONFIG },
-		{ "config-reload",            no_argument,       NULL, OPT_CONFIG_RELOAD },
 		{ "switch",                   no_argument,       NULL, OPT_ACTV_SWITCH },
 		{ "expose",                   no_argument,       NULL, OPT_ACTV_EXPOSE },
 		{ "paging",                   no_argument,       NULL, OPT_ACTV_PAGING },
@@ -1767,6 +1821,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 
 	int o = 0;
 	optind = 1;
+	bool custom_config = false;
 
 	// Only parse --config in first pass
 	if (first_pass) {
@@ -1774,9 +1829,10 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 			switch (o) {
 #define T_CASEBOOL(idx, option) case idx: ps->o.option = true; break
 				case OPT_CONFIG:
+					custom_config = true;
 					ps->o.config_path = mstrdup(optarg);
 					break;
-				case 'S':
+				case OPT_DEBUGLOG:
 					debuglog = true;
 					break;
 				// case 't':
@@ -1796,10 +1852,10 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 
 	while ((o = getopt_long(argc, argv, opts_short, opts_long, NULL)) >= 0) {
 		switch (o) {
-			case 'S': break;
-			case OPT_CONFIG: break;
-			case OPT_CONFIG_RELOAD:
-				ps->o.mode = PROGMODE_RELOAD_CONFIG;
+#define T_CASEBOOL(idx, option) case idx: ps->o.option = true; break
+			case OPT_DEBUGLOG: break;
+			case OPT_CONFIG:
+				custom_config = true;
 				break;
 			case OPT_ACTV_SWITCH:
 				ps->o.mode = PROGMODE_SWITCH;
@@ -1829,6 +1885,9 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 				exit(RET_UNKNOWN);
 		}
 	}
+
+	if (custom_config && !ps->o.runAsDaemon)
+		ps->o.mode = PROGMODE_RELOAD_CONFIG;
 }
 
 int
@@ -2115,7 +2174,7 @@ int main(int argc, char *argv[]) {
 			activate_paging(ps, pipePath);
 			goto main_end;
 		case PROGMODE_RELOAD_CONFIG:
-			queue_reload_config(pipePath);
+			queue_reload_config(ps, pipePath);
 			goto main_end;
 		case PROGMODE_DM_STOP:
 			exit_daemon(pipePath);
