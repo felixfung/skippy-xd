@@ -1,4 +1,4 @@
-BREAKING! ALT-TAB command is changed to skippy-xd --switch --pivot --next
+## BREAKING! ALT-TAB command is changed to skippy-xd --switch --pivot --next
 
 Welcome to skippy-xd!
 
