@@ -76,6 +76,10 @@ showSticky = true
 switchShowAllDesktops = false
 exposeShowAllDesktops = false
 
+# Whether the filtering of window class
+# Will be persistent across activations
+persistentFiltering = false
+
 [display]
 
 # Shows _NET_WM_WINDOW_TYPE_DESKTOP windows

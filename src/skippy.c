@@ -1418,6 +1418,11 @@ mainloop(session_t *ps, bool activate_on_start) {
 							layout = LAYOUTMODE_SWITCH;
 						}
 
+						if (!ps->o.persistentFiltering && ps->o.wm_class) {
+							free(ps->o.wm_class);
+							ps->o.wm_class = NULL;
+						}
+
 						if (piped_input & PIPECMD_WM_CLASS) {
 							if (ps->o.wm_class)
 								free(ps->o.wm_class);
@@ -1869,6 +1874,8 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 #define T_CASEBOOL(idx, option) case idx: ps->o.option = true; break
 				case OPT_CONFIG:
 					custom_config = true;
+					if (ps->o.config_path)
+						free(ps->o.config_path);
 					ps->o.config_path = mstrdup(optarg);
 					break;
 				case OPT_DEBUGLOG:
@@ -2066,6 +2073,7 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "filter", "exposeShowAllDesktops", &ps->o.exposeShowAllDesktops);
     config_get_bool_wrap(config, "filter", "showShadow", &ps->o.showShadow);
     config_get_bool_wrap(config, "filter", "showSticky", &ps->o.showSticky);
+    config_get_bool_wrap(config, "filter", "persistentFiltering", &ps->o.persistentFiltering);
     config_get_bool_wrap(config, "display", "movePointer", &ps->o.movePointer);
     config_get_bool_wrap(config, "filter", "showOnlyCurrentMonitor", &ps->o.xinerama_showAll);
 	ps->o.xinerama_showAll = !ps->o.xinerama_showAll;
@@ -2289,7 +2297,6 @@ main_end:
 		{
 			free(ps->o.config_path);
 			free(ps->o.pipePath);
-			free(ps->o.wm_class);
 			free(ps->o.clientDisplayModes);
 			free(ps->o.normal_tint);
 			free(ps->o.highlight_tint);
@@ -2319,6 +2326,9 @@ main_end:
 			free(ps->o.bindings_keysPivotExpose);
 			free(ps->o.bindings_keysPivotPaging);
 		}
+
+		if(ps->o.wm_class)
+			free(ps->o.wm_class);
 
 		if (ps->fd_pipe >= 0)
 			close(ps->fd_pipe);
