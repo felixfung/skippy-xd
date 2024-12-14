@@ -1428,7 +1428,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 								free(ps->o.wm_class);
 							ps->o.wm_class = receive_string_in_daemon_via_fifo(
 									ps, r_fd);
-							printfdf(true, "(): receiving newwm_class=%s",
+							printfdf(false, "(): receiving newwm_class=%s",
 									ps->o.wm_class);
 						}
 
