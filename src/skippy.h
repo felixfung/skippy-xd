@@ -222,6 +222,7 @@ typedef struct {
 	pictspec_t bg_spec;
 	Picture from;
 	bool xinerama_showAll;
+	char *wm_class;
 
 	char *normal_tint;
 	int normal_tintOpacity;
