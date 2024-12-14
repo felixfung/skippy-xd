@@ -2090,8 +2090,6 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "panel", "backgroundTinting", &ps->o.panel_tinting);
     config_get_bool_wrap(config, "panel", "allowOverlap", &ps->o.panel_allow_overlap);
     config_get_bool_wrap(config, "tooltip", "show", &ps->o.tooltip_show);
-    config_get_bool_wrap(config, "tooltip", "showDesktop", &ps->o.tooltip_showDesktop);
-    config_get_bool_wrap(config, "tooltip", "showMonitor", &ps->o.tooltip_showMonitor);
     config_get_int_wrap(config, "tooltip", "offsetX", &ps->o.tooltip_offsetX, INT_MIN, INT_MAX);
     config_get_int_wrap(config, "tooltip", "offsetY", &ps->o.tooltip_offsetY, INT_MIN, INT_MAX);
     config_get_double_wrap(config, "tooltip", "width", &ps->o.tooltip_width, 0.0, 1.0);

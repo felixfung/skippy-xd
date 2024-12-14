@@ -142,8 +142,6 @@ allowOverlap = true
 
 [tooltip]
 show = true
-showDesktop = false
-showMonitor = false
 offsetX = 0
 offsetY = -5
 width = 0.8
