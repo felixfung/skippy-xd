@@ -1653,8 +1653,7 @@ show_help() {
 			"  --help              - show this message.\n"
 			"  -S                  - enable debugging logs.\n"
 			"\n"
-			"  --config            - read configuration file from path.\n"
-			"  --config-reload     - reload configuration file from the previous path.\n"
+			"  --config            - load/reload configuration file from path.\n"
 			"\n"
 			"  --start-daemon      - runs as daemon mode.\n"
 			"  --stop-daemon       - terminates skippy-xd daemon.\n"
@@ -1807,7 +1806,6 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 	static const struct option opts_long[] = {
 		{ "help",                     no_argument,       NULL, 'h' },
 		{ "config",                   required_argument, NULL, OPT_CONFIG },
-		{ "config-reload",            required_argument, NULL, OPT_CONFIG_RELOAD },
 		{ "switch",                   no_argument,       NULL, OPT_ACTV_SWITCH },
 		{ "expose",                   no_argument,       NULL, OPT_ACTV_EXPOSE },
 		{ "paging",                   no_argument,       NULL, OPT_ACTV_PAGING },
@@ -1822,6 +1820,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 
 	int o = 0;
 	optind = 1;
+	bool custom_config = false;
 
 	// Only parse --config in first pass
 	if (first_pass) {
@@ -1829,7 +1828,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 			switch (o) {
 #define T_CASEBOOL(idx, option) case idx: ps->o.option = true; break
 				case OPT_CONFIG:
-				case OPT_CONFIG_RELOAD:
+					custom_config = true;
 					ps->o.config_path = mstrdup(optarg);
 					break;
 				case 'S':
@@ -1854,9 +1853,8 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		switch (o) {
 #define T_CASEBOOL(idx, option) case idx: ps->o.option = true; break
 			case 'S': break;
-			case OPT_CONFIG: break;
-			case OPT_CONFIG_RELOAD:
-				ps->o.mode = PROGMODE_RELOAD_CONFIG;
+			case OPT_CONFIG:
+				custom_config = true;
 				break;
 			case OPT_ACTV_SWITCH:
 				ps->o.mode = PROGMODE_SWITCH;
@@ -1886,6 +1884,9 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 				exit(RET_UNKNOWN);
 		}
 	}
+
+	if (custom_config && !ps->o.runAsDaemon)
+		ps->o.mode = PROGMODE_RELOAD_CONFIG;
 }
 
 int
