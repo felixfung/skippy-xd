@@ -537,7 +537,7 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 static void
 calculatePanelBorders(MainWin *mw,
 		int *x1, int *y1, int *x2, int *y2) {
-	if (mw->ps->o.panel_allow_overlap)
+	if (!mw->ps->o.panel_reserveSpace)
 		return;
 
 	// use heuristics to find panel borders
@@ -2055,10 +2055,12 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "general", "useNetWMFullscreen", &ps->o.useNetWMFullscreen);
 	{
 		ps->o.clientList = 0;
-		const char *tmp = config_get(config, "system", "clientList", NULL);
-		if (tmp && strcmp(tmp, "_NET_CLIENT_LIST") == 0)
+		const char *tmp = config_get(config, "system", "clientList", "_NET_CLIENT_LIST");
+		if (tmp && strcmp(tmp, "XQueryTree") == 0)
+			ps->o.clientList = 0;
+		else if (tmp && strcmp(tmp, "_NET_CLIENT_LIST") == 0)
 			ps->o.clientList = 1;
-		if (tmp && strcmp(tmp, "_WIN_CLIENT_LIST") == 0)
+		else if (tmp && strcmp(tmp, "_WIN_CLIENT_LIST") == 0)
 			ps->o.clientList = 2;
 	}
     config_get_double_wrap(config, "system", "updateFreq", &ps->o.updateFreq, -1000.0, 1000.0);
@@ -2086,10 +2088,8 @@ load_config_file(session_t *ps)
     config_get_int_wrap(config, "shadow", "opacity", &ps->o.shadow_opacity, 0, 256);
     config_get_bool_wrap(config, "panel", "show", &ps->o.panel_show);
     config_get_bool_wrap(config, "panel", "backgroundTinting", &ps->o.panel_tinting);
-    config_get_bool_wrap(config, "panel", "allowOverlap", &ps->o.panel_allow_overlap);
+    config_get_bool_wrap(config, "panel", "reserveSpace", &ps->o.panel_reserveSpace);
     config_get_bool_wrap(config, "tooltip", "show", &ps->o.tooltip_show);
-    config_get_bool_wrap(config, "tooltip", "showDesktop", &ps->o.tooltip_showDesktop);
-    config_get_bool_wrap(config, "tooltip", "showMonitor", &ps->o.tooltip_showMonitor);
     config_get_int_wrap(config, "tooltip", "offsetX", &ps->o.tooltip_offsetX, INT_MIN, INT_MAX);
     config_get_int_wrap(config, "tooltip", "offsetY", &ps->o.tooltip_offsetY, INT_MIN, INT_MAX);
     config_get_double_wrap(config, "tooltip", "width", &ps->o.tooltip_width, 0.0, 1.0);

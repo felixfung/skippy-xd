@@ -240,11 +240,9 @@ typedef struct {
 	bool panel_show;
 	bool panel_show_desktop;
 	bool panel_tinting;
-	bool panel_allow_overlap;
+	bool panel_reserveSpace;
 
 	bool tooltip_show;
-	bool tooltip_showDesktop;
-	bool tooltip_showMonitor;
 	int tooltip_offsetX;
 	int tooltip_offsetY;
 	double tooltip_width;
@@ -316,10 +314,8 @@ typedef struct {
 	.panel_show = true, \
 	.panel_show_desktop = true, \
 	.panel_tinting = true, \
-	.panel_allow_overlap = true, \
+	.panel_reserveSpace = true, \
 	.tooltip_show = true, \
-	.tooltip_showDesktop = true, \
-	.tooltip_showMonitor = true, \
 	.tooltip_offsetX = 0, \
 	.tooltip_offsetY = 20, \
 	.tooltip_width = 0.8, \
