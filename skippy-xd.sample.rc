@@ -138,7 +138,7 @@ opacity = 160
 [panel]
 show = true
 backgroundTinting = true
-allowOverlap = true
+reserveSpace = true
 
 [tooltip]
 show = true

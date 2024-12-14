@@ -537,7 +537,7 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 static void
 calculatePanelBorders(MainWin *mw,
 		int *x1, int *y1, int *x2, int *y2) {
-	if (mw->ps->o.panel_allow_overlap)
+	if (!mw->ps->o.panel_reserveSpace)
 		return;
 
 	// use heuristics to find panel borders
@@ -2088,7 +2088,7 @@ load_config_file(session_t *ps)
     config_get_int_wrap(config, "shadow", "opacity", &ps->o.shadow_opacity, 0, 256);
     config_get_bool_wrap(config, "panel", "show", &ps->o.panel_show);
     config_get_bool_wrap(config, "panel", "backgroundTinting", &ps->o.panel_tinting);
-    config_get_bool_wrap(config, "panel", "allowOverlap", &ps->o.panel_allow_overlap);
+    config_get_bool_wrap(config, "panel", "reserveSpace", &ps->o.panel_reserveSpace);
     config_get_bool_wrap(config, "tooltip", "show", &ps->o.tooltip_show);
     config_get_int_wrap(config, "tooltip", "offsetX", &ps->o.tooltip_offsetX, INT_MIN, INT_MAX);
     config_get_int_wrap(config, "tooltip", "offsetY", &ps->o.tooltip_offsetY, INT_MIN, INT_MAX);
