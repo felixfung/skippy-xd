@@ -681,7 +681,7 @@ wm_validate_window(session_t *ps, Window wid) {
 
 	if (ps->o.wm_class) {
 		regex_t regex;
-		regcomp(&regex, ps->o.wm_class, 0);
+		regcomp(&regex, ps->o.wm_class, REG_EXTENDED);
 		XClassHint *hints = allocchk(XAllocClassHint());
 		if (hints){
 			XGetClassHint(ps->dpy, wid, hints);
