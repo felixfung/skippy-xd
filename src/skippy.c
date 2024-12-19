@@ -474,6 +474,7 @@ receive_string_in_daemon_via_fifo(session_t *ps, struct pollfd *r_fd,
 		}
 
 		*nparams = buffer[1];
+		printfdf(true, "(): full command %s", buffer);
 		printfdf(true, "(): received multi-byte command %d of %d bytes and %d parameters",
 				master_command, cmdlen, *nparams);
 		*param = malloc(*nparams * sizeof(char*));
@@ -481,23 +482,20 @@ receive_string_in_daemon_via_fifo(session_t *ps, struct pollfd *r_fd,
 
 		int k=2;
 		for (int i=0; i < *nparams; i++) {
-			*param[i] = buffer[k];
+			(*param)[i] = buffer[k];
 			k++;
 
 			char nchar = buffer[k];
 			printfdf(true, "(): parameter %d takes %d bytes...",
-					*param[i], nchar);
+					(*param)[i], nchar);
 			k++;
 
-			*str[i] = malloc(nchar+1);
-			for (int j=0; j<nchar && buffer[k]!='\0'; j++) {
-				(*str[i])[j] = buffer[k];
-				k++;
-			}
-			(*str[i])[(int)nchar] = '\0';
-			k++;
+			(*str)[i] = malloc(nchar+1);
+			strncpy((*str)[i], buffer + k, nchar);
+			(*str)[i][(int)nchar] = '\0';
+			k += nchar;
 
-			printfdf(true, "(): received parameter %c%s", *param[i], *str[i]);
+			printfdf(true, "(): received parameter %d%s", (*param)[i], (*str)[i]);
 		}
 	}
 	return master_command;
@@ -557,7 +555,6 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 				PIPEPRM_WM_CLASS, (char)strlen(ps->o.wm_class), ps->o.wm_class);
 		strcat(command, wm_cmd);
 	}
-
 	send_string_command_to_daemon_via_fifo(pipePath, command);
 }
 
