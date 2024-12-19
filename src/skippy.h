@@ -192,8 +192,8 @@ typedef struct {
 	bool config_reload;
 	enum progmode mode;
 	bool runAsDaemon;
-	bool pivoting;
 	char focus_initial;
+	KeyCode pivotkey;
 
 	int exposeLayout;
 	int distance;
@@ -267,9 +267,6 @@ typedef struct {
 	char *bindings_keysIconify;
 	char *bindings_keysShade;
 	char *bindings_keysClose;
-	char *bindings_keysPivotSwitch;
-	char *bindings_keysPivotExpose;
-	char *bindings_keysPivotPaging;
 } options_t;
 
 #define OPTIONST_INIT { \
@@ -277,7 +274,7 @@ typedef struct {
 	.config_reload = false, \
 	.mode = PROGMODE_NORMAL, \
 	.runAsDaemon = false, \
-	.pivoting = false, \
+	.pivotkey = 0, \
 \
 	.exposeLayout = LAYOUT_BOXY, \
 	.distance = 50, \

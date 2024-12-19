@@ -141,9 +141,6 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keys_str_syms(ps->o.bindings_keysIconify, &mw->keysyms_Iconify);
 	keys_str_syms(ps->o.bindings_keysShade, &mw->keysyms_Shade);
 	keys_str_syms(ps->o.bindings_keysClose, &mw->keysyms_Close);
-	keys_str_syms(ps->o.bindings_keysPivotSwitch, &mw->keysyms_PivotSwitch);
-	keys_str_syms(ps->o.bindings_keysPivotExpose, &mw->keysyms_PivotExpose);
-	keys_str_syms(ps->o.bindings_keysPivotPaging, &mw->keysyms_PivotPaging);
 
 	// convert the arrays of KeySyms into arrays of KeyCodes, for this specific Display
 	keysyms_arr_keycodes(dpy, mw->keysyms_Up, &mw->keycodes_Up);
@@ -157,9 +154,6 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keysyms_arr_keycodes(dpy, mw->keysyms_Iconify, &mw->keycodes_Iconify);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Shade, &mw->keycodes_Shade);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Close, &mw->keycodes_Close);
-	keysyms_arr_keycodes(dpy, mw->keysyms_PivotSwitch, &mw->keycodes_PivotSwitch);
-	keysyms_arr_keycodes(dpy, mw->keysyms_PivotExpose, &mw->keycodes_PivotExpose);
-	keysyms_arr_keycodes(dpy, mw->keysyms_PivotPaging, &mw->keycodes_PivotPaging);
 
 	// we check all possible pairs, one pair at a time. This is in a specific order, to give a more helpful error msg
 	check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysDown", mw->keysyms_Down);
@@ -167,19 +161,15 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysRight", mw->keysyms_Right);
 	check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysCancel", mw->keysyms_Cancel);
 	check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysSelect", mw->keysyms_Select);
-	//check_keybindings_conflict(ps->o.config_path, "keysUp", mw->keysyms_Up, "keysPivot", mw->keysyms_Pivot);
 	check_keybindings_conflict(ps->o.config_path, "keysDown", mw->keysyms_Down, "keysLeft", mw->keysyms_Left);
 	check_keybindings_conflict(ps->o.config_path, "keysDown", mw->keysyms_Down, "keysRight", mw->keysyms_Right);
 	check_keybindings_conflict(ps->o.config_path, "keysDown", mw->keysyms_Down, "keysCancel", mw->keysyms_Cancel);
 	check_keybindings_conflict(ps->o.config_path, "keysDown", mw->keysyms_Down, "keysSelect", mw->keysyms_Select);
-	//check_keybindings_conflict(ps->o.config_path, "keysDown", mw->keysyms_Down, "keysPivot", mw->keysyms_Pivot);
 	check_keybindings_conflict(ps->o.config_path, "keysLeft", mw->keysyms_Left, "keysRight", mw->keysyms_Right);
 	check_keybindings_conflict(ps->o.config_path, "keysLeft", mw->keysyms_Left, "keysCancel", mw->keysyms_Cancel);
 	check_keybindings_conflict(ps->o.config_path, "keysLeft", mw->keysyms_Left, "keysSelect", mw->keysyms_Select);
-	//check_keybindings_conflict(ps->o.config_path, "keysLeft", mw->keysyms_Left, "keysPivot", mw->keysyms_Pivot);
 	check_keybindings_conflict(ps->o.config_path, "keysRight", mw->keysyms_Prev, "keysCancel", mw->keysyms_Cancel);
 	check_keybindings_conflict(ps->o.config_path, "keysRight", mw->keysyms_Prev, "keysSelect", mw->keysyms_Select);
-	//check_keybindings_conflict(ps->o.config_path, "keysRight", mw->keysyms_Prev, "keysPivot", mw->keysyms_Pivot);
 	check_keybindings_conflict(ps->o.config_path, "keysPrev", mw->keysyms_Prev, "keysCancel", mw->keysyms_Cancel);
 	check_keybindings_conflict(ps->o.config_path, "keysPrev", mw->keysyms_Prev, "keysSelect", mw->keysyms_Select);
 	check_keybindings_conflict(ps->o.config_path, "keysNext", mw->keysyms_Next, "keysCancel", mw->keysyms_Cancel);
@@ -484,9 +474,6 @@ mainwin_destroy(MainWin *mw) {
 	free(mw->keysyms_Iconify);
 	free(mw->keysyms_Shade);
 	free(mw->keysyms_Close);
-	free(mw->keysyms_PivotSwitch);
-	free(mw->keysyms_PivotExpose);
-	free(mw->keysyms_PivotPaging);
 
 	free(mw->keycodes_Up);
 	free(mw->keycodes_Down);
@@ -499,9 +486,6 @@ mainwin_destroy(MainWin *mw) {
 	free(mw->keycodes_Iconify);
 	free(mw->keycodes_Shade);
 	free(mw->keycodes_Close);
-	free(mw->keycodes_PivotSwitch);
-	free(mw->keycodes_PivotExpose);
-	free(mw->keycodes_PivotPaging);
 
 	free(mw);
 }
