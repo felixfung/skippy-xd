@@ -1898,7 +1898,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 					custom_config = true;
 					if (ps->o.config_path)
 						free(ps->o.config_path);
-					ps->o.config_path = mstrdup(optarg);
+					ps->o.config_path = realpath(optarg, NULL);
 					break;
 				case OPT_CONFIG_RELOAD:
 					config_reload = true;
