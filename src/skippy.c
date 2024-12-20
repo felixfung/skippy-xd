@@ -509,16 +509,19 @@ exit_daemon(const char *pipePath) {
 
 static inline void
 queue_reload_config(session_t *ps, const char *pipePath) {
-	char *config_path = "";
-	if (!ps->o.config_reload)
-		config_path = ps->o.config_path;
-
-	char command[256];
-	sprintf(command, "%c%c%c%c%s",
-			PIPECMD_RELOAD_CONFIG | PIPECMD_MULTI_BYTE,
-			1, PIPECMD_RELOAD_CONFIG,
-			(char)strlen(config_path), config_path);
-	send_string_command_to_daemon_via_fifo(pipePath, command);
+	if (!ps->o.config_reload) {
+		char command[256];
+		sprintf(command, "%c%c%c%c%s",
+				PIPECMD_RELOAD_CONFIG | PIPECMD_MULTI_BYTE,
+				1, PIPECMD_RELOAD_CONFIG,
+				(char)strlen(ps->o.config_path), ps->o.config_path);
+		send_string_command_to_daemon_via_fifo(pipePath, command);
+	}
+	else {
+		char command[256];
+		sprintf(command, "%c", PIPECMD_RELOAD_CONFIG);
+		send_string_command_to_daemon_via_fifo(pipePath, command);
+	}
 }
 
 static void
@@ -1531,10 +1534,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 						if (ps->o.config_path)
 							free(ps->o.config_path);
 						ps->o.config_path = str[i];
-						load_config_file(ps);
-						mainwin_reload(ps, ps->mainwin);
 					}
 				}
+				load_config_file(ps);
+				mainwin_reload(ps, ps->mainwin);
 			}
 			else {
 				ps->o.focus_initial = -((piped_input & PIPECMD_PREV) > 0)
