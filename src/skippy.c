@@ -1710,6 +1710,7 @@ show_help() {
 			"\n"
 			"  --wm-class          - displays only windows of specific class.\n"
 			"\n"
+			"  --toggle            - activates via toggle mode.\n"
 			"  --pivot             - activates via pivot mode with specified pivot key.\n"
 			"\n"
 			"  --prev              - focus on the previous window.\n"
@@ -1847,6 +1848,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		OPT_DM_START,
 		OPT_DM_STOP,
 		OPT_WM_CLASS,
+		OPT_TOGGLE,
 		OPT_PIVOTING,
 		OPT_PREV,
 		OPT_NEXT,
@@ -1863,6 +1865,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		{ "start-daemon",             no_argument,       NULL, OPT_DM_START },
 		{ "stop-daemon",              no_argument,       NULL, OPT_DM_STOP },
 		{ "wm-class",                 required_argument, NULL, OPT_WM_CLASS },
+		{ "toggle",                   no_argument,       NULL, OPT_TOGGLE },
 		{ "pivot",                    required_argument, NULL, OPT_PIVOTING },
 		{ "prev",                     no_argument,       NULL, OPT_PREV },
 		{ "next",                     no_argument,       NULL, OPT_NEXT },
@@ -1929,6 +1932,9 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 				break;
 			case OPT_WM_CLASS:
 				ps->o.wm_class = mstrdup(optarg);
+				break;
+			case OPT_TOGGLE:
+				ps->o.pivotkey = 0;
 				break;
 			case OPT_PIVOTING:
 				KeySym keysym = XStringToKeysym(optarg);
