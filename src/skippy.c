@@ -420,12 +420,12 @@ send_string_command_to_daemon_via_fifo(
 		}
 	}
 
-	printfdf(true, "(): sending string command to pipe of length %d",
+	printfdf(false, "(): sending string command to pipe of length %d",
 			(int)strlen(command) + 1);
 
 	char final_cmd[strlen(command)+1];
 	sprintf(final_cmd, "%c%s", (char)strlen(command), command);
-	printfdf(true, "(): string command: %s", final_cmd);
+	printfdf(false, "(): string command: %s", final_cmd);
 
 	int fp = open(pipePath, O_WRONLY);
 	int bytes_written = write(fp, final_cmd, strlen(command)+1);
@@ -462,7 +462,7 @@ receive_string_in_daemon_via_fifo(session_t *ps, struct pollfd *r_fd,
 	char master_command = buffer[0];
 
 	if ((master_command & PIPECMD_MULTI_BYTE) == 0) {
-		printfdf(true, "(): received single byte command %d", master_command);
+		printfdf(false, "(): received single byte command %d", master_command);
 		*nparams = 0;
 		param = NULL;
 		str = NULL;
@@ -474,8 +474,7 @@ receive_string_in_daemon_via_fifo(session_t *ps, struct pollfd *r_fd,
 		}
 
 		*nparams = buffer[1];
-		printfdf(true, "(): full command %s", buffer);
-		printfdf(true, "(): received multi-byte command %d of %d bytes and %d parameters",
+		printfdf(false, "(): received multi-byte command %d of %d bytes and %d parameters",
 				master_command, cmdlen, *nparams);
 		*param = malloc(*nparams * sizeof(char*));
 		*str = malloc(*nparams * sizeof(char*));
@@ -486,7 +485,7 @@ receive_string_in_daemon_via_fifo(session_t *ps, struct pollfd *r_fd,
 			k++;
 
 			char nchar = buffer[k];
-			printfdf(true, "(): parameter %d takes %d bytes...",
+			printfdf(false, "(): parameter %d takes %d bytes...",
 					(*param)[i], nchar);
 			k++;
 
@@ -495,7 +494,7 @@ receive_string_in_daemon_via_fifo(session_t *ps, struct pollfd *r_fd,
 			(*str)[i][(int)nchar] = '\0';
 			k += nchar;
 
-			printfdf(true, "(): received parameter %d%s", (*param)[i], (*str)[i]);
+			printfdf(false, "(): received parameter %d%s", (*param)[i], (*str)[i]);
 		}
 	}
 	return master_command;
@@ -1570,17 +1569,17 @@ mainloop(session_t *ps, bool activate_on_start) {
 							if (ps->o.wm_class)
 								free(ps->o.wm_class);
 							ps->o.wm_class = str[i];
-							printfdf(true, "(): receiving new wm_class=%s",
+							printfdf(false, "(): receiving new wm_class=%s",
 									ps->o.wm_class);
 						}
 						if (param[i] & PIPEPRM_PIVOTING) {
 							ps->o.pivotkey = str[i][0];
-							printfdf(true, "(): receiving new pivot key=%d",ps->o.pivotkey);
+							printfdf(false, "(): receiving new pivot key=%d",ps->o.pivotkey);
 							toggling = false;
 						}
 					}
 
-					printfdf(true, "(): skippy activating: metaphor=%d", layout);
+					printfdf(false, "(): skippy activating: metaphor=%d", layout);
 				}
 				// parameter == 0, toggle
 				// otherwise shift window focus
