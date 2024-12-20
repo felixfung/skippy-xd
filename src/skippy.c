@@ -1877,6 +1877,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 	optind = 1;
 	bool custom_config = false;
 	bool config_reload = false;
+	bool user_specified_toggle_pivot = false;
 
 	// Only parse --config in first pass
 	if (first_pass) {
@@ -1934,9 +1935,11 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 				ps->o.wm_class = mstrdup(optarg);
 				break;
 			case OPT_TOGGLE:
+				user_specified_toggle_pivot = true;
 				ps->o.pivotkey = 0;
 				break;
 			case OPT_PIVOTING:
+				user_specified_toggle_pivot = true;
 				KeySym keysym = XStringToKeysym(optarg);
 				if (keysym == 0) {
 					printfef(true, "(): \"%s\" was not recognized as a valid KeySym. Run the program 'xev' to find the correct value.", optarg);
@@ -1957,6 +1960,16 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 			default:
 				printfef(true, "(0): Unimplemented option %d.", o);
 				exit(RET_UNKNOWN);
+		}
+	}
+
+	if (!user_specified_toggle_pivot) {
+		if (ps->o.mode == PROGMODE_SWITCH) {
+			ps->o.pivotkey = 64; // switch defaults to pivot with Alt_L
+		}
+		if (ps->o.mode == PROGMODE_EXPOSE
+				|| ps->o.mode == PROGMODE_PAGING) {
+			ps->o.pivotkey = 0; // expose/paging defaults to toggle
 		}
 	}
 
