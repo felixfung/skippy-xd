@@ -1706,7 +1706,7 @@ show_help() {
 			"  [no command]        - activate expose once without daemon.\n"
 			"\n"
 			"  --help              - show this message.\n"
-			"  --debug-log          - enable debugging logs.\n"
+			"  --debug-log         - enable debugging logs.\n"
 			"\n"
 			"  --config            - load/reload configuration file from specifed path.\n"
 			"  --config-reload     - reload configuration file without changing path.\n"
