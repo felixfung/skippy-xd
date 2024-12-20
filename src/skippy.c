@@ -1696,7 +1696,7 @@ show_help() {
 			"  [no command]        - activate expose once without daemon.\n"
 			"\n"
 			"  --help              - show this message.\n"
-			"  --debuglog          - enable debugging logs.\n"
+			"  --debug-log          - enable debugging logs.\n"
 			"\n"
 			"  --config            - load/reload configuration file from specifed path.\n"
 			"  --config-reload     - reload configuration file without changing path.\n"
@@ -1855,7 +1855,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 	static const char * opts_short = "h";
 	static const struct option opts_long[] = {
 		{ "help",                     no_argument,       NULL, 'h' },
-		{ "debuglog",                 no_argument,       NULL, OPT_DEBUGLOG },
+		{ "debug-log",                no_argument,       NULL, OPT_DEBUGLOG },
 		{ "config",                   required_argument, NULL, OPT_CONFIG },
 		{ "config-reload",            no_argument,       NULL, OPT_CONFIG_RELOAD },
 		{ "switch",                   no_argument,       NULL, OPT_ACTV_SWITCH },
