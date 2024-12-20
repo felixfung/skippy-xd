@@ -1592,8 +1592,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 						printfdf(false, "(): toggling skippy off");
 						mw->refocus = die = true;
 					}
-
-					break;
 				}
 				else if (mw && mw->mapped)
 				{
