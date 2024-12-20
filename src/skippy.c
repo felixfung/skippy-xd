@@ -1536,7 +1536,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					if (param[i] == PIPECMD_RELOAD_CONFIG) {
 						if (ps->o.config_path)
 							free(ps->o.config_path);
-						ps->o.config_path = str[i];
+						ps->o.config_path = mstrdup(str[i]);
 					}
 				}
 				load_config_file(ps);
