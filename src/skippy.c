@@ -514,9 +514,11 @@ queue_reload_config(session_t *ps, const char *pipePath) {
 		config_path = ps->o.config_path;
 
 	char command[256];
-	sprintf(command, "%c%c%s",
-			PIPECMD_RELOAD_CONFIG, (char)strlen(config_path), config_path);
-	send_string_command_to_daemon_via_fifo( pipePath, command);
+	sprintf(command, "%c%c%c%c%s",
+			PIPECMD_RELOAD_CONFIG | PIPECMD_MULTI_BYTE,
+			1, PIPECMD_RELOAD_CONFIG,
+			(char)strlen(config_path), config_path);
+	send_string_command_to_daemon_via_fifo(pipePath, command);
 }
 
 static void
@@ -1529,6 +1531,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 						if (ps->o.config_path)
 							free(ps->o.config_path);
 						ps->o.config_path = str[i];
+						load_config_file(ps);
+						mainwin_reload(ps, ps->mainwin);
 					}
 				}
 			}
