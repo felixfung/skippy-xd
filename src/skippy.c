@@ -497,6 +497,10 @@ receive_string_in_daemon_via_fifo(session_t *ps, struct pollfd *r_fd,
 			printfdf(false, "(): received parameter %d%s", (*param)[i], (*str)[i]);
 		}
 	}
+
+	if (buffer)
+		free(buffer);
+
 	return master_command;
 }
 
@@ -1608,6 +1612,13 @@ mainloop(session_t *ps, bool activate_on_start) {
 						clientwin_render(mw->client_to_focus);
 				}
 			}
+
+			// free receive_string_in_daemon_via_fifo() paramters
+			if (param)
+				free(param);
+			for (int i=0; i<nparams; i++)
+				if (str[i])
+					free(str[i]);
 		}
 
 		if (POLLHUP & r_fd[1].revents) {
