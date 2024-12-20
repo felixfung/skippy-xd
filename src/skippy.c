@@ -1572,7 +1572,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 						if (param[i] & PIPEPRM_WM_CLASS) {
 							if (ps->o.wm_class)
 								free(ps->o.wm_class);
-							ps->o.wm_class = str[i];
+							ps->o.wm_class = mstrdup(str[i]);
 							printfdf(false, "(): receiving new wm_class=%s",
 									ps->o.wm_class);
 						}
@@ -1617,6 +1617,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 			for (int i=0; i<nparams; i++)
 				if (str[i])
 					free(str[i]);
+			if (str)
+				free(str);
 		}
 
 		if (POLLHUP & r_fd[1].revents) {

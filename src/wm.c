@@ -690,7 +690,9 @@ wm_validate_window(session_t *ps, Window wid) {
 				result = false;
 			XFree(hints->res_name);
 			XFree(hints->res_class);
+			XFree(hints);
 		}
+		regfree(&regex);
 	}
 
 	return result;
