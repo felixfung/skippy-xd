@@ -1,5 +1,16 @@
 Skippy-XD changelog
 
+0.9.0 -- "Marble" (26 Dec 2024) ~/felixfung
+ - Revamped pipe command protocol
+ - Reloading config file allows changing file path
+ - Window class filtering
+ - Redesign pivot interface
+ - Seamless xrandr reconfiguration without segfault or bug
+ - _NET_WM_WINDOW_TYPE_DESKTOP windows is displayed properly
+ - Option to show sticky windows
+ - panel/reserveSpace calculation fix
+ - Paging desktop preservePages option
+
 0.8.0 -- "Labyrinth" (19 June 2024) ~/felixfung
  - Tooltip for all windows, and other tooltip improvements
  - Background tinting
@@ -32,7 +43,7 @@ Skippy-XD changelog
  - Support mouse scroll wheel
  - Tooltip shows on bottom of windows
 
-0.6.0 -- "" (10 Mar 2023) ~/felixfung
+0.6.0 -- "Anime" (10 Mar 2023) ~/felixfung
  - Thumbnail displays for iconized or otherwise unmapped windows
  - Animation when activating skippy
  - Boxy layout / multiple layouts
