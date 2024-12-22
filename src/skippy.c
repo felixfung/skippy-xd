@@ -1310,9 +1310,9 @@ mainloop(session_t *ps, bool activate_on_start) {
 						XRenderComposite(mw->ps->dpy,
 								PictOpSrc, mw->ps->o.from,
 								None, mw->background,
-								mw->x + cw->x + mw->xoff, mw->y + cw->y + mw->yoff,
+								cw->x + mw->xoff, cw->y + mw->yoff,
 								0, 0,
-								mw->x + cw->x + mw->xoff, mw->y + cw->y + mw->yoff,
+								cw->x + mw->xoff - mw->x, cw->y + mw->yoff - mw->y,
 								cw->src.width * mw->multiplier,
 								cw->src.height * mw->multiplier);
 						XSetWindowBackgroundPixmap(ps->dpy, mw->window, mw->bg_pixmap);
