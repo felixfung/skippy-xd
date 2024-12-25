@@ -1126,6 +1126,11 @@ mainloop(session_t *ps, bool activate_on_start) {
 	long first_animated = 0L;
 	bool first_animating = false;
 
+	// set up deterministic random seed
+	// this is only for boxy layout
+	// when two windows have the same centre of mass
+	srand(0);
+
 	switch (ps->o.mode) {
 		case PROGMODE_SWITCH:
 			layout = LAYOUTMODE_SWITCH;

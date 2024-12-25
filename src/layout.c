@@ -162,560 +162,149 @@ layout_xd(MainWin *mw, dlist *windows,
 	dlist_free(rows);
 }
 
-// new layout algorithm
-//
-//
-// design principles:
-//
-// 0. there are non-unique ways to put windows into a screen without overlapping
-// 1. for user intuition, we want the layout to be close to the original
-//    window positions
-// 2. when two windows hold identical positions, then we have tradeoffs
-// 3. screens are often either long (when rotated 90) or wide,
-//    and layouts should capitalize on that
-// 4. sizes of windows will enlarge/shrink by the same factor,
-//    since size is an important visual cue to identify windows
-// 5. the screen size aspect ratio,
-//    the windows orignal total occupied screen space aspect ratio,
-//    (and windows may be overlapping or hold identical spaces,
-//    and the final occupied screen aspect ratio
-//    do not have to be identical
-// 6. boxy layout slots are more screen efficient,
-//    as well as being easier for user's eyes
-//
-// algorithm:
-//
-// 1. scan through windows to find the smallest window size,
-//    this forms the slot size
-// 2. LOOP:
-//    create 2D array of slots,
-//    where each element holds the number of windows in that slot,
-//    map each slot to the occupying windows,
-// 3. if there are any empty rows/columns, remove and go to start of loop
-// 3. a. expand:
-//       loop slots right->left, bottom->top, for each slot with collision,
-//       insert right/below new row/columns based on screen aspect ratio
-//       move windows to right/down, sorted by "affinity":
-//       which is the number of slots in that direction minus those
-//           in opposite direction, times the windows' number of slots
-//       so the higher the affinity, the further from the original slot
-//    b. contract:
-//       because expansion goes only to right and down,
-//       we often get layouts in top-left half e.g.
-//
-//        o o o o
-//        o o
-//        o
-//
-//       rotate contract row/column
-//       routine is grab rightmost/tpomost bottom/rightmost slot,
-//       move right/down while slot above/left is empty
-//       then move up/left
-//
-// 4. END LOOP when no windows have been moved
-// 5. move windows to slots
-//
-//
-// normal window has aspect ratio around (2.5,1)
-// dramatic aspect ratio defined as aspect ratio bigger than 10
-// so aspect ratio of (25,1) or (1,4)
+static inline bool
+isIntersecting(ClientWin *cw1, ClientWin *cw2) {
+	int dis = cw1->mainwin->distance / 2;
+	int x1 = cw1->x, x2 = cw2->x;
+	int y1 = cw1->y, y2 = cw2->y;
+	int w1 = cw1->src.width, w2 = cw2->src.width;
+	int h1 = cw1->src.height, h2 = cw2->src.height;
+	return ((x2 - dis <= x1 && x1 < x2 + w2 + dis)
+			|| (x1 - dis <= x2 && x2 < x1 + w1 + dis))
+		&& ((y2 - dis <= y1 && y1 < y2 + h2 + dis)
+			 || (y1 - dis <= y2 && y2 < y1 + h1 + dis));
+}
 
-#ifndef ASPECT_TOLERANCE
-#define ASPECT_TOLERANCE 1.4
-#endif
+static inline void
+com(ClientWin *cw, int *x, int *y) {
+	*x = cw->x + cw->src.width / 2;
+	*y = cw->y + cw->src.height / 2;
+}
 
-#ifndef TRIANGULAR_TOLERANCE
-#define TRIANGULAR_TOLERANCE 0.7
-#endif
+static inline void
+newPositionFromCollision(ClientWin *cw1, ClientWin *cw2,
+		int *newx, int *newy) {
+	if (!isIntersecting(cw1, cw2))
+		return;
+
+	{
+		int x1=0, y1=0;
+		com(cw1, &x1, &y1);
+		int x2=0, y2=0;
+		com(cw2, &x2, &y2);
+
+		// if two windows have the same centre of mass,
+		// move in random direction
+		if (x1 == x2 && y1 == y2) {
+			*newx = x1 + rand() % 50;
+			*newy = y1 + rand() % 50;
+			return;
+		}
+	}
+
+	// if two windows have the same centre of mass,
+	// move in random direction
+	{
+		int x1=0, y1=0;
+		com(cw1, &x1, &y1);
+		int x2=0, y2=0;
+		com(cw2, &x2, &y2);
+
+		if (x1 == x2 && y1 == y2) {
+			*newx = x1 + rand() % 50;
+			*newy = y1 + rand() % 50;
+			return;
+		}
+	}
+
+	// basic rectangular collision reflection
+	int dis = cw1->mainwin->distance / 2;
+	int x1 = cw1->x, x2 = cw2->x;
+	int y1 = cw1->y, y2 = cw2->y;
+	int w1 = cw1->src.width, w2 = cw2->src.width;
+	int h1 = cw1->src.height, h2 = cw2->src.height;
+
+	if (x2 - dis <= x1 && x1 < x2 + w2 + dis)
+		*newx = x2 + w2 + dis;
+	else if (x1 - dis <= x2 && x2 < x1 + w1 + dis)
+		*newx = x2 - w1 - dis;
+
+	if (y2 - dis <= y1 && y1 < y2 + h2 + dis)
+		*newy = y2 + h2 + dis;
+	else if (y1 - dis >= y2 && y2 < y1 + h1 + dis)
+		*newy = y2 - h1 - dis;
+}
 
 void
 layout_boxy(MainWin *mw, dlist *windows,
 		unsigned int *total_width, unsigned int *total_height)
 {
-	// find screen aspect ratio
-	//
-	float screen_aspect = (float) mw->width / (float) mw->height;
-
-	// find slot size
-	// offset window positions by virtual desktop
-	// initialize destination position as source position
-	//
-	int slot_width=INT_MAX, slot_height=INT_MAX;
-	foreach_dlist (windows) {
-		ClientWin *cw = (ClientWin *) iter->data;
-		if (!cw->mode) continue;
-
-		slot_width = MIN(slot_width,  cw->src.width);
-		slot_height = MIN(slot_height, cw->src.height);
-
-		{
-			int screencount = wm_get_desktops(mw->ps);
-			if (screencount == -1)
-				screencount = 1;
-			int desktop_dim = ceil(sqrt(screencount));
-
-			int win_desktop = wm_get_window_desktop(mw->ps, cw->wid_client);
-			int current_desktop = wm_get_current_desktop(mw->ps);
-			if (win_desktop == -1)
-				win_desktop = current_desktop;
-
-			int win_desktop_x = win_desktop % desktop_dim;
-			int win_desktop_y = win_desktop / desktop_dim;
-
-			int current_desktop_x = current_desktop % desktop_dim;
-			int current_desktop_y = current_desktop / desktop_dim;
-
-			cw->src.x += (win_desktop_x - current_desktop_x) * (mw->width + mw->distance);
-			cw->src.y += (win_desktop_y - current_desktop_y) * (mw->height + mw->distance);
-		}
-
+	foreach_dlist (dlist_first(windows)) {
+		ClientWin *cw = iter->data;
 		cw->x = cw->src.x;
 		cw->y = cw->src.y;
 	}
-	// minimal slot size required,
-	// otherwise windows too small create round-off issus
-	if (slot_width < mw->width/5)
-		slot_width = mw->width/5;
-	if (slot_height < mw->height/5)
-		slot_height = mw->height/5;
 
-	//printfdf("(): slot size: (%d,%d)", slot_width, slot_height);
-
-	// array declaration
-	// properly allocated in the beginning of each iteration of the loop
-	// and freed at the end of the loop
-	// we declare it here because the final coordinate calculations
-	// use this 2D array
-	dlist** slot2cw;
-	int* slot2n;
-	int slot_minx=INT_MAX, slot_miny=INT_MAX,
-		slot_maxx=INT_MIN, slot_maxy=INT_MIN;
-
-// main calculation loop
-bool recalculate = true;
-for (int max_iterations=0; recalculate && max_iterations<100; max_iterations++)
-{
-	recalculate = false;
-
-	// create 2D arrays of slots:
-	//
-	// 1. a list of pointers of windows that occupy the slot
-	// 2. the number of windows on that slot
-	//
-
-	slot_minx=INT_MAX; slot_miny=INT_MAX;
-	slot_maxx=INT_MIN; slot_maxy=INT_MIN;
-	// first do a pass to find the min/max slots,
-	// so that we can declare the 2D array with the right dimensions
-	foreach_dlist (windows) {
-		ClientWin *cw = (ClientWin *) iter->data;
-		if (!cw->mode) continue;
-
-		int slotx  = floor((float) cw->x / (float) slot_width);
-		int sloty  = floor((float) cw->y / (float) slot_height);
-		int slotxx = slotx + ceil((float) cw->src.width / (float) slot_width);
-		int slotyy = sloty + ceil((float) cw->src.height / (float) slot_height);
-
-		printfdf(false,"(): window %p coord: (%d,%d) (%d,%d)", cw, cw->x, cw->y, cw->src.width, cw->src.height);
-		printfdf(false,"(): window %p slot: (%d,%d) (%d,%d)", cw, slotx, sloty, slotxx, slotyy);
-		slot_minx  = MIN(slot_minx, slotx);
-		slot_miny  = MIN(slot_miny, sloty);
-		slot_maxx  = MAX(slot_maxx, slotxx);
-		slot_maxy  = MAX(slot_maxy, slotyy);
+	if (dlist_len(windows) == 0) {
+		*total_width = mw->width;
+		*total_height = mw->height;
+		return;
 	}
 
-		//printfdf("(): slot maxes: (%d,%d) (%d,%d)", slot_minx, slot_miny, slot_maxx, slot_maxy);
-	int number_of_slots = (slot_maxx -slot_minx) * (slot_maxy -slot_miny);
-
-	//printfdf("(): slot layout: %dx%d, %d slots",
-			//slot_maxx-slot_minx, slot_maxy-slot_miny, number_of_slots);
-
-	// allocate and initailize 2D arrays
-	//
-	slot2cw = malloc(number_of_slots * sizeof(dlist*));
-	for (int j=slot_miny; j<slot_maxy; j++) {
-		for (int i=slot_minx; i<slot_maxx; i++) {
-			slot2cw[(j-slot_miny) * (slot_maxx - slot_minx) + i-slot_minx] = NULL;
-		}
+	if (dlist_len(windows) == 1) {
+		ClientWin *cw = dlist_first(windows)->data;
+		cw->x = cw->y = 0;
+		*total_width = cw->src.width;
+		*total_height = cw->src.height;
+		return;
 	}
 
-	slot2n = malloc(number_of_slots * sizeof(int));
-	for (int j=slot_miny; j<slot_maxy; j++) {
-		for (int i=slot_minx; i<slot_maxx; i++) {
-			slot2n[(j-slot_miny) * (slot_maxx - slot_minx) + i-slot_minx] = 0;
-		}
-	}
+	// collision detection and omvement between all window pairs
+	// this is of course O(n^2) complexity
+	int iterations = 0;
+	for (bool colliding = true; colliding; ) {
+		colliding = false;
+		for (dlist *iter1 = dlist_first(windows)->next;
+				iter1; iter1=iter1->next) {
+			for (dlist *iter2 = dlist_first(windows);
+					iter2 != iter1; iter2=iter2->next) {
+				ClientWin *cw1 = iter1->data;
+				ClientWin *cw2 = iter2->data;
 
-	// populate 2D arrays
-	//
-	foreach_dlist (windows) {
-		ClientWin *cw = (ClientWin *) iter->data;
-		if (!cw->mode) continue;
+				int newx=cw2->x, newy=cw2->y;
+				newPositionFromCollision(cw2, cw1, &newx, &newy);
 
-		cw->slots = 0; // reset
-
-		int slotx  = floor((float) cw->x / (float) slot_width);
-		int sloty  = floor((float) cw->y / (float) slot_height);
-		int slotxx = slotx + ceil((float) cw->src.width / (float) slot_width);
-		int slotyy = sloty + ceil((float) cw->src.height / (float) slot_height);
-		if (slotxx == slotx)
-			slotxx++;
-		if (slotyy == sloty)
-			slotyy++;
-
-		for (int j=sloty; j<slotyy && j<slot_maxy; j++) {
-			for (int i=slotx; i<slotxx && i<slot_maxx; i++) {
-				// map slot to window(s)
-				if (slot2cw[(j-slot_miny) * (slot_maxx - slot_minx) + i-slot_minx] == NULL) {
-					slot2cw[(j-slot_miny) * (slot_maxx - slot_minx) + i-slot_minx]
-						= dlist_add(NULL, cw);
-				}
-				else {
-					dlist_add(slot2cw[(j-slot_miny) * (slot_maxx - slot_minx) + i-slot_minx], cw);
-				}
-//printfdf("(): (%d,%d) window++", i, j);
-				// add slot number
-				slot2n[(j-slot_miny) * (slot_maxx - slot_minx) + i-slot_minx]++;
-
-				cw->slots++;
-			}
-		}
-	}
-
-	/*printf("Slot occupancy:\n");
-	for (int j=slot_miny; j<slot_maxy; j++) {
-		for (int i=slot_minx; i<slot_maxx; i++) {
-			int slot = slot2n[(j-slot_miny) * (slot_maxx - slot_minx) + i-slot_minx];
-			if (slot == 0)
-				printf("  ");
-			else
-				printf("%d ", slot);
-		}
-		printf("\n");
-	}*/
-
-	// remove empty rows and columns
-	//
-	for (int j=slot_miny; j<slot_maxy; j++) {
-		bool row_empty = true;
-		for (int i=slot_minx; row_empty && i<slot_maxx; i++) {
-			if (slot2n[(j-slot_miny) * (slot_maxx - slot_minx) + i-slot_minx] > 0)
-				row_empty = false;
-		}
-		if (row_empty) {
-			//printfdf("(): prune row %d",j);
-			foreach_dlist (windows) {
-				ClientWin *cw = iter->data;
-				int sloty  = floor((float) cw->y / (float) slot_height);
-				if (sloty >= j)
-					cw->y -= slot_height;
-			}
-			recalculate = true;
-		}
-	} for (int i=slot_minx; i<slot_maxx; i++) {
-		bool column_empty = true;
-		for (int j=slot_miny; column_empty && j<slot_maxy; j++) {
-			if (slot2n[(j-slot_miny) * (slot_maxx - slot_minx) + i-slot_minx] > 0)
-				column_empty = false;
-		}
-		if (column_empty) {
-			//printfdf("(): prune column %d",i);
-			foreach_dlist (windows) {
-				ClientWin *cw = iter->data;
-				int slotx  = floor((float) cw->x / (float) slot_width);
-				if (slotx >= i)
-					cw->x -= slot_width;
-			}
-			recalculate = true;
-		}
-	}
-
-	// expansion:
-	//
-	// loop slots right->left, bottom->top, for each slot with collision,
-	// insert right/below new row/columns based on screen aspect ratio
-	// move windows to right/down, sorted by affinity
-	//
-	for (int j=slot_maxy-1; !recalculate && j>=slot_miny; j--) {
-		for (int i=slot_maxx-1; !recalculate && i>=slot_minx; i--) {
-			if (slot2n[(j-slot_miny) * (slot_maxx - slot_minx) + i-slot_minx] > 1) {
-				recalculate = true;
-				printfdf(false,"(): Collision on slot (%d,%d) with %d windows",
-						i, j, slot2n[(j-slot_miny) * (slot_maxx - slot_minx) + i-slot_minx]);
-
-				// insert new row or column
-				// based on estimated used screen aspect ratio
-				// we favour adding new row below current slot
-				int ii = i, jj = j + 1;
-				float estimated_aspect = (float) (slot_width * slot_maxx)
-					/ (float) (slot_height * slot_maxy);
-				if (estimated_aspect < screen_aspect * ASPECT_TOLERANCE) {
-					ii = i + 1;
-					jj = j;
-				}
-
-				// find window with highest affinity to neighbouring slot
-				ClientWin *moving_window = NULL;//dlist_first(slot2cw[(j-slot_miny) * (slot_maxx - slot_minx) + i-slot_minx]);
-				int max_affinity = INT_MIN;
-				foreach_dlist (slot2cw[(j-slot_miny) * (slot_maxx - slot_minx) + i-slot_minx]) {
-					ClientWin *slotw = (ClientWin*) iter->data;
-					int affinity = boxy_affinity(slotw, slot_width, slot_height, i, j, ii-i, jj-j);
-					if (affinity > max_affinity) {
-						max_affinity = affinity;
-						moving_window = slotw;
-					}
-					max_affinity = MAX(max_affinity, affinity);
-					printfdf(false,"(): window %p has affinity %d", slotw, affinity);
-				}
-
-				{
-					int slotx  = floor((float) moving_window->x / (float) slot_width);
-					int sloty  = floor((float) moving_window->y / (float) slot_height);
-					int slotxx = slotx + ceil((float) moving_window->src.width / (float) slot_width);
-					int slotyy = sloty + ceil((float) moving_window->src.height / (float) slot_height);
-					if (slotxx == slotx)
-						slotxx++;
-					if (slotyy == sloty)
-						slotyy++;
-
-					printfdf(false,"(): moving window %p (%d,%d) -> (%d,%d) which has size (%d,%d)",
-							moving_window, slotx, sloty, slotx+ii-i, sloty+jj-j, slotxx-slotx, slotyy-sloty);
-				}
-
-						moving_window->x += (ii - i) * slot_width;
-						moving_window->y += (jj - j) * slot_height;
-			}
-		}
-	}
-
-	// rotate contraction to solve triangular non-optimal
-	{
-		// check triangular score
-		int top_left_occupancy = 0;
-		int total_occupancy = 0;
-		for (int j=slot_miny; j<slot_maxy; j++) {
-			for (int i=slot_minx; i<slot_maxx; i++) {
-				int slot_occupancy = slot2n[(j-slot_miny) * (slot_maxx - slot_minx) + i-slot_minx] > 0;
-				total_occupancy += slot_occupancy;
-				if ((slot_maxx - slot_minx) * (j - slot_miny)
-						+ (slot_maxy - slot_miny) * (i - slot_minx)
-						< (slot_maxx - slot_minx) * (slot_maxy - slot_miny) + 1){
-					printfdf(false,"(): (%d,%d) in top left", i,j);
-					top_left_occupancy += slot_occupancy;
+				colliding = colliding || !(cw2->x == newx && cw2->y == newy);
+				if (colliding) {
+					cw2->x = newx;
+					cw2->y = newy;
 				}
 			}
 		}
-		float occupancy_ratio = (float)top_left_occupancy / (float)total_occupancy;
-		printfdf(false,"(): top left occupancy: %d total occupancy: %d triangular ratio: %f",
-				top_left_occupancy, total_occupancy, occupancy_ratio);
-
-		// if too triangular, perform rotate contraction
-		if (occupancy_ratio > TRIANGULAR_TOLERANCE) {
-
-			// determine whether to perform row or column rotate contraction
-			int pivotx = 0, pivoty = 0, ii = 0, jj = 0;
-			bool pivoted = false;
-			float estimated_aspect = (float) (slot_width * slot_maxx)
-				/ (float) (slot_height * slot_maxy);
-            printfdf(false,"(): aspect %f %f",estimated_aspect, screen_aspect*ASPECT_TOLERANCE);
-			if (estimated_aspect < screen_aspect * ASPECT_TOLERANCE) {
-				ii = 1;
-				for (int j=slot_maxy-1; j>slot_miny && !pivoted; j--) {
-					for (int i=slot_maxx-1; i>=slot_minx && !pivoted; i--) {
-						if (slot2n[(j-slot_miny) * (slot_maxx - slot_minx) + i-slot_minx] > 0) {
-							printfdf(false,"(): perform row rotate contraction at (%d,%d)",
-									i, j);
-							pivotx = i;
-							pivoty = j;
-							pivoted = true;
-						}
-					}
-				}
-			}
-			else {
-				jj = 1;
-				for (int i=slot_maxx-1; i>slot_minx && !pivoted; i--) {
-					for (int j=slot_maxy-1; j>=slot_miny && !pivoted; j--) {
-						if (slot2n[(j-slot_miny) * (slot_maxx - slot_minx) + i-slot_minx] > 0) {
-							printfdf(false,"(): perform column rotate contraction at (%d,%d)",
-									i, j);
-							pivotx = i;
-							pivoty = j;
-							pivoted = true;
-						}
-					}
-				}
-			}
-
-			// rotate contraction:
-			// identify next empty slot as target
-			int targetx = pivotx, targety = pivoty;
-			
-			while (targetx-jj < slot_maxx-1 && targety-ii < slot_maxy-1
-					&& slot2n[(targety-ii -slot_miny) * (slot_maxx - slot_minx)
-					+ targetx-jj -slot_minx] > 0) { // notice swapping and -ve of ii,jj
-				targetx += ii;
-				targety += jj;
-			}
-
-			if (!(targetx == pivotx && targety == pivoty)
-					&& targetx-jj >= 0
-					&& targety-ii >= 0
-					&& slot2n[(targety-ii -slot_miny) * (slot_maxx - slot_minx)
-					+ targetx-jj -slot_minx] == 0) { // notice swapping and -ve of ii,jj
-				targetx -= jj;
-				targety -= ii;
-
-				// find window from pivot slot to move, associated with max affinity
-				ClientWin *moving_window = NULL;
-				int max_affinity = INT_MIN;
-				foreach_dlist (slot2cw[(pivoty-slot_miny) * (slot_maxx - slot_minx)
-						+ pivotx-slot_minx]) {
-					ClientWin *slotw = (ClientWin*) iter->data;
-					int affinity = boxy_affinity(slotw, slot_width, slot_height,
-							pivotx, pivoty,
-							targetx - pivotx, targety - pivoty);
-					if (affinity > max_affinity) {
-						bool collision = false;
-						{
-							int slotx_old  = floor((float) slotw->x / (float) slot_width);
-							int sloty_old  = floor((float) slotw->y / (float) slot_height);
-							int slotxx_old = slotx_old + ceil((float) slotw->src.width / (float) slot_width);
-							int slotyy_old = sloty_old + ceil((float) slotw->src.height / (float) slot_height);
-							if (slotxx_old == slotx_old)
-								slotxx_old++;
-							if (slotyy_old == sloty_old)
-								slotyy_old++;
-
-							int slotx_new = slotx_old + targetx - pivotx;
-							int sloty_new = sloty_old + targety - pivoty;
-							int slotxx_new = slotx_new + slotxx_old - slotx_old;
-							int slotyy_new = sloty_new + slotyy_old - sloty_old;
-
-							for (int j=sloty_new; !collision && j<slotyy_new && j<slot_maxy; j++) {
-								for (int i=slotx_new; !collision && i<slotxx_new && i<slot_maxx; i++) {
-									if (slot2n[(j-slot_miny) * (slot_maxx - slot_minx) + i-slot_minx] > 0) {
-										if (slot2n[(j-slot_miny) * (slot_maxx - slot_minx) + i-slot_minx] == 1
-												&& slotx_old <= i && i < slotxx_old
-												&& sloty_old <= j && j < slotyy_old) {
-											// do not count own window slots
-											continue;
-										}
-										printfdf(false,"(): collision at (%d,%d), window dimensions (%d,%d,%d,%d)",
-												i,j, slotx_old, sloty_old, slotxx_old-slotx_old, slotyy_old-sloty_old);
-										collision = true;
-									}
-								}
-							}
-						}
-						if (!collision) {
-							max_affinity = affinity;
-							moving_window = slotw;
-						}
-					}
-					max_affinity = MAX(max_affinity, affinity);
-					printfdf(false,"(): window %p has affinity %d", slotw, affinity);
-				}
-
-				// move window
-				if (moving_window != NULL) {
-					printfdf(false,"(): rotate contraction from (%d,%d) -> (%d,%d)",
-							pivotx, pivoty, targetx, targety);
-					recalculate = true;
-					moving_window->x += (targetx - pivotx) *slot_width;
-					moving_window->y += (targety - pivoty) *slot_height;
-				}
-			}
-		}
+		iterations++;
 	}
+	printfdf(true, "(): %d coolision iterations", iterations);
 
-	if (recalculate && max_iterations<100-1) {
-		for (int i=0; i<number_of_slots; i++)
-			dlist_free (slot2cw[i]);
-		free(slot2cw);
-		free(slot2n);
-	}
-}
-
-	// move windows to slots,
-	// from the 2D array calculate the centre of window and move
-	//
-	foreach_dlist (windows) {
-		ClientWin *cw = (ClientWin *) iter->data;
-		if (!cw->mode) continue;
-		cw->x = -cw->src.width / 2 - slot_minx * slot_width;
-		cw->y = -cw->src.height / 2 - slot_miny * slot_height;
-	}
-	for (int j=slot_miny; j<slot_maxy; j++) {
-		for (int i=slot_minx; i<slot_maxx; i++) {
-			foreach_dlist (slot2cw[(j-slot_miny) * (slot_maxx - slot_minx) + i-slot_minx]) {
-				ClientWin *cw = (ClientWin *) iter->data;
-				if (!cw->mode) continue;
-
-				cw->x += i * (slot_width + mw->distance) / cw->slots;
-				cw->y += j * (slot_height + mw->distance) / cw->slots;
-			}
-		}
-	}
-
-	// and finally, calculate new total used screen dimension
-	//
-	int minx=INT_MAX, miny=INT_MAX, maxx=INT_MIN, maxy=INT_MIN;
-	foreach_dlist (windows) {
-		ClientWin *cw = (ClientWin *) iter->data;
-		if (!cw->mode) continue;
-		//printfdf("(): window %p coord: (%d,%d) (%d,%d)", cw, cw->x, cw->y, cw->x+cw->src.width, cw->y+cw->src.height);
-
+	ClientWin *cw = dlist_first(windows)->data;
+	int minx = cw->x, maxx = cw->x + cw->src.width;
+	int miny = cw->y, maxy = cw->y + cw->src.height;
+	foreach_dlist (dlist_first(windows)) {
+		ClientWin *cw = iter->data;
 		minx = MIN(minx, cw->x);
-		miny = MIN(miny, cw->y);
 		maxx = MAX(maxx, cw->x + cw->src.width);
+		miny = MIN(miny, cw->y);
 		maxy = MAX(maxy, cw->y + cw->src.height);
+		//printfdf(true, "():cw  (%d,%d) %dx%d", cw->x, cw->y,
+				//cw->src.width, cw->src.height);
 	}
+	//printfdf(true, "(): ");
 
-	if (minx < 0) {
-		foreach_dlist (windows) {
-			ClientWin *cw = (ClientWin *) iter->data;
-			if (!cw->mode) continue;
-			cw->x -= minx;
-		}
-		maxx -= minx;
-		minx = 0;
-	}
-
-	if (miny < 0) {
-		foreach_dlist (windows) {
-			ClientWin *cw = (ClientWin *) iter->data;
-			if (!cw->mode) continue;
-			cw->y -= miny;
-		}
-		maxy -= miny;
-		miny = 0;
+	foreach_dlist (dlist_first(windows)) {
+		ClientWin *cw = iter->data;
+		cw->x -= minx;
+		cw->y -= miny;
 	}
 
 	*total_width = maxx - minx;
 	*total_height = maxy - miny;
-
-	for (int j=slot_miny; j<slot_maxy; j++)
-		for (int i=slot_minx; i<slot_maxx; i++)
-			dlist_free (slot2cw[(j-slot_miny) * (slot_maxx - slot_minx) + i-slot_minx]);
-	free(slot2cw);
-	free(slot2n);
-}
-
-int boxy_affinity(
-		ClientWin *cw, int slot_width, int slot_height, int x, int y, int ii, int jj
-		// x, y is coordinate the window asks for
-		// ii, jj is direction of potential move
-		)
-{
-	// cw->src.x cw->src.y should be taken into account also
-	float slotx  = (float) cw->x / (float) slot_width;
-	float sloty  = (float) cw->y / (float) slot_height;
-	float slotxx = slotx + (float) cw->src.width / (float) slot_width;
-	float slotyy = sloty + (float) cw->src.height / (float) slot_height;
-
-	//printfdf("(): affinity for window %p (%d,%d)->(%d,%d) (%d,%d,%d,%d)",
-			//cw, x,y,x+ii,y+jj,slotx,sloty,slotxx,slotyy);
-	return (int)((float)ii * (slotxx - (float)x - (float)x + slotx)
-					  + (float)jj * (slotyy - (float)y - (float)y + sloty));
 }
