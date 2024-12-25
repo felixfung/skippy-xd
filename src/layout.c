@@ -187,52 +187,26 @@ newPositionFromCollision(ClientWin *cw1, ClientWin *cw2,
 	if (!isIntersecting(cw1, cw2))
 		return;
 
-	{
-		int x1=0, y1=0;
-		com(cw1, &x1, &y1);
-		int x2=0, y2=0;
-		com(cw2, &x2, &y2);
-
-		// if two windows have the same centre of mass,
-		// move in random direction
-		if (x1 == x2 && y1 == y2) {
-			*newx = x1 + rand() % 50;
-			*newy = y1 + rand() % 50;
-			return;
-		}
-	}
+    int x1=0, y1=0;
+    com(cw1, &x1, &y1);
+    int x2=0, y2=0;
+    com(cw2, &x2, &y2);
 
 	// if two windows have the same centre of mass,
 	// move in random direction
-	{
-		int x1=0, y1=0;
-		com(cw1, &x1, &y1);
-		int x2=0, y2=0;
-		com(cw2, &x2, &y2);
-
-		if (x1 == x2 && y1 == y2) {
-			*newx = x1 + rand() % 50;
-			*newy = y1 + rand() % 50;
-			return;
-		}
+	if (x1 == x2 && y1 == y2) {
+		*newx = x1 + rand() % 50;
+		*newy = y1 + rand() % 50;
+		return;
 	}
 
-	// basic rectangular collision reflection
-	int dis = cw1->mainwin->distance / 2;
-	int x1 = cw1->x, x2 = cw2->x;
-	int y1 = cw1->y, y2 = cw2->y;
-	int w1 = cw1->src.width, w2 = cw2->src.width;
-	int h1 = cw1->src.height, h2 = cw2->src.height;
-
-	if (x2 - dis <= x1 && x1 < x2 + w2 + dis)
-		*newx = x2 + w2 + dis;
-	else if (x1 - dis <= x2 && x2 < x1 + w1 + dis)
-		*newx = x2 - w1 - dis;
-
-	if (y2 - dis <= y1 && y1 < y2 + h2 + dis)
-		*newy = y2 + h2 + dis;
-	else if (y1 - dis >= y2 && y2 < y1 + h1 + dis)
-		*newy = y2 - h1 - dis;
+	int dx = x1 - x2;
+	int dy = y1 - y2;
+	float norm = sqrt((float)(dx*dx + dy*dy));
+	dx = (float)dx / (float)norm * 50.0;
+	dy = (float)dy / (float)norm * 50.0;
+	*newx = cw1->x + dx;
+	*newy = cw1->y + dy;
 }
 
 void
