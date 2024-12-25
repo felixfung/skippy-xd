@@ -183,7 +183,7 @@ com(ClientWin *cw, int *x, int *y) {
 
 static inline void
 newPositionFromCollision(ClientWin *cw1, ClientWin *cw2,
-		int *newx, int *newy) {
+		int *dx, int *dy) {
 	if (!isIntersecting(cw1, cw2))
 		return;
 
@@ -195,18 +195,14 @@ newPositionFromCollision(ClientWin *cw1, ClientWin *cw2,
 	// if two windows have the same centre of mass,
 	// move in random direction
 	if (x1 == x2 && y1 == y2) {
-		*newx = x1 + rand() % 50;
-		*newy = y1 + rand() % 50;
+		*dx = rand() % 50;
+		*dy = rand() % 50;
 		return;
 	}
 
-	int dx = x1 - x2;
-	int dy = y1 - y2;
-	float norm = sqrt((float)(dx*dx + dy*dy));
-	dx = (float)dx / (float)norm * 50.0;
-	dy = (float)dy / (float)norm * 50.0;
-	*newx = cw1->x + dx;
-	*newy = cw1->y + dy;
+	float norm = sqrt((float)((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2)));
+	*dx = (float)(x1 - x2) / (float)norm * 50.0;
+	*dy = (float)(y1 - y2) / (float)norm * 50.0;
 }
 
 void
@@ -233,10 +229,10 @@ layout_boxy(MainWin *mw, dlist *windows,
 		return;
 	}
 
-	// collision detection and omvement between all window pairs
+	// collision detection and movement between all window pairs
 	// this is of course O(n^2) complexity
 	int iterations = 0;
-	for (bool colliding = true; colliding; ) {
+	for (bool colliding = true; colliding && iterations < 1000; ) {
 		colliding = false;
 		for (dlist *iter1 = dlist_first(windows)->next;
 				iter1; iter1=iter1->next) {
@@ -245,19 +241,19 @@ layout_boxy(MainWin *mw, dlist *windows,
 				ClientWin *cw1 = iter1->data;
 				ClientWin *cw2 = iter2->data;
 
-				int newx=cw2->x, newy=cw2->y;
-				newPositionFromCollision(cw2, cw1, &newx, &newy);
+				int dx=0, dy=0;
+				newPositionFromCollision(cw2, cw1, &dx, &dy);
 
-				colliding = colliding || !(cw2->x == newx && cw2->y == newy);
-				if (colliding) {
-					cw2->x = newx;
-					cw2->y = newy;
+				colliding = colliding || !(dx==0 && dy==0);
+				if (!(dx==0 && dy==0)) {
+					cw2->x += dx;
+					cw2->y += dy;
 				}
 			}
 		}
 		iterations++;
 	}
-	printfdf(true, "(): %d coolision iterations", iterations);
+	printfdf(true, "(): %d collision iterations", iterations);
 
 	ClientWin *cw = dlist_first(windows)->data;
 	int minx = cw->x, maxx = cw->x + cw->src.width;
