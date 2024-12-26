@@ -42,8 +42,15 @@ void layout_run(MainWin *mw, dlist *windows,
 		enum layoutmode layout) {
 	if (layout == LAYOUTMODE_EXPOSE
 			&& mw->ps->o.exposeLayout == LAYOUT_BOXY) {
+		foreach_dlist (dlist_first(windows)) {
+			ClientWin *cw = iter->data;
+			cw->x = cw->src.x;
+			cw->y = cw->src.y;
+		}
+
 		dlist *sorted_windows = dlist_dup(windows);
 		dlist_sort(sorted_windows, sort_cw_by_id, 0);
+		dlist_sort(sorted_windows, sort_cw_by_column, 0);
 		layout_boxy(mw, sorted_windows, total_width, total_height);
 		dlist_free(sorted_windows);
 	}
@@ -209,12 +216,6 @@ void
 layout_boxy(MainWin *mw, dlist *windows,
 		unsigned int *total_width, unsigned int *total_height)
 {
-	foreach_dlist (dlist_first(windows)) {
-		ClientWin *cw = iter->data;
-		cw->x = cw->src.x;
-		cw->y = cw->src.y;
-	}
-
 	if (dlist_len(windows) == 0) {
 		*total_width = mw->width;
 		*total_height = mw->height;
@@ -229,11 +230,34 @@ layout_boxy(MainWin *mw, dlist *windows,
 		return;
 	}
 
-	// collision detection and movement between all window pairs
-	// this is of course O(n^2) complexity
 	int iterations = 0;
-	for (bool colliding = true; colliding && iterations < 1000; ) {
+	bool colliding = true;
+	while (true) {
+		int minx = INT_MAX, maxx = INT_MIN;
+		int miny = INT_MAX, maxy = INT_MIN;
+		foreach_dlist (dlist_first(windows)) {
+			ClientWin *cw = iter->data;
+			minx = MIN(minx, cw->x);
+			maxx = MAX(maxx, cw->x + cw->src.width);
+			miny = MIN(miny, cw->y);
+			maxy = MAX(maxy, cw->y + cw->src.height);
+		}
+
+		foreach_dlist (dlist_first(windows)) {
+			ClientWin *cw = iter->data;
+			cw->x -= minx;
+			cw->y -= miny;
+		}
+
+		*total_width = maxx - minx;
+		*total_height = maxy - miny;
+
+		if (!colliding || iterations >= 100)
+			break;
 		colliding = false;
+
+		// collision detection and movement between all window pairs
+		// this is of course O(n^2) complexity
 		for (dlist *iter1 = dlist_first(windows)->next;
 				iter1; iter1=iter1->next) {
 			for (dlist *iter2 = dlist_first(windows);
@@ -244,37 +268,16 @@ layout_boxy(MainWin *mw, dlist *windows,
 				int dx=0, dy=0;
 				newPositionFromCollision(cw2, cw1, &dx, &dy);
 
-				colliding = colliding || !(dx==0 && dy==0);
-				if (!(dx==0 && dy==0)) {
+				bool positionChanging = !(dx==0 && dy==0);
+				if (positionChanging) {
 					cw2->x += dx;
 					cw2->y += dy;
+					colliding = true;
 				}
 			}
 		}
+
 		iterations++;
 	}
 	printfdf(true, "(): %d collision iterations", iterations);
-
-	ClientWin *cw = dlist_first(windows)->data;
-	int minx = cw->x, maxx = cw->x + cw->src.width;
-	int miny = cw->y, maxy = cw->y + cw->src.height;
-	foreach_dlist (dlist_first(windows)) {
-		ClientWin *cw = iter->data;
-		minx = MIN(minx, cw->x);
-		maxx = MAX(maxx, cw->x + cw->src.width);
-		miny = MIN(miny, cw->y);
-		maxy = MAX(maxy, cw->y + cw->src.height);
-		//printfdf(true, "():cw  (%d,%d) %dx%d", cw->x, cw->y,
-				//cw->src.width, cw->src.height);
-	}
-	//printfdf(true, "(): ");
-
-	foreach_dlist (dlist_first(windows)) {
-		ClientWin *cw = iter->data;
-		cw->x -= minx;
-		cw->y -= miny;
-	}
-
-	*total_width = maxx - minx;
-	*total_height = maxy - miny;
 }
