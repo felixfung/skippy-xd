@@ -42,6 +42,10 @@ void layout_run(MainWin *mw, dlist *windows,
 		enum layoutmode layout) {
 	if (layout == LAYOUTMODE_EXPOSE
 			&& mw->ps->o.exposeLayout == LAYOUT_BOXY) {
+		// set up deterministic random seed
+		// when two windows have the same centre of mass
+		srand(0);
+
 		foreach_dlist (dlist_first(windows)) {
 			ClientWin *cw = iter->data;
 			cw->x = cw->src.x;
@@ -49,8 +53,6 @@ void layout_run(MainWin *mw, dlist *windows,
 		}
 
 		dlist *sorted_windows = dlist_dup(windows);
-		dlist_sort(sorted_windows, sort_cw_by_id, 0);
-		dlist_sort(sorted_windows, sort_cw_by_column, 0);
 		layout_boxy(mw, sorted_windows, total_width, total_height);
 		dlist_free(sorted_windows);
 	}
@@ -258,6 +260,9 @@ layout_boxy(MainWin *mw, dlist *windows,
 
 		// collision detection and movement between all window pairs
 		// this is of course O(n^2) complexity
+		dlist_sort(windows, sort_cw_by_id, 0);
+		dlist_sort(windows, sort_cw_by_column, 0);
+
 		for (dlist *iter1 = dlist_first(windows)->next;
 				iter1; iter1=iter1->next) {
 			for (dlist *iter2 = dlist_first(windows);
