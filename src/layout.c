@@ -218,20 +218,6 @@ void
 layout_boxy(MainWin *mw, dlist *windows,
 		unsigned int *total_width, unsigned int *total_height)
 {
-	if (dlist_len(windows) == 0) {
-		*total_width = mw->width;
-		*total_height = mw->height;
-		return;
-	}
-
-	if (dlist_len(windows) == 1) {
-		ClientWin *cw = dlist_first(windows)->data;
-		cw->x = cw->y = 0;
-		*total_width = cw->src.width;
-		*total_height = cw->src.height;
-		return;
-	}
-
 	int iterations = 0;
 	bool colliding = true;
 	while (true) {
