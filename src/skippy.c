@@ -2195,8 +2195,12 @@ load_config_file(session_t *ps)
     config_get_int_wrap(config, "tooltip", "offsetX", &ps->o.tooltip_offsetX, INT_MIN, INT_MAX);
     config_get_int_wrap(config, "tooltip", "offsetY", &ps->o.tooltip_offsetY, INT_MIN, INT_MAX);
     config_get_double_wrap(config, "tooltip", "width", &ps->o.tooltip_width, 0.0, 1.0);
-    config_get_int_wrap(config, "tooltip", "tintOpacity", &ps->o.highlight_tintOpacity, 0, 256);
-    config_get_int_wrap(config, "tooltip", "opacity", &ps->o.tooltip_opacity, 0, 256);
+	{
+		int old_value = ps->o.tooltip_opacity;
+		config_get_int_wrap(config, "tooltip", "opacity", &ps->o.tooltip_opacity, 0, 256);
+		if (ps->o.tooltip_opacity != old_value)
+			ps->o.updatetooltip = true;
+	}
 
     // load keybindings settings
     ps->o.bindings_keysUp = mstrdup(config_get(config, "bindings", "keysUp", "Up"));
