@@ -1340,7 +1340,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 			continue; // while animating, do not allow user actions
 		}
 
-		if (!toggling && ps->o.pivotLockingTime > 0
+		if (layout != LAYOUTMODE_SWITCH
+				&& !toggling && ps->o.pivotLockingTime > 0
 				&& time_in_millis() >= first_animated + ps->o.pivotLockingTime)
 			toggling = true;
 
