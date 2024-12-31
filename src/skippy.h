@@ -194,6 +194,7 @@ typedef struct {
 	bool runAsDaemon;
 	char focus_initial;
 	KeyCode pivotkey;
+	int pivotLockingTime;
 
 	int exposeLayout;
 	int distance;
@@ -275,6 +276,7 @@ typedef struct {
 	.mode = PROGMODE_NORMAL, \
 	.runAsDaemon = false, \
 	.pivotkey = 0, \
+	.pivotLockingTime = 0, \
 \
 	.exposeLayout = LAYOUT_BOXY, \
 	.distance = 50, \

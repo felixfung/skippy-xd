@@ -1340,7 +1340,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 			continue; // while animating, do not allow user actions
 		}
 
-		if (!toggling && time_in_millis() >= first_animated + 2000)
+		if (!toggling && ps->o.pivotLockingTime > 0
+				&& time_in_millis() >= first_animated + ps->o.pivotLockingTime)
 			toggling = true;
 
 		// Process X events
@@ -2137,6 +2138,7 @@ load_config_file(session_t *ps)
 			ps->o.clientList = 2;
 	}
     config_get_double_wrap(config, "system", "updateFreq", &ps->o.updateFreq, -1000.0, 1000.0);
+    config_get_int_wrap(config, "layout", "pivotLockingTime", &ps->o.pivotLockingTime, 0, 20000);
     config_get_int_wrap(config, "layout", "switchWaitDuration", &ps->o.switchWaitDuration, 0, 2000);
     config_get_int_wrap(config, "layout", "animationDuration", &ps->o.animationDuration, 0, 2000);
     config_get_bool_wrap(config, "system", "pseudoTrans", &ps->o.pseudoTrans);
