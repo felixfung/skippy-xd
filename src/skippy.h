@@ -192,54 +192,55 @@ typedef struct {
 	bool config_reload;
 	enum progmode mode;
 	bool runAsDaemon;
+
 	char focus_initial;
 	KeyCode pivotkey;
 
-	int exposeLayout;
-	int distance;
-	bool useNetWMFullscreen;
-	int clientList;
-	double updateFreq;
-	int animationDuration;;
-	int switchWaitDuration;
-	bool pseudoTrans;
-	bool includeFrame;
 	char *pipePath;
-	bool preservePages;
-	bool movePointer;
+	double updateFreq;
+	int clientList;
+	bool pseudoTrans;
+
+	int pivotLockingTime;
+	int switchWaitDuration;
+	int animationDuration;;
+	int distance;
+	int exposeLayout;
 	bool allowUpscale;
-	bool switchShowAllDesktops;
-	bool exposeShowAllDesktops;
+
+	bool xinerama_showAll;
 	bool showShadow;
 	bool showSticky;
+	bool switchShowAllDesktops;
+	bool exposeShowAllDesktops;
+	bool persistentFiltering;
+	char *wm_class;
+
+	bool panel_show_desktop;
+	bool preservePages;
+	bool movePointer;
+	bool includeFrame;
 	int cornerRadius;
 	int preferredIconSize;
 	client_disp_mode_t *clientDisplayModes;
 	pictspec_t iconFillSpec;
 	pictw_t *iconDefault;
 	pictspec_t fillSpec;
-	char *buttonImgs[NUM_BUTN];
 	pictw_t *background;
 	pictspec_t bg_spec;
 	Picture from;
-	bool xinerama_showAll;
-	char *wm_class;
-	bool persistentFiltering;
 
 	char *normal_tint;
 	int normal_tintOpacity;
 	int normal_opacity;
-
 	char *highlight_tint;
 	int highlight_tintOpacity;
 	int highlight_opacity;
-
 	char *shadow_tint;
 	int shadow_tintOpacity;
 	int shadow_opacity;
 
 	bool panel_show;
-	bool panel_show_desktop;
 	bool panel_tinting;
 	bool panel_reserveSpace;
 
@@ -276,32 +277,36 @@ typedef struct {
 	.runAsDaemon = false, \
 	.pivotkey = 0, \
 \
-	.exposeLayout = LAYOUT_BOXY, \
-	.distance = 50, \
-	.useNetWMFullscreen = true, \
-	.clientList = 0, \
-	.updateFreq = 60.0, \
-	.animationDuration = 200, \
-	.switchWaitDuration = 100, \
-	.pseudoTrans = true, \
-	.includeFrame = false, \
 	.pipePath = NULL, \
+	.updateFreq = 60.0, \
+	.clientList = 0, \
+	.pseudoTrans = true, \
+\
+	.pivotLockingTime = 0, \
+	.switchWaitDuration = 100, \
+	.animationDuration = 200, \
+	.distance = 50, \
+	.exposeLayout = LAYOUT_BOXY, \
+	.allowUpscale = false, \
+\
+	.xinerama_showAll = true, \
+	.showShadow = true, \
+	.showSticky = true, \
+	.switchShowAllDesktops = true, \
+	.exposeShowAllDesktops = false, \
+	.persistentFiltering = false, \
+\
+	.panel_show_desktop = true, \
+	.background = NULL, \
 	.preservePages = true, \
 	.movePointer = false, \
-	.allowUpscale = true, \
+	.includeFrame = false, \
 	.cornerRadius = 0, \
 	.preferredIconSize = 48, \
 	.clientDisplayModes = NULL, \
 	.iconFillSpec = PICTSPECT_INIT, \
 	.fillSpec = PICTSPECT_INIT, \
-	.switchShowAllDesktops = true, \
-	.exposeShowAllDesktops = false, \
-	.showShadow = true, \
-	.showSticky = true, \
-	.buttonImgs = { NULL }, \
-	.background = NULL, \
-	.xinerama_showAll = true, \
-	.persistentFiltering = false, \
+\
 	.normal_tint = NULL, \
 	.normal_tintOpacity = 0, \
 	.normal_opacity = 255, \
@@ -311,10 +316,11 @@ typedef struct {
 	.shadow_tint = NULL, \
 	.shadow_tintOpacity = 0, \
 	.shadow_opacity = 160, \
+\
 	.panel_show = true, \
-	.panel_show_desktop = true, \
 	.panel_tinting = true, \
 	.panel_reserveSpace = true, \
+\
 	.tooltip_show = true, \
 	.tooltip_offsetX = 0, \
 	.tooltip_offsetY = 20, \

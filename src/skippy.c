@@ -1340,6 +1340,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 			continue; // while animating, do not allow user actions
 		}
 
+		if (!toggling && ps->o.pivotLockingTime > 0
+				&& time_in_millis() >= first_animated + ps->o.pivotLockingTime)
+			toggling = true;
+
 		// Process X events
 		int num_events = 0;
 		XEvent ev = { };
@@ -2122,7 +2126,6 @@ load_config_file(session_t *ps)
     }
 
     config_get_int_wrap(config, "layout", "distance", &ps->o.distance, 1, INT_MAX);
-    config_get_bool_wrap(config, "general", "useNetWMFullscreen", &ps->o.useNetWMFullscreen);
 	{
 		ps->o.clientList = 0;
 		const char *tmp = config_get(config, "system", "clientList", "_NET_CLIENT_LIST");
@@ -2134,6 +2137,7 @@ load_config_file(session_t *ps)
 			ps->o.clientList = 2;
 	}
     config_get_double_wrap(config, "system", "updateFreq", &ps->o.updateFreq, -1000.0, 1000.0);
+    config_get_int_wrap(config, "layout", "pivotLockingTime", &ps->o.pivotLockingTime, 0, 20000);
     config_get_int_wrap(config, "layout", "switchWaitDuration", &ps->o.switchWaitDuration, 0, 2000);
     config_get_int_wrap(config, "layout", "animationDuration", &ps->o.animationDuration, 0, 2000);
     config_get_bool_wrap(config, "system", "pseudoTrans", &ps->o.pseudoTrans);

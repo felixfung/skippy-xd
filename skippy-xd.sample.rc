@@ -39,6 +39,11 @@ pseudoTrans = true
 
 [layout]
 
+# After this time, pivot "locks" into toggle mode
+# And the pivot key no longer needs to be held
+# Set to 0 to disable pivot locking
+pivotLockingTime = 0
+
 # Wait time before displaying switch previews
 switchWaitDuration = 100
 
