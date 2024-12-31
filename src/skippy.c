@@ -1340,6 +1340,9 @@ mainloop(session_t *ps, bool activate_on_start) {
 			continue; // while animating, do not allow user actions
 		}
 
+		if (!toggling && time_in_millis() >= first_animated + 2000)
+			toggling = true;
+
 		// Process X events
 		int num_events = 0;
 		XEvent ev = { };
