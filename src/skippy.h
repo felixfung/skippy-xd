@@ -217,6 +217,7 @@ typedef struct {
 	char *wm_class;
 
 	bool panel_show_desktop;
+	pictspec_t bg_spec;
 	bool preservePages;
 	bool movePointer;
 	bool includeFrame;
@@ -227,7 +228,6 @@ typedef struct {
 	pictw_t *iconDefault;
 	pictspec_t fillSpec;
 	pictw_t *background;
-	pictspec_t bg_spec;
 	Picture from;
 
 	char *normal_tint;

@@ -2061,10 +2061,127 @@ load_config_file(session_t *ps)
 
 		ps->o.pipePath = pipePath;
 	}
+	{
+		ps->o.clientList = 0;
+		const char *tmp = config_get(config, "system", "clientList", "_NET_CLIENT_LIST");
+		if (tmp && strcmp(tmp, "XQueryTree") == 0)
+			ps->o.clientList = 0;
+		else if (tmp && strcmp(tmp, "_NET_CLIENT_LIST") == 0)
+			ps->o.clientList = 1;
+		else if (tmp && strcmp(tmp, "_WIN_CLIENT_LIST") == 0)
+			ps->o.clientList = 2;
+	}
+    config_get_double_wrap(config, "system", "updateFreq", &ps->o.updateFreq, -1000.0, 1000.0);
+    config_get_bool_wrap(config, "system", "pseudoTrans", &ps->o.pseudoTrans);
+
+    config_get_int_wrap(config, "layout", "pivotLockingTime", &ps->o.pivotLockingTime, 0, 20000);
+    config_get_int_wrap(config, "layout", "switchWaitDuration", &ps->o.switchWaitDuration, 0, 2000);
+    config_get_int_wrap(config, "layout", "animationDuration", &ps->o.animationDuration, 0, 2000);
+    config_get_int_wrap(config, "layout", "distance", &ps->o.distance, 1, INT_MAX);
+	{
+		const char *s = config_get(config, "layout", "exposeLayout", NULL);
+		if (s) {
+			if (strcmp(s,"boxy") == 0) {
+				ps->o.exposeLayout = LAYOUT_BOXY;
+			}
+			else if (strcmp(s,"xd") == 0) {
+				ps->o.exposeLayout = LAYOUT_XD;
+			}
+			else {
+				ps->o.exposeLayout = LAYOUT_BOXY;
+			}
+		}
+		else
+			ps->o.exposeLayout = LAYOUT_BOXY;
+    }
+    config_get_bool_wrap(config, "layout", "allowUpscale", &ps->o.allowUpscale);
+
+    config_get_bool_wrap(config, "filter", "showOnlyCurrentMonitor", &ps->o.xinerama_showAll);
+	ps->o.xinerama_showAll = !ps->o.xinerama_showAll;
+    config_get_bool_wrap(config, "filter", "showShadow", &ps->o.showShadow);
+    config_get_bool_wrap(config, "filter", "showSticky", &ps->o.showSticky);
+    config_get_bool_wrap(config, "filter", "switchShowAllDesktops", &ps->o.switchShowAllDesktops);
+    config_get_bool_wrap(config, "filter", "exposeShowAllDesktops", &ps->o.exposeShowAllDesktops);
+    config_get_bool_wrap(config, "filter", "persistentFiltering", &ps->o.persistentFiltering);
+
+    config_get_bool_wrap(config, "display", "showDesktop", &ps->o.panel_show_desktop);
+    {
+        const char *sspec = config_get(config, "display", "background", "#00000055");
+		if (!sspec || strlen(sspec) == 0)
+			sspec = "#00000055";
+		char bg_spec[256] = "orig mid mid ";
+		strcat(bg_spec, sspec);
+
+		pictspec_t spec = PICTSPECT_INIT;
+		if (strcmp("None", sspec) == 0) {
+			ps->o.background = None;
+		}
+		else if (!parse_pictspec(ps, bg_spec, &spec)) {
+			ps->o.background = None;
+			return RET_BADARG;
+		}
+		free_pictspec(ps, &ps->o.bg_spec);
+		ps->o.bg_spec = spec;
+	}
+	config_get_bool_wrap(config, "display", "preservePages", &ps->o.preservePages);
+    config_get_bool_wrap(config, "display", "movePointer", &ps->o.movePointer);
+    config_get_bool_wrap(config, "display", "includeFrame", &ps->o.includeFrame);
+	config_get_int_wrap(config, "display", "cornerRadius", &ps->o.cornerRadius, 0, INT_MAX);
+    config_get_int_wrap(config, "display", "preferredIconSize", &ps->o.preferredIconSize, 1, INT_MAX);
+    {
+        static client_disp_mode_t DEF_CLIDISPM[] = {
+            CLIDISP_THUMBNAIL, CLIDISP_ZOMBIE, CLIDISP_ICON, CLIDISP_FILLED, CLIDISP_NONE
+        };
+
+        static client_disp_mode_t DEF_CLIDISPM_ICON[] = {
+            CLIDISP_THUMBNAIL_ICON, CLIDISP_THUMBNAIL, CLIDISP_ZOMBIE_ICON,
+            CLIDISP_ZOMBIE, CLIDISP_ICON, CLIDISP_FILLED, CLIDISP_NONE
+        };
+
+        bool thumbnail_icons = false;
+        config_get_bool_wrap(config, "display", "showIconsOnThumbnails", &thumbnail_icons);
+        if (thumbnail_icons) {
+            ps->o.clientDisplayModes = allocchk(malloc(sizeof(DEF_CLIDISPM_ICON)));
+            memcpy(ps->o.clientDisplayModes, &DEF_CLIDISPM_ICON, sizeof(DEF_CLIDISPM_ICON));
+        }
+        else {
+            ps->o.clientDisplayModes = allocchk(malloc(sizeof(DEF_CLIDISPM)));
+            memcpy(ps->o.clientDisplayModes, &DEF_CLIDISPM, sizeof(DEF_CLIDISPM));
+        }
+    }
+	{
+		char defaultstr[256] = "orig mid mid ";
+		const char* sspec = config_get(config, "display", "fillSpec", "#333333");
+		strcat(defaultstr, sspec);
+		if (!parse_pictspec(ps, defaultstr, &ps->o.fillSpec))
+			return RET_BADARG;
+		char defaultstr2[256] = "orig ";
+		const char* sspec2 = config_get(config, "display", "iconFillSpec", "mid mid #333333");
+		strcat(defaultstr2, sspec2);
+		if (!parse_pictspec(ps, defaultstr2, &ps->o.iconFillSpec))
+			return RET_BADARG;
+		if (!simg_cachespec(ps, &ps->o.fillSpec))
+			return RET_BADARG;
+		if (ps->o.iconFillSpec.path
+				&& !(ps->o.iconDefault = simg_load(ps, ps->o.iconFillSpec.path,
+						PICTPOSP_SCALEK, ps->o.preferredIconSize, ps->o.preferredIconSize,
+						ALIGN_MID, ALIGN_MID, NULL)))
+			return RET_BADARG;
+	}
 
 	ps->o.normal_tint = mstrdup(config_get(config, "normal", "tint", "black"));
+    config_get_int_wrap(config, "normal", "tintOpacity", &ps->o.normal_tintOpacity, 0, 256);
+    config_get_int_wrap(config, "normal", "opacity", &ps->o.normal_opacity, 0, 256);
 	ps->o.highlight_tint = mstrdup(config_get(config, "highlight", "tint", "#101020"));
+    config_get_int_wrap(config, "highlight", "tintOpacity", &ps->o.highlight_tintOpacity, 0, 256);
+    config_get_int_wrap(config, "highlight", "opacity", &ps->o.highlight_opacity, 0, 256);
 	ps->o.shadow_tint = mstrdup(config_get(config, "shadow", "tint", "#010101"));
+    config_get_int_wrap(config, "shadow", "tintOpacity", &ps->o.shadow_tintOpacity, 0, 256);
+    config_get_int_wrap(config, "shadow", "opacity", &ps->o.shadow_opacity, 0, 256);
+
+    config_get_bool_wrap(config, "panel", "show", &ps->o.panel_show);
+    config_get_bool_wrap(config, "panel", "backgroundTinting", &ps->o.panel_tinting);
+    config_get_bool_wrap(config, "panel", "reserveSpace", &ps->o.panel_reserveSpace);
 
 	{
 		ps->o.updatetooltip = false;
@@ -2074,6 +2191,12 @@ load_config_file(session_t *ps)
 		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "textShadow", "black", &ps->o.tooltip_textShadow);
 		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "font", "fixed-11:weight=bold", &ps->o.tooltip_font);
 	}
+    config_get_bool_wrap(config, "tooltip", "show", &ps->o.tooltip_show);
+    config_get_int_wrap(config, "tooltip", "offsetX", &ps->o.tooltip_offsetX, INT_MIN, INT_MAX);
+    config_get_int_wrap(config, "tooltip", "offsetY", &ps->o.tooltip_offsetY, INT_MIN, INT_MAX);
+    config_get_double_wrap(config, "tooltip", "width", &ps->o.tooltip_width, 0.0, 1.0);
+    config_get_int_wrap(config, "tooltip", "tintOpacity", &ps->o.highlight_tintOpacity, 0, 256);
+    config_get_int_wrap(config, "tooltip", "opacity", &ps->o.tooltip_opacity, 0, 256);
 
     // load keybindings settings
     ps->o.bindings_keysUp = mstrdup(config_get(config, "bindings", "keysUp", "Up"));
@@ -2107,127 +2230,6 @@ load_config_file(session_t *ps)
 			|| !parse_cliop(ps, config_get(config, "bindings", "miwMouse4", "keysNext"), &ps->o.bindings_miwMouse[4])
 			|| !parse_cliop(ps, config_get(config, "bindings", "miwMouse5", "keysPrev"), &ps->o.bindings_miwMouse[5])) {
 		return RET_BADARG;
-	}
-
-	{
-		const char *s = config_get(config, "layout", "exposeLayout", NULL);
-		if (s) {
-			if (strcmp(s,"boxy") == 0) {
-				ps->o.exposeLayout = LAYOUT_BOXY;
-			}
-			else if (strcmp(s,"xd") == 0) {
-				ps->o.exposeLayout = LAYOUT_XD;
-			}
-			else {
-				ps->o.exposeLayout = LAYOUT_BOXY;
-			}
-		}
-		else
-			ps->o.exposeLayout = LAYOUT_BOXY;
-    }
-
-    config_get_int_wrap(config, "layout", "distance", &ps->o.distance, 1, INT_MAX);
-	{
-		ps->o.clientList = 0;
-		const char *tmp = config_get(config, "system", "clientList", "_NET_CLIENT_LIST");
-		if (tmp && strcmp(tmp, "XQueryTree") == 0)
-			ps->o.clientList = 0;
-		else if (tmp && strcmp(tmp, "_NET_CLIENT_LIST") == 0)
-			ps->o.clientList = 1;
-		else if (tmp && strcmp(tmp, "_WIN_CLIENT_LIST") == 0)
-			ps->o.clientList = 2;
-	}
-    config_get_double_wrap(config, "system", "updateFreq", &ps->o.updateFreq, -1000.0, 1000.0);
-    config_get_int_wrap(config, "layout", "pivotLockingTime", &ps->o.pivotLockingTime, 0, 20000);
-    config_get_int_wrap(config, "layout", "switchWaitDuration", &ps->o.switchWaitDuration, 0, 2000);
-    config_get_int_wrap(config, "layout", "animationDuration", &ps->o.animationDuration, 0, 2000);
-    config_get_bool_wrap(config, "system", "pseudoTrans", &ps->o.pseudoTrans);
-    config_get_bool_wrap(config, "display", "showDesktop", &ps->o.panel_show_desktop);
-    config_get_bool_wrap(config, "display", "includeFrame", &ps->o.includeFrame);
-    config_get_bool_wrap(config, "layout", "allowUpscale", &ps->o.allowUpscale);
-	config_get_int_wrap(config, "display", "cornerRadius", &ps->o.cornerRadius, 0, INT_MAX);
-    config_get_int_wrap(config, "display", "preferredIconSize", &ps->o.preferredIconSize, 1, INT_MAX);
-    config_get_bool_wrap(config, "filter", "switchShowAllDesktops", &ps->o.switchShowAllDesktops);
-    config_get_bool_wrap(config, "filter", "exposeShowAllDesktops", &ps->o.exposeShowAllDesktops);
-    config_get_bool_wrap(config, "filter", "showShadow", &ps->o.showShadow);
-    config_get_bool_wrap(config, "filter", "showSticky", &ps->o.showSticky);
-    config_get_bool_wrap(config, "filter", "persistentFiltering", &ps->o.persistentFiltering);
-    config_get_bool_wrap(config, "display", "movePointer", &ps->o.movePointer);
-    config_get_bool_wrap(config, "filter", "showOnlyCurrentMonitor", &ps->o.xinerama_showAll);
-	ps->o.xinerama_showAll = !ps->o.xinerama_showAll;
-    config_get_int_wrap(config, "normal", "tintOpacity", &ps->o.normal_tintOpacity, 0, 256);
-    config_get_int_wrap(config, "normal", "opacity", &ps->o.normal_opacity, 0, 256);
-    config_get_int_wrap(config, "highlight", "tintOpacity", &ps->o.highlight_tintOpacity, 0, 256);
-    config_get_int_wrap(config, "highlight", "opacity", &ps->o.highlight_opacity, 0, 256);
-    config_get_int_wrap(config, "shadow", "tintOpacity", &ps->o.shadow_tintOpacity, 0, 256);
-    config_get_int_wrap(config, "shadow", "opacity", &ps->o.shadow_opacity, 0, 256);
-    config_get_bool_wrap(config, "panel", "show", &ps->o.panel_show);
-    config_get_bool_wrap(config, "panel", "backgroundTinting", &ps->o.panel_tinting);
-    config_get_bool_wrap(config, "panel", "reserveSpace", &ps->o.panel_reserveSpace);
-    config_get_bool_wrap(config, "tooltip", "show", &ps->o.tooltip_show);
-    config_get_int_wrap(config, "tooltip", "offsetX", &ps->o.tooltip_offsetX, INT_MIN, INT_MAX);
-    config_get_int_wrap(config, "tooltip", "offsetY", &ps->o.tooltip_offsetY, INT_MIN, INT_MAX);
-    config_get_double_wrap(config, "tooltip", "width", &ps->o.tooltip_width, 0.0, 1.0);
-    config_get_int_wrap(config, "tooltip", "tintOpacity", &ps->o.highlight_tintOpacity, 0, 256);
-    config_get_int_wrap(config, "tooltip", "opacity", &ps->o.tooltip_opacity, 0, 256);
-    {
-        static client_disp_mode_t DEF_CLIDISPM[] = {
-            CLIDISP_THUMBNAIL, CLIDISP_ZOMBIE, CLIDISP_ICON, CLIDISP_FILLED, CLIDISP_NONE
-        };
-
-        static client_disp_mode_t DEF_CLIDISPM_ICON[] = {
-            CLIDISP_THUMBNAIL_ICON, CLIDISP_THUMBNAIL, CLIDISP_ZOMBIE_ICON,
-            CLIDISP_ZOMBIE, CLIDISP_ICON, CLIDISP_FILLED, CLIDISP_NONE
-        };
-
-        bool thumbnail_icons = false;
-        config_get_bool_wrap(config, "display", "showIconsOnThumbnails", &thumbnail_icons);
-        if (thumbnail_icons) {
-            ps->o.clientDisplayModes = allocchk(malloc(sizeof(DEF_CLIDISPM_ICON)));
-            memcpy(ps->o.clientDisplayModes, &DEF_CLIDISPM_ICON, sizeof(DEF_CLIDISPM_ICON));
-        }
-        else {
-            ps->o.clientDisplayModes = allocchk(malloc(sizeof(DEF_CLIDISPM)));
-            memcpy(ps->o.clientDisplayModes, &DEF_CLIDISPM, sizeof(DEF_CLIDISPM));
-        }
-    }
-    {
-        const char *sspec = config_get(config, "display", "background", "#00000055");
-		if (!sspec || strlen(sspec) == 0)
-			sspec = "#00000055";
-		char bg_spec[256] = "orig mid mid ";
-		strcat(bg_spec, sspec);
-
-		pictspec_t spec = PICTSPECT_INIT;
-		if (strcmp("None", sspec) == 0) {
-			ps->o.background = None;
-		}
-		else if (!parse_pictspec(ps, bg_spec, &spec)) {
-			ps->o.background = None;
-			return RET_BADARG;
-		}
-		free_pictspec(ps, &ps->o.bg_spec);
-		ps->o.bg_spec = spec;
-	}
-	config_get_bool_wrap(config, "display", "preservePages", &ps->o.preservePages);
-	{
-		char defaultstr[256] = "orig mid mid ";
-		const char* sspec = config_get(config, "display", "fillSpec", "#333333");
-		strcat(defaultstr, sspec);
-		if (!parse_pictspec(ps, defaultstr, &ps->o.fillSpec))
-			return RET_BADARG;
-		char defaultstr2[256] = "orig ";
-		const char* sspec2 = config_get(config, "display", "iconFillSpec", "mid mid #333333");
-		strcat(defaultstr2, sspec2);
-		if (!parse_pictspec(ps, defaultstr2, &ps->o.iconFillSpec))
-			return RET_BADARG;
-		if (!simg_cachespec(ps, &ps->o.fillSpec))
-			return RET_BADARG;
-		if (ps->o.iconFillSpec.path
-				&& !(ps->o.iconDefault = simg_load(ps, ps->o.iconFillSpec.path,
-						PICTPOSP_SCALEK, ps->o.preferredIconSize, ps->o.preferredIconSize,
-						ALIGN_MID, ALIGN_MID, NULL)))
-			return RET_BADARG;
 	}
 
     setlocale(LC_NUMERIC, lc_numeric_old);
