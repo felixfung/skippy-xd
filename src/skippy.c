@@ -2126,7 +2126,6 @@ load_config_file(session_t *ps)
     }
 
     config_get_int_wrap(config, "layout", "distance", &ps->o.distance, 1, INT_MAX);
-    config_get_bool_wrap(config, "general", "useNetWMFullscreen", &ps->o.useNetWMFullscreen);
 	{
 		ps->o.clientList = 0;
 		const char *tmp = config_get(config, "system", "clientList", "_NET_CLIENT_LIST");
