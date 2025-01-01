@@ -39,11 +39,11 @@ com(ClientWin *cw, int *x, int *y) {
 	*y = cw->y + cw->src.height / 2;
 }
 
-inline void
+inline bool
 newPositionFromCollision(ClientWin *cw1, ClientWin *cw2,
-		int *dx, int *dy) {
+		int *dx, int *dy, unsigned int *totalwidth, unsigned int *totalheight) {
 	if (!isIntersecting(cw1, cw2))
-		return;
+		return false;
 
     int x1=0, y1=0;
     com(cw1, &x1, &y1);
@@ -53,12 +53,31 @@ newPositionFromCollision(ClientWin *cw1, ClientWin *cw2,
 	// if two windows have the same centre of mass,
 	// move in random direction
 	if (x1 == x2 && y1 == y2) {
-		*dx = rand() % 50;
-		*dy = rand() % 50;
-		return;
+		*dx = rand() % 20;
+		*dy = rand() % 20;
+		return true;
 	}
 
 	float norm = sqrt((float)((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2)));
-	*dx = (float)(x1 - x2) / (float)norm * 50.0;
-	*dy = (float)(y1 - y2) / (float)norm * 50.0;
+	if (abs(x1-x2) > abs(y1-y2))
+		*dx = (float)(x1 - x2) / (float)norm * 20.0;
+	else
+		*dy = (float)(y1 - y2) / (float)norm * 20.0;
+
+	x1 = cw1->x;
+	y1 = cw1->y;
+	int w1 = cw1->src.width;
+	int h1 = cw1->src.height;
+
+	if (x1 + *dx < 0)
+		*dx = -x1;
+	if (*totalwidth < x1 + *dx + w1)
+		*dx = *totalwidth - x1 - w1;
+
+	if (y1 + *dy < 0)
+		*dy = -y1;
+	if (*totalheight < y1 + *dy + h1)
+		*dy = *totalheight - y1 - h1;
+
+	return true;
 }

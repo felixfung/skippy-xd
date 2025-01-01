@@ -177,6 +177,9 @@ void
 layout_boxy(MainWin *mw, dlist *windows,
 		unsigned int *total_width, unsigned int *total_height)
 {
+	float aratio = (float)mw->width / (float)mw->height;
+	float expansion_coefficient = 1.1;
+
 	int iterations = 0;
 	bool colliding = true;
 	while (true) {
@@ -203,6 +206,14 @@ layout_boxy(MainWin *mw, dlist *windows,
 			break;
 		colliding = false;
 
+		// expand frame
+		*total_width = expansion_coefficient * (float)(*total_height);
+		*total_height = expansion_coefficient * (float)(*total_height);
+		if (*total_width < aratio * (float)(*total_height))
+			*total_width = aratio * (float)(*total_height);
+		else /*if (*total_height < aratio / (float)(*total_width))*/
+			*total_height = (float)(*total_width) / aratio;
+
 		// collision detection and movement between all window pairs
 		// this is of course O(n^2) complexity
 		dlist_sort(windows, sort_cw_by_id, 0);
@@ -216,12 +227,15 @@ layout_boxy(MainWin *mw, dlist *windows,
 				ClientWin *cw2 = iter2->data;
 
 				int dx=0, dy=0;
-				newPositionFromCollision(cw2, cw1, &dx, &dy);
+				bool positionChanging = newPositionFromCollision(cw1, cw2,
+						&dx, &dy, total_width, total_height);
 
-				bool positionChanging = !(dx==0 && dy==0);
+				if (dx==0 && dy==0 && positionChanging)
+					expansion_coefficient += 0.1;
+
 				if (positionChanging) {
-					cw2->x += dx;
-					cw2->y += dy;
+					cw1->x += dx;
+					cw1->y += dy;
 					colliding = true;
 				}
 			}

@@ -20,15 +20,9 @@
 #ifndef SKIPPY_PHYSICS_H
 #define SKIPPY_PHYSICS_H
 
-// calculate and populate windows destination positions
-// switches to different layout algorithms based on user/default config
-void layout_run(MainWin *, dlist *, unsigned int *, unsigned int *, enum layoutmode);
-void layout_xd(MainWin *, dlist *, unsigned int *, unsigned int *);
-void layout_boxy(MainWin *, dlist *, unsigned int *, unsigned int *);
-
 bool isIntersecting(ClientWin *cw1, ClientWin *cw2);
 void com(ClientWin *cw, int *x, int *y);
-void newPositionFromCollision(ClientWin *cw1, ClientWin *cw2,
-		int *dx, int *dy);
+bool newPositionFromCollision(ClientWin *cw1, ClientWin *cw2,
+		int *dx, int *dy, unsigned int *totalwidth, unsigned int *totalheight);
 
 #endif /* SKIPPY_LAYOUT_H */
