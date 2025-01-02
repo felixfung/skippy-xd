@@ -58,11 +58,10 @@ newPositionFromCollision(ClientWin *cw1, ClientWin *cw2,
 		return true;
 	}
 
-	float norm = sqrt((float)((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2)));
 	if (abs(x1-x2) > abs(y1-y2))
-		*dx = (float)(x1 - x2) / (float)norm * 20.0;
+		*dx = x1 > x2? 20: -20;
 	else
-		*dy = (float)(y1 - y2) / (float)norm * 20.0;
+		*dy = y1 > y2? 20: -20;
 
 	x1 = cw1->x;
 	y1 = cw1->y;
