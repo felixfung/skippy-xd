@@ -42,16 +42,6 @@ void layout_run(MainWin *mw, dlist *windows,
 		enum layoutmode layout) {
 	if (layout == LAYOUTMODE_EXPOSE
 			&& mw->ps->o.exposeLayout == LAYOUT_BOXY) {
-		// set up deterministic random seed
-		// when two windows have the same centre of mass
-		srand(0);
-
-		foreach_dlist (dlist_first(windows)) {
-			ClientWin *cw = iter->data;
-			cw->x = cw->src.x;
-			cw->y = cw->src.y;
-		}
-
 		dlist *sorted_windows = dlist_dup(windows);
 		layout_boxy(mw, sorted_windows, total_width, total_height);
 		dlist_free(sorted_windows);
@@ -177,6 +167,16 @@ void
 layout_boxy(MainWin *mw, dlist *windows,
 		unsigned int *total_width, unsigned int *total_height)
 {
+	// set up deterministic random seed
+	// when two windows have the same centre of mass
+	srand(0);
+
+	foreach_dlist (dlist_first(windows)) {
+		ClientWin *cw = iter->data;
+		cw->x = cw->src.x;
+		cw->y = cw->src.y;
+	}
+
 	float aratio = (float)mw->width / (float)mw->height;
 	float expansion_coefficient = 1.1;
 
@@ -202,7 +202,7 @@ layout_boxy(MainWin *mw, dlist *windows,
 		*total_width = maxx - minx;
 		*total_height = maxy - miny;
 
-		if (!colliding || iterations >= 100)
+		if (!colliding || iterations >= 1000)
 			break;
 		colliding = false;
 
