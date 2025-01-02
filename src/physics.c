@@ -52,31 +52,52 @@ newPositionFromCollision(ClientWin *cw1, ClientWin *cw2,
 
 	// if two windows have the same centre of mass,
 	// move in random direction
+	int dis = cw1->mainwin->distance / 2;
 	if (x1 == x2 && y1 == y2) {
-		*dx = rand() % 20;
-		*dy = rand() % 20;
+		bool axis = rand() % 2;
+		if (axis)
+			*dx = rand() % dis;
+		else
+			*dy = rand() % dis;
 		return true;
 	}
 
-	if (abs(x1-x2) > abs(y1-y2))
-		*dx = x1 > x2? 20: -20;
-	else
-		*dy = y1 > y2? 20: -20;
+	bool xmajoraxis = abs(x1-x2) > abs(y1-y2);
+	bool triedbothaxis = false;
+	while (*dx == 0 && *dy == 0)
+	{
+		if (xmajoraxis)
+			*dx = x1 > x2? dis: -dis;
+		else
+			*dy = y1 > y2? dis: -dis;
 
-	x1 = cw1->x;
-	y1 = cw1->y;
-	int w1 = cw1->src.width;
-	int h1 = cw1->src.height;
+		x1 = cw1->x;
+		y1 = cw1->y;
+		int w1 = cw1->src.width;
+		int h1 = cw1->src.height;
 
-	if (x1 + *dx < 0)
-		*dx = -x1;
-	if (*totalwidth < x1 + *dx + w1)
-		*dx = *totalwidth - x1 - w1;
+		if (x1 + *dx < 0)
+			*dx = -x1;
+		if (*totalwidth < x1 + *dx + w1)
+			*dx = *totalwidth - x1 - w1;
 
-	if (y1 + *dy < 0)
-		*dy = -y1;
-	if (*totalheight < y1 + *dy + h1)
-		*dy = *totalheight - y1 - h1;
+		if (y1 + *dy < 0)
+			*dy = -y1;
+		if (*totalheight < y1 + *dy + h1)
+			*dy = *totalheight - y1 - h1;
+
+		if (triedbothaxis) {
+			break;
+		}
+		else if (xmajoraxis) {
+			xmajoraxis = false;
+			triedbothaxis = true;
+		}
+		else if (!xmajoraxis) {
+			xmajoraxis = true;
+			triedbothaxis = true;
+		}
+	}
 
 	return true;
 }

@@ -207,11 +207,11 @@ layout_boxy(MainWin *mw, dlist *windows,
 		colliding = false;
 
 		// expand frame
-		*total_width = expansion_coefficient * (float)(*total_height);
+		*total_width = expansion_coefficient * (float)(*total_width);
 		*total_height = expansion_coefficient * (float)(*total_height);
-		if (*total_width < aratio * (float)(*total_height))
+		if (*total_width <= aratio * (float)(*total_height))
 			*total_width = aratio * (float)(*total_height);
-		else /*if (*total_height < aratio / (float)(*total_width))*/
+		else
 			*total_height = (float)(*total_width) / aratio;
 
 		// collision detection and movement between all window pairs
