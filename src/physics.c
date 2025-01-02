@@ -20,47 +20,47 @@
 #include "skippy.h"
 #include "physics.h"
 
-inline bool
-isIntersecting(ClientWin *cw1, ClientWin *cw2) {
+unsigned int
+intersectArea(ClientWin *cw1, ClientWin *cw2) {
 	int dis = cw1->mainwin->distance / 2;
-	int x1 = cw1->x, x2 = cw2->x;
-	int y1 = cw1->y, y2 = cw2->y;
-	int w1 = cw1->src.width, w2 = cw2->src.width;
-	int h1 = cw1->src.height, h2 = cw2->src.height;
-	return ((x2 - dis <= x1 && x1 < x2 + w2 + dis)
+	int x1 = cw1->x - dis, x2 = cw2->x - dis;
+	int y1 = cw1->y - dis, y2 = cw2->y - dis;
+	int w1 = cw1->src.width + dis, w2 = cw2->src.width + dis;
+	int h1 = cw1->src.height + dis, h2 = cw2->src.height + dis;
+
+	int left   = MAX(x1, x2);
+	int top    = MAX(y1, y2);
+	int right  = MIN(x1 + w1, x2 + w2);
+	int bottom = MIN(y1 + h1, y2 + h2);
+
+	if (right < left || bottom < top)
+		return 0;
+
+	return (right - left) * (bottom - top);
+
+	/*unsigned int intersectx = 0;
+	if ((x2 - dis <= x1 && x1 < x2 + w2 + dis)
 			|| (x1 - dis <= x2 && x2 < x1 + w1 + dis))
+		intersectx = x1 + w1 - x2 - w2;
+	unsigned int intersecty = ;
 		&& ((y2 - dis <= y1 && y1 < y2 + h2 + dis)
-			 || (y1 - dis <= y2 && y2 < y1 + h1 + dis));
+			 || (y1 - dis <= y2 && y2 < y1 + h1 + dis));*/
 }
 
-inline void
-com(ClientWin *cw, int *x, int *y) {
-	*x = cw->x + cw->src.width / 2;
-	*y = cw->y + cw->src.height / 2;
-}
-
-inline bool
+bool
 newPositionFromCollision(ClientWin *cw1, ClientWin *cw2,
-		int *dx, int *dy, unsigned int *totalwidth, unsigned int *totalheight) {
-	if (!isIntersecting(cw1, cw2))
+		int *dx, int *dy, unsigned int *totalwidth, unsigned int *totalheight)
+{
+	if (intersectArea(cw1, cw2) == 0)
 		return false;
-
-    int x1=0, y1=0;
-    com(cw1, &x1, &y1);
-    int x2=0, y2=0;
-    com(cw2, &x2, &y2);
 
 	// if two windows have the same centre of mass,
 	// move in random direction
 	int dis = cw1->mainwin->distance / 2;
-	if (x1 == x2 && y1 == y2) {
-		bool axis = rand() % 2;
-		if (axis)
-			*dx = rand() % dis;
-		else
-			*dy = rand() % dis;
-		return true;
-	}
+	int x1 = cw1->x - dis, x2 = cw2->x - dis;
+	int y1 = cw1->y - dis, y2 = cw2->y - dis;
+	int w1 = cw1->src.width, w2 = cw2->src.width;
+	int h1 = cw1->src.height, h2 = cw2->src.height;
 
 	bool xmajoraxis = abs(x1-x2) > abs(y1-y2);
 	bool triedbothaxis = false;

@@ -20,8 +20,7 @@
 #ifndef SKIPPY_PHYSICS_H
 #define SKIPPY_PHYSICS_H
 
-bool isIntersecting(ClientWin *cw1, ClientWin *cw2);
-void com(ClientWin *cw, int *x, int *y);
+unsigned int intersectArea(ClientWin *cw1, ClientWin *cw2);
 bool newPositionFromCollision(ClientWin *cw1, ClientWin *cw2,
 		int *dx, int *dy, unsigned int *totalwidth, unsigned int *totalheight);
 
