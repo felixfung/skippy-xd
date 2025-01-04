@@ -181,7 +181,7 @@ layout_boxy(MainWin *mw, dlist *windows,
 	float expansion_coefficient = 1.1;
 
 	int iterations = 0;
-	bool colliding = true;
+	bool colliding = true, stuck = false;
 	while (true) {
 		int minx = INT_MAX, maxx = INT_MIN;
 		int miny = INT_MAX, maxy = INT_MIN;
@@ -218,18 +218,22 @@ layout_boxy(MainWin *mw, dlist *windows,
 		// this is of course O(n^2) complexity
 		dlist_sort(windows, sort_cw_by_id, 0);
 		dlist_sort(windows, sort_cw_by_column, 0);
+		if (stuck)
+			dlist_reverse(windows);
+		stuck = true;
 
 		for (dlist *iter1 = dlist_first(windows)->next;
 				iter1; iter1=iter1->next) {
+			ClientWin *cw1 = iter1->data;
+			int oldx = cw1->x;
+			int oldy = cw1->y;
 			for (dlist *iter2 = dlist_first(windows);
 					iter2 != iter1; iter2=iter2->next) {
-				ClientWin *cw1 = iter1->data;
 				ClientWin *cw2 = iter2->data;
 
 				int dx=0, dy=0;
 				bool positionChanging = newPositionFromCollision(cw1, cw2,
 						&dx, &dy, total_width, total_height);
-
 				if (dx==0 && dy==0 && positionChanging)
 					expansion_coefficient += 0.1;
 
@@ -239,6 +243,8 @@ layout_boxy(MainWin *mw, dlist *windows,
 					colliding = true;
 				}
 			}
+			if (cw1->x != oldx || cw1->y != oldy)
+				stuck = false;
 		}
 
 		iterations++;
