@@ -42,6 +42,35 @@ void layout_run(MainWin *mw, dlist *windows,
 		enum layoutmode layout) {
 	if (layout == LAYOUTMODE_EXPOSE
 			&& mw->ps->o.exposeLayout == LAYOUT_BOXY) {
+		foreach_dlist (dlist_first(windows)) {
+			ClientWin *cw = iter->data;
+
+			// virtual desktop offset
+			{
+				int screencount = wm_get_desktops(mw->ps);
+				if (screencount == -1)
+					screencount = 1;
+				int desktop_dim = ceil(sqrt(screencount));
+
+				int win_desktop = wm_get_window_desktop(mw->ps, cw->wid_client);
+				int current_desktop = wm_get_current_desktop(mw->ps);
+				if (win_desktop == -1)
+					win_desktop = current_desktop;
+
+				int win_desktop_x = win_desktop % desktop_dim;
+				int win_desktop_y = win_desktop / desktop_dim;
+
+				int current_desktop_x = current_desktop % desktop_dim;
+				int current_desktop_y = current_desktop / desktop_dim;
+
+				cw->src.x += (win_desktop_x - current_desktop_x) * (mw->width + mw->distance);
+				cw->src.y += (win_desktop_y - current_desktop_y) * (mw->height + mw->distance);
+			}
+
+			cw->x = cw->src.x;
+			cw->y = cw->src.y;
+		}
+
 		dlist *sorted_windows = dlist_dup(windows);
 		layout_boxy(mw, sorted_windows, total_width, total_height);
 		dlist_free(sorted_windows);
@@ -167,12 +196,6 @@ void
 layout_boxy(MainWin *mw, dlist *windows,
 		unsigned int *total_width, unsigned int *total_height)
 {
-	foreach_dlist (dlist_first(windows)) {
-		ClientWin *cw = iter->data;
-		cw->x = cw->src.x;
-		cw->y = cw->src.y;
-	}
-
 	float aratio = (float)mw->width / (float)mw->height;
 	float expansion_coefficient = 1.1;
 
