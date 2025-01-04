@@ -73,7 +73,7 @@ void layout_run(MainWin *mw, dlist *windows,
 
 		dlist *sorted_windows = dlist_dup(windows);
 		dlist_sort(sorted_windows, sort_cw_by_id, 0);
-		layout_boxy(mw, sorted_windows, total_width, total_height);
+		layout_cosmos(mw, sorted_windows, total_width, total_height);
 		dlist_free(sorted_windows);
 	}
 	else {
@@ -723,4 +723,115 @@ int boxy_affinity(
 			//cw, x,y,x+ii,y+jj,slotx,sloty,slotxx,slotyy);
 	return (int)((float)ii * (slotxx - (float)x - (float)x + slotx)
 					  + (float)jj * (slotyy - (float)y - (float)y + sloty));
+}
+
+static bool
+isIntersecting(ClientWin *cw1, ClientWin *cw2) {
+	int dis = cw1->mainwin->distance / 2;
+	int x1 = cw1->x, x2 = cw2->x;
+	int y1 = cw1->y, y2 = cw2->y;
+	int w1 = cw1->src.width, w2 = cw2->src.width;
+	int h1 = cw1->src.height, h2 = cw2->src.height;
+	return ((x2 - dis <= x1 && x1 < x2 + w2 + dis)
+			|| (x1 - dis <= x2 && x2 < x1 + w1 + dis))
+		&& ((y2 - dis <= y1 && y1 < y2 + h2 + dis)
+			 || (y1 - dis <= y2 && y2 < y1 + h1 + dis));
+}
+
+static void
+com(ClientWin *cw, int *x, int *y) {
+	*x = cw->x + cw->src.width / 2;
+	*y = cw->y + cw->src.height / 2;
+}
+
+static inline void
+inverse2(int dx, int dy, float *ax, float *ay) {
+	float dist = sqrt(dx*dx + dy*dy);
+	*ax = 1.0e+2 * (float)(dx/abs(dx)) / dist;
+	*ay = 1.0e+2 * (float)(dy/abs(dy)) / dist;
+}
+
+void
+layout_cosmos(MainWin *mw, dlist *windows,
+		unsigned int *total_width, unsigned int *total_height)
+{
+	srand(0); // initialize deterministic randomness
+	foreach_dlist (dlist_first(windows)) {
+		ClientWin *cw = iter->data;
+		cw->vx = cw->vy = cw->ax = cw->ay = 0;
+	}
+
+	int iterations = 0;
+	bool colliding = true;
+	while (true) {
+		int minx = INT_MAX, maxx = INT_MIN;
+		int miny = INT_MAX, maxy = INT_MIN;
+		foreach_dlist (dlist_first(windows)) {
+			ClientWin *cw = iter->data;
+			minx = MIN(minx, cw->x);
+			maxx = MAX(maxx, cw->x + cw->src.width);
+			miny = MIN(miny, cw->y);
+			maxy = MAX(maxy, cw->y + cw->src.height);
+		}
+
+		foreach_dlist (dlist_first(windows)) {
+			ClientWin *cw = iter->data;
+			cw->x -= minx;
+			cw->y -= miny;
+		}
+
+		*total_width = maxx - minx;
+		*total_height = maxy - miny;
+
+		if (!colliding || iterations >= 1000)
+			break;
+		colliding = false;
+
+		for (dlist *iter1 = dlist_first(windows);
+				iter1; iter1=iter1->next) {
+			for (dlist *iter2 = dlist_first(windows);
+					iter2; iter2=iter2->next) {
+				ClientWin *cw1 = iter1->data;
+				ClientWin *cw2 = iter2->data;
+				if (cw1 == cw2)
+					continue;
+				if (isIntersecting(cw1, cw2)) {
+					colliding = true;
+					float m1 = cw1->src.width * cw1->src.height,
+						  m2 = cw2->src.width * cw2->src.height;
+					int x1=0, y1=0;
+					com(cw1, &x1, &y1);
+					int x2=0, y2=0;
+					com(cw2, &x2, &y2);
+					int dx = x2 - x1;
+					int dy = y2 - y1;
+					if (dx==0 && dy==0) {
+						dx = rand() % 100 - 50;
+						dy = rand() % 100 - 50;
+					}
+					float ax=0, ay=0;
+					inverse2(dx, dy, &ax, &ay);
+					cw1->ax -= ax;
+					cw1->ay -= ay;
+					cw2->ax += ax;
+					cw2->ay += ay;
+				}
+			}
+		}
+
+		float deltat = 1e-1;
+		foreach_dlist (dlist_first(windows)) {
+			ClientWin *cw = iter->data;
+			cw->vx += cw->ax * deltat;
+			cw->vy += cw->ay * deltat;
+			cw->x += cw->vx * deltat;
+			cw->y += cw->vy * deltat;
+			cw->ax = 0;
+			cw->ay = 0;
+		}
+
+		iterations++;
+	}
+
+	printfdf(true, "(): %d expansion iterations", iterations);
 }

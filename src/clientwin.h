@@ -60,6 +60,7 @@ struct _clientwin_t {
 	
 	/* These are virtual positions set by the layout routine */
 	int x, y;
+	float vx, vy, ax, ay;
 	struct _Tooltip *tooltip;
     int slots;
 };
