@@ -37,14 +37,6 @@ intersectArea(ClientWin *cw1, ClientWin *cw2) {
 		return 0;
 
 	return (right - left) * (bottom - top);
-
-	/*unsigned int intersectx = 0;
-	if ((x2 - dis <= x1 && x1 < x2 + w2 + dis)
-			|| (x1 - dis <= x2 && x2 < x1 + w1 + dis))
-		intersectx = x1 + w1 - x2 - w2;
-	unsigned int intersecty = ;
-		&& ((y2 - dis <= y1 && y1 < y2 + h2 + dis)
-			 || (y1 - dis <= y2 && y2 < y1 + h1 + dis));*/
 }
 
 bool
@@ -59,14 +51,21 @@ newPositionFromCollision(ClientWin *cw1, ClientWin *cw2,
 	int dis = cw1->mainwin->distance / 2;
 	int x1 = cw1->x - dis, x2 = cw2->x - dis;
 	int y1 = cw1->y - dis, y2 = cw2->y - dis;
-	int w1 = cw1->src.width, w2 = cw2->src.width;
-	int h1 = cw1->src.height, h2 = cw2->src.height;
+	//int w1 = cw1->src.width, w2 = cw2->src.width;
+	//int h1 = cw1->src.height, h2 = cw2->src.height;
 
-	bool xmajoraxis = abs(x1-x2) > abs(y1-y2);
-	bool triedbothaxis = false;
-	while (*dx == 0 && *dy == 0)
+	int attempts = 0;
+	bool axis_attempted[2];
+	axis_attempted[0] = axis_attempted[1] = false;
+
+	while (*dx == 0 && *dy == 0 && attempts < 2)
 	{
-		if (xmajoraxis)
+		int axis = abs(x1-x2) > abs(y1-y2) ? 0 : 1;
+		if (axis_attempted[axis])
+			axis = !axis;
+		axis_attempted[axis] = true;
+
+		if (axis == 0)
 			*dx = x1 > x2? dis: -dis;
 		else
 			*dy = y1 > y2? dis: -dis;
@@ -86,17 +85,7 @@ newPositionFromCollision(ClientWin *cw1, ClientWin *cw2,
 		if (*totalheight < y1 + *dy + h1)
 			*dy = *totalheight - y1 - h1;
 
-		if (triedbothaxis) {
-			break;
-		}
-		else if (xmajoraxis) {
-			xmajoraxis = false;
-			triedbothaxis = true;
-		}
-		else if (!xmajoraxis) {
-			xmajoraxis = true;
-			triedbothaxis = true;
-		}
+		attempts++;
 	}
 
 	return true;
