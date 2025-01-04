@@ -764,24 +764,6 @@ layout_cosmos(MainWin *mw, dlist *windows,
 	int iterations = 0;
 	bool colliding = true;
 	while (true) {
-		int minx = INT_MAX, maxx = INT_MIN;
-		int miny = INT_MAX, maxy = INT_MIN;
-		foreach_dlist (dlist_first(windows)) {
-			ClientWin *cw = iter->data;
-			minx = MIN(minx, cw->x);
-			maxx = MAX(maxx, cw->x + cw->src.width);
-			miny = MIN(miny, cw->y);
-			maxy = MAX(maxy, cw->y + cw->src.height);
-		}
-
-		foreach_dlist (dlist_first(windows)) {
-			ClientWin *cw = iter->data;
-			cw->x -= minx;
-			cw->y -= miny;
-		}
-
-		*total_width = maxx - minx;
-		*total_height = maxy - miny;
 
 		if (!colliding || iterations >= 1000)
 			break;
@@ -834,4 +816,26 @@ layout_cosmos(MainWin *mw, dlist *windows,
 	}
 
 	printfdf(true, "(): %d expansion iterations", iterations);
+
+	// calculate total width and height
+	{
+		int minx = INT_MAX, maxx = INT_MIN;
+		int miny = INT_MAX, maxy = INT_MIN;
+		foreach_dlist (dlist_first(windows)) {
+			ClientWin *cw = iter->data;
+			minx = MIN(minx, cw->x);
+			maxx = MAX(maxx, cw->x + cw->src.width);
+			miny = MIN(miny, cw->y);
+			maxy = MAX(maxy, cw->y + cw->src.height);
+		}
+
+		foreach_dlist (dlist_first(windows)) {
+			ClientWin *cw = iter->data;
+			cw->x -= minx;
+			cw->y -= miny;
+		}
+
+		*total_width = maxx - minx;
+		*total_height = maxy - miny;
+	}
 }
