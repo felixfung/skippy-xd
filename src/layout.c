@@ -167,10 +167,6 @@ void
 layout_boxy(MainWin *mw, dlist *windows,
 		unsigned int *total_width, unsigned int *total_height)
 {
-	// set up deterministic random seed
-	// when two windows have the same centre of mass
-	srand(0);
-
 	foreach_dlist (dlist_first(windows)) {
 		ClientWin *cw = iter->data;
 		cw->x = cw->src.x;

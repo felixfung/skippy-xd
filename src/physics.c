@@ -46,8 +46,6 @@ newPositionFromCollision(ClientWin *cw1, ClientWin *cw2,
 	if (intersectArea(cw1, cw2) == 0)
 		return false;
 
-	// if two windows have the same centre of mass,
-	// move in random direction
 	int dis = cw1->mainwin->distance / 2;
 	int x1 = cw1->x - dis, x2 = cw2->x - dis;
 	int y1 = cw1->y - dis, y2 = cw2->y - dis;
