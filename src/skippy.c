@@ -905,10 +905,10 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 
 		mw->desktoptransform.matrix[0][0] = 1.0;
 		mw->desktoptransform.matrix[0][1] = 0.0;
-		mw->desktoptransform.matrix[0][2] = xoff;
+		mw->desktoptransform.matrix[0][2] = xoff + x1;
 		mw->desktoptransform.matrix[1][0] = 0.0;
 		mw->desktoptransform.matrix[1][1] = 1.0;
-		mw->desktoptransform.matrix[1][2] = yoff;
+		mw->desktoptransform.matrix[1][2] = yoff + y1;
 		mw->desktoptransform.matrix[2][0] = 0.0;
 		mw->desktoptransform.matrix[2][1] = 0.0;
 		mw->desktoptransform.matrix[2][2] = 1.0;
