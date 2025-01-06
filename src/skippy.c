@@ -2172,10 +2172,10 @@ load_config_file(session_t *ps)
 	ps->o.normal_tint = mstrdup(config_get(config, "normal", "tint", "black"));
     config_get_int_wrap(config, "normal", "tintOpacity", &ps->o.normal_tintOpacity, 0, 256);
     config_get_int_wrap(config, "normal", "opacity", &ps->o.normal_opacity, 0, 256);
-	ps->o.highlight_tint = mstrdup(config_get(config, "highlight", "tint", "#101020"));
+	ps->o.highlight_tint = mstrdup(config_get(config, "highlight", "tint", "#444444"));
     config_get_int_wrap(config, "highlight", "tintOpacity", &ps->o.highlight_tintOpacity, 0, 256);
     config_get_int_wrap(config, "highlight", "opacity", &ps->o.highlight_opacity, 0, 256);
-	ps->o.shadow_tint = mstrdup(config_get(config, "shadow", "tint", "#010101"));
+	ps->o.shadow_tint = mstrdup(config_get(config, "shadow", "tint", "#040404"));
     config_get_int_wrap(config, "shadow", "tintOpacity", &ps->o.shadow_tintOpacity, 0, 256);
     config_get_int_wrap(config, "shadow", "opacity", &ps->o.shadow_opacity, 0, 256);
 
@@ -2185,9 +2185,9 @@ load_config_file(session_t *ps)
 
 	{
 		ps->o.updatetooltip = false;
-		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "border", "#e0e0e0", &ps->o.tooltip_border);
-		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "background", "#404040", &ps->o.tooltip_background);
-		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "text", "#e0e0e0", &ps->o.tooltip_text);
+		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "border", "#0e0e0e", &ps->o.tooltip_border);
+		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "background", "#202020", &ps->o.tooltip_background);
+		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "text", "white", &ps->o.tooltip_text);
 		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "textShadow", "black", &ps->o.tooltip_textShadow);
 		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "font", "fixed-11:weight=bold", &ps->o.tooltip_font);
 	}
