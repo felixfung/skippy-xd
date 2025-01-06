@@ -1411,6 +1411,26 @@ mainloop(session_t *ps, bool activate_on_start) {
 					clientwin_update(cw);
 					clientwin_update2(cw);
 				}
+
+				// when there are many windows on a virtual desktop
+				// switching virtual desktop leads to many mapping and unmapping events
+				// below routine clears repeated events
+				{
+					int evtype = ev.type;
+					XEvent ev_next = { };
+					while(num_events > 0)
+					{
+						XPeekEvent(ps->dpy, &ev_next);
+
+						if(ev_next.type != evtype)
+							break;
+
+						XNextEvent(ps->dpy, &ev);
+						wid = ev_window(ps, &ev);
+
+						num_events--;
+					}
+				}
 			}
 			else if (mw && (ps->xinfo.damage_ev_base + XDamageNotify == ev.type)) {
 				printfdf(false, "(): else if (ev.type == XDamageNotify) {");
