@@ -1403,7 +1403,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				}
 			}
 			else if (ev.type == CreateNotify || ev.type == UnmapNotify) {
-				printfdf(false, "(): else if (ev.type == MapNotify || ev.type == UnmapNotify) {");
+				printfdf(false, "(): else if (ev.type == CreateNotify || ev.type == UnmapNotify) {");
 				daemon_count_clients(ps->mainwin);
 				dlist *iter = (wid ? dlist_find(ps->mainwin->clients, clientwin_cmp_func, (void *) wid): NULL);
 				if (iter) {
