@@ -92,6 +92,7 @@ int clientwin_filter_func(dlist *, void *);
 int clientwin_sort_func(dlist *, dlist *, void *);
 ClientWin *clientwin_create(MainWin *, Window);
 void clientwin_destroy(ClientWin *, bool destroyed);
+void clientwin_prepmove(ClientWin *);
 void clientwin_move(ClientWin *, float, int, int, float);
 void clientwin_map(ClientWin *);
 void clientwin_unmap(ClientWin *);

@@ -133,8 +133,7 @@ clientwin_create(MainWin *mw, Window client) {
 			.background_pixel = 0,
 			.colormap = mw->colormap,
 			.event_mask = ButtonPressMask | ButtonReleaseMask | KeyPressMask
-				| KeyReleaseMask | EnterWindowMask | LeaveWindowMask
-				| PointerMotionMask | ExposureMask | FocusChangeMask,
+				| KeyReleaseMask | PointerMotionMask | FocusChangeMask,
 			.override_redirect = !ps->o.pseudoTrans,
 		};
 		cw->mini.window = XCreateWindow(ps->dpy,
@@ -568,6 +567,23 @@ void clientwin_round_corners(ClientWin *cw) {
 	XFreeGC(ps->dpy, shape_gc);
 }
 
+void clientwin_prepmove(ClientWin *cw)
+{
+	if (cw->pixmap)
+		XFreePixmap(cw->mainwin->ps->dpy, cw->pixmap);
+
+	if (cw->destination)
+		XRenderFreePicture(cw->mainwin->ps->dpy, cw->destination);
+
+	cw->pixmap = XCreatePixmap(cw->mainwin->ps->dpy, cw->mini.window,
+			cw->src.width, cw->src.height, cw->mainwin->depth);
+	XSetWindowBackgroundPixmap(cw->mainwin->ps->dpy,
+			cw->mini.window, cw->pixmap);
+
+	cw->destination = XRenderCreatePicture(cw->mainwin->ps->dpy,
+			cw->pixmap, cw->mini.format, 0, 0);
+}
+
 void
 clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 {
@@ -589,17 +605,6 @@ clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 
 	XMoveResizeWindow(cw->mainwin->ps->dpy, cw->mini.window, cw->mini.x - border, cw->mini.y - border, cw->mini.width, cw->mini.height);
 
-	if(cw->pixmap)
-		XFreePixmap(cw->mainwin->ps->dpy, cw->pixmap);
-
-	if(cw->destination)
-		XRenderFreePicture(cw->mainwin->ps->dpy, cw->destination);
-
-	cw->pixmap = XCreatePixmap(cw->mainwin->ps->dpy, cw->mini.window, cw->mini.width, cw->mini.height, cw->mainwin->depth);
-	XSetWindowBackgroundPixmap(cw->mainwin->ps->dpy, cw->mini.window, cw->pixmap);
-
-	cw->destination = XRenderCreatePicture(cw->mainwin->ps->dpy, cw->pixmap, cw->mini.format, 0, 0);
-	
 	clientwin_round_corners(cw);
 }
 
