@@ -1176,6 +1176,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// Main window destruction, before poll()
 		if (mw && die) {
 			printfdf(false,"(): selecting/canceling and returning to background");
+
 			// Unmap the main window and all clients, to make sure focus doesn't fall out
 			// when we start setting focus on client window
 			mainwin_unmap(mw);
@@ -1184,23 +1185,30 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 			// Focus the client window only after the main window get unmapped and
 			// keyboard gets ungrabbed.
-			long new_desktop = -1;
-			if (mw->client_to_focus) {
-				if (layout == LAYOUTMODE_PAGING) {
-					if (!mw->refocus)
-						new_desktop = mw->client_to_focus->slots;
-					else
-						childwin_focus(mw->client_to_focus_on_cancel);
-					if (new_desktop == wm_get_current_desktop(ps)) {
-						new_desktop = -1;
-						childwin_focus(mw->client_to_focus_on_cancel);
-					}
+			if (mw->client_to_focus && layout != LAYOUTMODE_PAGING) {
+				if (!mw->refocus)
+					childwin_focus(mw->client_to_focus);
+				else
+					childwin_focus(mw->client_to_focus_on_cancel);
+			}
+			if (mw->client_to_focus && layout == LAYOUTMODE_PAGING ) {
+				if (!mw->refocus &&
+						mw->client_to_focus->slots
+						!= wm_get_current_desktop(ps)) {
+					wm_set_desktop_ewmh(ps, mw->client_to_focus->slots);
 				}
 				else {
-					if (!mw->refocus)
-						childwin_focus(mw->client_to_focus);
-					else
+					if (mw->client_to_focus_on_cancel){
 						childwin_focus(mw->client_to_focus_on_cancel);
+					}
+					else {
+						// this trick does not work
+						// when there is only one virtual desktop
+						wm_set_desktop_ewmh(ps,
+								(wm_get_current_desktop(ps)+1)
+								% wm_get_desktops(mw->ps));
+						wm_set_desktop_ewmh(ps, wm_get_current_desktop(ps));
+					}
 				}
 			}
 
@@ -1232,9 +1240,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 			XSync(ps->dpy, True);
 
 			mw = NULL;
-
-			if (new_desktop != -1)
-				wm_set_desktop_ewmh(ps, new_desktop);
 		}
 		if (!mw)
 			die = false;
