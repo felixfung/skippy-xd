@@ -150,10 +150,10 @@ show = true
 offsetX = 0
 offsetY = -5
 width = 0.8
-border = #ffffff
-background = #404040
+border = #0e0e0e
+background = #202020
 opacity = 128
-text = #ffffff
+text = white
 textShadow = black
 font = fixed-11:weight=bold
 

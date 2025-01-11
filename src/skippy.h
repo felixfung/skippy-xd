@@ -323,7 +323,7 @@ typedef struct {
 \
 	.tooltip_show = true, \
 	.tooltip_offsetX = 0, \
-	.tooltip_offsetY = 20, \
+	.tooltip_offsetY = -5, \
 	.tooltip_width = 0.8, \
 	.tooltip_border = NULL, \
 	.tooltip_background = NULL, \

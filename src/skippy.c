@@ -905,10 +905,10 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 
 		mw->desktoptransform.matrix[0][0] = 1.0;
 		mw->desktoptransform.matrix[0][1] = 0.0;
-		mw->desktoptransform.matrix[0][2] = xoff;
+		mw->desktoptransform.matrix[0][2] = xoff + x1;
 		mw->desktoptransform.matrix[1][0] = 0.0;
 		mw->desktoptransform.matrix[1][1] = 1.0;
-		mw->desktoptransform.matrix[1][2] = yoff;
+		mw->desktoptransform.matrix[1][2] = yoff + y1;
 		mw->desktoptransform.matrix[2][0] = 0.0;
 		mw->desktoptransform.matrix[2][1] = 0.0;
 		mw->desktoptransform.matrix[2][2] = 1.0;
@@ -1176,6 +1176,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// Main window destruction, before poll()
 		if (mw && die) {
 			printfdf(false,"(): selecting/canceling and returning to background");
+
 			// Unmap the main window and all clients, to make sure focus doesn't fall out
 			// when we start setting focus on client window
 			mainwin_unmap(mw);
@@ -1184,23 +1185,30 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 			// Focus the client window only after the main window get unmapped and
 			// keyboard gets ungrabbed.
-			long new_desktop = -1;
-			if (mw->client_to_focus) {
-				if (layout == LAYOUTMODE_PAGING) {
-					if (!mw->refocus)
-						new_desktop = mw->client_to_focus->slots;
-					else
-						childwin_focus(mw->client_to_focus_on_cancel);
-					if (new_desktop == wm_get_current_desktop(ps)) {
-						new_desktop = -1;
-						childwin_focus(mw->client_to_focus_on_cancel);
-					}
+			if (mw->client_to_focus && layout != LAYOUTMODE_PAGING) {
+				if (!mw->refocus)
+					childwin_focus(mw->client_to_focus);
+				else
+					childwin_focus(mw->client_to_focus_on_cancel);
+			}
+			if (mw->client_to_focus && layout == LAYOUTMODE_PAGING ) {
+				if (!mw->refocus &&
+						mw->client_to_focus->slots
+						!= wm_get_current_desktop(ps)) {
+					wm_set_desktop_ewmh(ps, mw->client_to_focus->slots);
 				}
 				else {
-					if (!mw->refocus)
-						childwin_focus(mw->client_to_focus);
-					else
+					if (mw->client_to_focus_on_cancel){
 						childwin_focus(mw->client_to_focus_on_cancel);
+					}
+					else {
+						// this trick does not work
+						// when there is only one virtual desktop
+						wm_set_desktop_ewmh(ps,
+								(wm_get_current_desktop(ps)+1)
+								% wm_get_desktops(mw->ps));
+						wm_set_desktop_ewmh(ps, wm_get_current_desktop(ps));
+					}
 				}
 			}
 
@@ -1232,9 +1240,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 			XSync(ps->dpy, True);
 
 			mw = NULL;
-
-			if (new_desktop != -1)
-				wm_set_desktop_ewmh(ps, new_desktop);
 		}
 		if (!mw)
 			die = false;
@@ -1402,8 +1407,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 					mw->client_to_focus = NULL;
 				}
 			}
-			else if (ev.type == MapNotify || ev.type == UnmapNotify) {
-				printfdf(false, "(): else if (ev.type == MapNotify || ev.type == UnmapNotify) {");
+			else if (ev.type == CreateNotify || ev.type == UnmapNotify) {
+				printfdf(false, "(): else if (ev.type == CreateNotify || ev.type == UnmapNotify) {");
 				daemon_count_clients(ps->mainwin);
 				dlist *iter = (wid ? dlist_find(ps->mainwin->clients, clientwin_cmp_func, (void *) wid): NULL);
 				if (iter) {
@@ -1415,6 +1420,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				// when there are many windows on a virtual desktop
 				// switching virtual desktop leads to many mapping and unmapping events
 				// below routine clears repeated events
+				if (ev.type == UnmapNotify)
 				{
 					int evtype = ev.type;
 					XEvent ev_next = { };
@@ -2192,10 +2198,10 @@ load_config_file(session_t *ps)
 	ps->o.normal_tint = mstrdup(config_get(config, "normal", "tint", "black"));
     config_get_int_wrap(config, "normal", "tintOpacity", &ps->o.normal_tintOpacity, 0, 256);
     config_get_int_wrap(config, "normal", "opacity", &ps->o.normal_opacity, 0, 256);
-	ps->o.highlight_tint = mstrdup(config_get(config, "highlight", "tint", "#101020"));
+	ps->o.highlight_tint = mstrdup(config_get(config, "highlight", "tint", "#444444"));
     config_get_int_wrap(config, "highlight", "tintOpacity", &ps->o.highlight_tintOpacity, 0, 256);
     config_get_int_wrap(config, "highlight", "opacity", &ps->o.highlight_opacity, 0, 256);
-	ps->o.shadow_tint = mstrdup(config_get(config, "shadow", "tint", "#010101"));
+	ps->o.shadow_tint = mstrdup(config_get(config, "shadow", "tint", "#040404"));
     config_get_int_wrap(config, "shadow", "tintOpacity", &ps->o.shadow_tintOpacity, 0, 256);
     config_get_int_wrap(config, "shadow", "opacity", &ps->o.shadow_opacity, 0, 256);
 
@@ -2205,9 +2211,9 @@ load_config_file(session_t *ps)
 
 	{
 		ps->o.updatetooltip = false;
-		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "border", "#e0e0e0", &ps->o.tooltip_border);
-		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "background", "#404040", &ps->o.tooltip_background);
-		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "text", "#e0e0e0", &ps->o.tooltip_text);
+		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "border", "#0e0e0e", &ps->o.tooltip_border);
+		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "background", "#202020", &ps->o.tooltip_background);
+		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "text", "white", &ps->o.tooltip_text);
 		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "textShadow", "black", &ps->o.tooltip_textShadow);
 		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "font", "fixed-11:weight=bold", &ps->o.tooltip_font);
 	}
