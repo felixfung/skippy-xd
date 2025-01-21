@@ -1407,6 +1407,17 @@ mainloop(session_t *ps, bool activate_on_start) {
 					mw->client_to_focus = NULL;
 				}
 			}
+			else if (!mw && ev.type == ConfigureNotify) {
+				printfdf(false, "(): else if (ev.type == ConfigureNotify) {");
+				dlist *iter = (wid ? dlist_find(ps->mainwin->clients, clientwin_cmp_func, (void *) wid): NULL);
+				ClientWin *cw = NULL;
+				if (iter)
+					cw = (ClientWin *) iter->data;
+				if (cw) {
+					clientwin_update(cw);
+					clientwin_update2(cw);
+				}
+            }
 			else if (ev.type == CreateNotify || ev.type == UnmapNotify) {
 				printfdf(false, "(): else if (ev.type == CreateNotify || ev.type == UnmapNotify) {");
 				daemon_count_clients(ps->mainwin);
