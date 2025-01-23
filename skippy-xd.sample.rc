@@ -63,8 +63,11 @@ allowUpscale = false
 
 [filter]
 
-# in multi-monitor setting, whether to filter windows by monitor
+# in Xinerama multi-monitor setting, whether to filter windows by Xinerama monitor
 showOnlyCurrentMonitor = false
+
+# display only windows on the current XScreen
+showOnlyCurrentScreen = true
 
 # Choose whether to show shadow windows:
 # windows that are minimized, shaded, or on other virtual desktops

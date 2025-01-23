@@ -209,6 +209,7 @@ typedef struct {
 	bool allowUpscale;
 
 	bool xinerama_showAll;
+	bool filterxscreen;
 	bool showShadow;
 	bool showSticky;
 	bool switchShowAllDesktops;
@@ -290,6 +291,7 @@ typedef struct {
 	.allowUpscale = false, \
 \
 	.xinerama_showAll = true, \
+	.filterxscreen = true, \
 	.showShadow = true, \
 	.showSticky = true, \
 	.switchShowAllDesktops = true, \
