@@ -421,6 +421,11 @@ send_string_command_to_daemon_via_fifo(
 
 	// reserve space for first char and null terminator
 	int command_len = strlen(command) + 2;
+	if (command_len > BUF_LEN) {
+		printfef(true, "(): attempting to send %d character commands, exceeding %d limit",
+				command_len, BUF_LEN);
+		exit(1);
+	}
 	printfdf(false, "(): sending string command to pipe of length %d", command_len);
 
 	char final_cmd[command_len];
@@ -505,7 +510,16 @@ exit_daemon(const char *pipePath) {
 static inline void
 queue_reload_config(session_t *ps, const char *pipePath) {
 	if (!ps->o.config_reload) {
-		char command[256];
+		{
+			int cmd_len = 5+strlen(ps->o.config_path);
+			if (cmd_len >= BUF_LEN) {
+				printfef(true,
+						"(): attempting to send %d character commands, exceeding %d limit",
+						cmd_len, BUF_LEN);
+				exit(1);
+			}
+		}
+		char command[BUF_LEN];
 		sprintf(command, "%c%c%c%c%s",
 				PIPECMD_RELOAD_CONFIG | PIPECMD_MULTI_BYTE,
 				1, PIPECMD_RELOAD_CONFIG,
@@ -513,7 +527,7 @@ queue_reload_config(session_t *ps, const char *pipePath) {
 		send_string_command_to_daemon_via_fifo(pipePath, command);
 	}
 	else {
-		char command[256];
+		char command[BUF_LEN];
 		sprintf(command, "%c", PIPECMD_RELOAD_CONFIG);
 		send_string_command_to_daemon_via_fifo(pipePath, command);
 	}
@@ -534,11 +548,13 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 	else if (ps->o.focus_initial < 0)
 		master_command |= PIPECMD_PREV;
 
-	char command[256];
+	char command[BUF_LEN];
 	char nparams = (ps->o.wm_class != NULL) + (ps->o.pivotkey != 0);
+	int cmd_len = 1;
 	if (nparams > 0) {
 		master_command |= PIPECMD_MULTI_BYTE;
 		sprintf(command, "%c%c", master_command, nparams);
+		cmd_len++;
 	}
 	else
 		sprintf(command, "%c", master_command);
@@ -547,9 +563,16 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 		char pivot_cmd[4];
 		sprintf(pivot_cmd, "%c%c%c", PIPEPRM_PIVOTING, 1, ps->o.pivotkey);
 		strcat(command, pivot_cmd);
+		cmd_len += 4;
 	}
 
 	if (ps->o.wm_class) {
+		cmd_len += 1+1+strlen(ps->o.wm_class)+1;
+		if (cmd_len >= BUF_LEN) {
+			printfef(true, "(): attempting to send %d character commands, exceeding %d limit",
+					cmd_len, BUF_LEN);
+			exit(1);
+		}
 		char wm_cmd[1+1+strlen(ps->o.wm_class)+1];
 		sprintf(wm_cmd, "%c%c%s",
 				PIPEPRM_WM_CLASS, (char)strlen(ps->o.wm_class), ps->o.wm_class);
