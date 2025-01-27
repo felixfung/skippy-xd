@@ -156,7 +156,7 @@ clientwin_create(MainWin *mw, Window client) {
 
 	// Listen to events on the window. We don't want to miss any changes so
 	// this is to be done as early as possible
-	XSelectInput(cw->mainwin->ps->dpy, cw->src.window, SubstructureNotifyMask | StructureNotifyMask);
+	//XSelectInput(cw->mainwin->ps->dpy, cw->src.window, SubstructureNotifyMask | StructureNotifyMask);
 
 	return cw;
 
