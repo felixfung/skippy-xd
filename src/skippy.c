@@ -393,7 +393,7 @@ open_pipe(session_t *ps, struct pollfd *r_fd) {
 
 static inline int
 read_pipe(session_t *ps, struct pollfd *r_fd, char *piped_input) {
-	int read_ret = read(ps->fd_pipe, piped_input, 1);
+	int read_ret = read(ps->fd_pipe, piped_input, BUF_LEN);
 	if (0 == read_ret) {
 		printfef(true, "(): EOF reached on pipe \"%s\".", ps->o.pipePath);
 		open_pipe(ps, r_fd);
@@ -404,7 +404,6 @@ read_pipe(session_t *ps, struct pollfd *r_fd, char *piped_input) {
 		//exit(1);
 	}
 
-	assert(1 == read_ret);
 	return read_ret;
 }
 
@@ -422,6 +421,11 @@ send_string_command_to_daemon_via_fifo(
 
 	// reserve space for first char and null terminator
 	int command_len = strlen(command) + 2;
+	if (command_len > BUF_LEN) {
+		printfef(true, "(): attempting to send %d character commands, exceeding %d limit",
+				command_len, BUF_LEN);
+		exit(1);
+	}
 	printfdf(false, "(): sending string command to pipe of length %d", command_len);
 
 	char final_cmd[command_len];
@@ -446,21 +450,16 @@ send_command_to_daemon_via_fifo(char command, const char *pipePath) {
 static char
 receive_string_in_daemon_via_fifo(session_t *ps, struct pollfd *r_fd,
 		char *nparams, char **param, char ***str) {
+	char buffer[BUF_LEN];
+	int ret_read = read_pipe(ps, r_fd, &buffer[0]);
 	char cmdlen = 0;
-	read_pipe(ps, r_fd, &cmdlen);
-	if (cmdlen <= 0) {
+	if (ret_read < 1 || (cmdlen = buffer[0]) < ret_read - 2) {
 		printfef(true, "(): stubbed command received");
 		exit(1);
 	}
 
-	char *buffer = malloc(cmdlen);
-	int ret_read = read(ps->fd_pipe, buffer, cmdlen);
-	if (ret_read < cmdlen) {
-		printfef(true, "(): stubbed command received");
-		exit(1);
-	}
-
-	char master_command = buffer[0];
+	char *pbuffer = &buffer[1];
+	char master_command = pbuffer[0];
 
 	if ((master_command & PIPECMD_MULTI_BYTE) == 0) {
 		printfdf(false, "(): received single byte command %d", master_command);
@@ -474,7 +473,7 @@ receive_string_in_daemon_via_fifo(session_t *ps, struct pollfd *r_fd,
 			exit(1);
 		}
 
-		*nparams = buffer[1];
+		*nparams = pbuffer[1];
 		printfdf(false, "(): received multi-byte command %d of %d bytes and %d parameters",
 				master_command, cmdlen, *nparams);
 		*param = malloc(*nparams * sizeof(char*));
@@ -482,25 +481,22 @@ receive_string_in_daemon_via_fifo(session_t *ps, struct pollfd *r_fd,
 
 		int k=2;
 		for (int i=0; i < *nparams; i++) {
-			(*param)[i] = buffer[k];
+			(*param)[i] = pbuffer[k];
 			k++;
 
-			char nchar = buffer[k];
+			char nchar = pbuffer[k];
 			printfdf(false, "(): parameter %d takes %d bytes...",
 					(*param)[i], nchar);
 			k++;
 
 			(*str)[i] = malloc(nchar+1);
-			strncpy((*str)[i], buffer + k, nchar);
+			strncpy((*str)[i], pbuffer + k, nchar);
 			(*str)[i][(int)nchar] = '\0';
 			k += nchar;
 
 			printfdf(false, "(): received parameter %d%s", (*param)[i], (*str)[i]);
 		}
 	}
-
-	if (buffer)
-		free(buffer);
 
 	return master_command;
 }
@@ -514,7 +510,16 @@ exit_daemon(const char *pipePath) {
 static inline void
 queue_reload_config(session_t *ps, const char *pipePath) {
 	if (!ps->o.config_reload) {
-		char command[256];
+		{
+			int cmd_len = 5+strlen(ps->o.config_path);
+			if (cmd_len >= BUF_LEN) {
+				printfef(true,
+						"(): attempting to send %d character commands, exceeding %d limit",
+						cmd_len, BUF_LEN);
+				exit(1);
+			}
+		}
+		char command[BUF_LEN];
 		sprintf(command, "%c%c%c%c%s",
 				PIPECMD_RELOAD_CONFIG | PIPECMD_MULTI_BYTE,
 				1, PIPECMD_RELOAD_CONFIG,
@@ -522,7 +527,7 @@ queue_reload_config(session_t *ps, const char *pipePath) {
 		send_string_command_to_daemon_via_fifo(pipePath, command);
 	}
 	else {
-		char command[256];
+		char command[BUF_LEN];
 		sprintf(command, "%c", PIPECMD_RELOAD_CONFIG);
 		send_string_command_to_daemon_via_fifo(pipePath, command);
 	}
@@ -543,11 +548,13 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 	else if (ps->o.focus_initial < 0)
 		master_command |= PIPECMD_PREV;
 
-	char command[256];
+	char command[BUF_LEN];
 	char nparams = (ps->o.wm_class != NULL) + (ps->o.pivotkey != 0);
+	int cmd_len = 1;
 	if (nparams > 0) {
 		master_command |= PIPECMD_MULTI_BYTE;
 		sprintf(command, "%c%c", master_command, nparams);
+		cmd_len++;
 	}
 	else
 		sprintf(command, "%c", master_command);
@@ -556,9 +563,16 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 		char pivot_cmd[4];
 		sprintf(pivot_cmd, "%c%c%c", PIPEPRM_PIVOTING, 1, ps->o.pivotkey);
 		strcat(command, pivot_cmd);
+		cmd_len += 4;
 	}
 
 	if (ps->o.wm_class) {
+		cmd_len += 1+1+strlen(ps->o.wm_class)+1;
+		if (cmd_len >= BUF_LEN) {
+			printfef(true, "(): attempting to send %d character commands, exceeding %d limit",
+					cmd_len, BUF_LEN);
+			exit(1);
+		}
 		char wm_cmd[1+1+strlen(ps->o.wm_class)+1];
 		sprintf(wm_cmd, "%c%c%s",
 				PIPEPRM_WM_CLASS, (char)strlen(ps->o.wm_class), ps->o.wm_class);

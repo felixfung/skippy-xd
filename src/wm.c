@@ -785,7 +785,7 @@ wm_wid_get_prop_rstr(session_t *ps, Window wid, Atom prop) {
 	unsigned long bytes_after_ret = 0;
 	unsigned char *data = NULL;
 	char *ret = NULL;
-	if (Success == XGetWindowProperty(ps->dpy, wid, prop, 0, BUF_LEN,
+	if (Success == XGetWindowProperty(ps->dpy, wid, prop, 0, 128,
 				False, AnyPropertyType, &type_ret, &fmt_ret, &nitems,
 				&bytes_after_ret, &data) && nitems && 8 == fmt_ret)
 		ret = mstrdup((char *) data);
