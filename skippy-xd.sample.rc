@@ -54,8 +54,9 @@ animationDuration = 200
 # Relative minimal distance between windows
 distance = 50
 
-# exposeLayout=xd uses the same layout as switcher, maximizing screen estate
-# exposeLayout=boxy tends to preserve window positions, thus guiding the eye more
+# xd layout is the switch layout
+# boxy layout uses box heuristics
+# cosmos layout uses physics based modeling
 exposeLayout = boxy
 
 # Whether to show the window bigger than its original size
