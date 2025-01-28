@@ -701,7 +701,7 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 	// is important for prev/next window selection
 	mw->focuslist = dlist_dup(mw->clientondesktop);
 
-	if (layout == LAYOUTMODE_EXPOSE && ps->o.exposeLayout == LAYOUT_BOXY)
+	if (layout == LAYOUTMODE_EXPOSE && ps->o.exposeLayout != LAYOUT_XD)
 		dlist_sort(mw->focuslist, sort_cw_by_column, 0);
 	else
 		dlist_reverse(mw->focuslist);
@@ -2109,6 +2109,9 @@ load_config_file(session_t *ps)
 		if (s) {
 			if (strcmp(s,"boxy") == 0) {
 				ps->o.exposeLayout = LAYOUT_BOXY;
+			}
+			if (strcmp(s,"cosmos") == 0) {
+				ps->o.exposeLayout = LAYOUT_COSMOS;
 			}
 			else if (strcmp(s,"xd") == 0) {
 				ps->o.exposeLayout = LAYOUT_XD;

@@ -73,7 +73,10 @@ void layout_run(MainWin *mw, dlist *windows,
 
 		dlist *sorted_windows = dlist_dup(windows);
 		dlist_sort(sorted_windows, sort_cw_by_id, 0);
-		layout_cosmos(mw, sorted_windows, total_width, total_height);
+		if (mw->ps->o.exposeLayout == LAYOUT_BOXY)
+			layout_boxy(mw, sorted_windows, total_width, total_height);
+		else if (mw->ps->o.exposeLayout == LAYOUT_COSMOS)
+			layout_cosmos(mw, sorted_windows, total_width, total_height);
 		dlist_free(sorted_windows);
 	}
 	else {
