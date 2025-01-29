@@ -1201,10 +1201,20 @@ mainloop(session_t *ps, bool activate_on_start) {
 			// Focus the client window only after the main window get unmapped and
 			// keyboard gets ungrabbed.
 			if (mw->client_to_focus && layout != LAYOUTMODE_PAGING) {
-				if (!mw->refocus)
-					childwin_focus(mw->client_to_focus);
-				else
-					childwin_focus(mw->client_to_focus_on_cancel);
+				if (!mw->refocus) {
+					dlist *iter = dlist_find(ps->mainwin->clients,
+							clientwin_cmp_func,
+							(void *) mw->client_to_focus);
+					if (iter)
+						childwin_focus(mw->client_to_focus);
+				}
+				else {
+					dlist *iter = dlist_find(ps->mainwin->clients,
+							clientwin_cmp_func,
+							(void *) mw->client_to_focus_on_cancel);
+					if (iter)
+						childwin_focus(mw->client_to_focus_on_cancel);
+				}
 			}
 			if (mw->client_to_focus && layout == LAYOUTMODE_PAGING ) {
 				if (!mw->refocus &&

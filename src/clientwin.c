@@ -30,7 +30,8 @@ int
 clientwin_cmp_func(dlist *l, void *data) {
 	ClientWin *cw = (ClientWin *) l->data;
 	return cw->src.window == (Window) data
-		|| cw->wid_client == (Window) data;
+		|| cw->wid_client == (Window) data
+		|| cw == (ClientWin *) data;
 }
 
 void clientwin_round_corners(ClientWin *cw);
