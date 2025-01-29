@@ -494,7 +494,9 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 				XRenderFillRectangle(cw->mainwin->ps->dpy, PictOpOver,
 						cw->destination, tint, s_x, s_y, s_w, s_h);
 				XClearArea(cw->mainwin->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
+#ifdef CFG_XINERAMA
 			}
+#endif /* CFG_XINERAMA */
 		}
 	}
 

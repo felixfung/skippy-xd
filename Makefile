@@ -10,12 +10,12 @@ endif
 CPPFLAGS += -std=c99 -Wall -I/usr/include/freetype2
 
 SRCS_RAW = skippy wm dlist mainwin clientwin layout focus config tooltip img img-xlib
-PACKAGES = x11 xft xrender xcomposite xdamage xfixes
+PACKAGES = x11 xft xrender xcomposite xdamage xfixes xext
 
 # === Options ===
 ifeq "${CFG_NO_XINERAMA}" ""
 	CPPFLAGS += -DCFG_XINERAMA
-	PACKAGES += xext xinerama
+	PACKAGES += xinerama
 endif
 
 ifeq "${CFG_NO_PNG}" ""
