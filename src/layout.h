@@ -25,6 +25,7 @@
 void layout_run(MainWin *, dlist *, unsigned int *, unsigned int *, enum layoutmode);
 void layout_xd(MainWin *, dlist *, unsigned int *, unsigned int *);
 void layout_boxy(MainWin *, dlist *, unsigned int *, unsigned int *);
+void layout_cosmos(MainWin *, dlist *, unsigned int *, unsigned int *);
 int boxy_affinity(ClientWin *, int, int, int, int, int, int);
 
 int middleOfThree(int a, int b, int c);

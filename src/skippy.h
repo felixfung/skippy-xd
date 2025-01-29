@@ -71,7 +71,8 @@ extern bool debuglog;
 
 enum {
 	LAYOUT_XD,
-	LAYOUT_BOXY
+	LAYOUT_BOXY,
+	LAYOUT_COSMOS,
 };
 
 enum {
