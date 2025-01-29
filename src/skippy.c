@@ -2306,7 +2306,7 @@ int main(int argc, char *argv[]) {
 
 	ps->screen = DefaultScreen(dpy);
 	ps->root = RootWindow(dpy, ps->screen);
-	printfdf(true, "(): Working on screen %d root window %d",
+	printfdf(false, "(): Working on screen %d root window %d",
 			ps->screen, ps->root);
 
 	wm_get_atoms(ps);
