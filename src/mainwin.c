@@ -340,9 +340,9 @@ mainwin_update_background(MainWin *mw) {
 void
 mainwin_update(MainWin *mw)
 {
+#ifdef CFG_XINERAMA
 	session_t * const ps = mw->ps;
 
-#ifdef CFG_XINERAMA
 	XineramaScreenInfo *iter;
 	int i;
 	Window dummy_w;
