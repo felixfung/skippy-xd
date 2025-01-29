@@ -2092,25 +2092,24 @@ load_config_file(session_t *ps)
     // occupies a lot more memory for non-string types.
 	{
 		// two -'s, the first digit of uid/xid and null terminator
-		int pipeStrLen = 5;
+		int pipeStrLen = 7;
 
 		int uid = getuid();
-		{
-			int num;
-			for (num = uid; num >= 10; num /= 10) pipeStrLen++;
-		}
+		for (int num = uid; num >= 10; num /= 10)
+			pipeStrLen++;
 
 		int xid = XConnectionNumber(ps->dpy);
-		{
-			int num;
-			for (num = xid; num >= 10; num /= 10) pipeStrLen++;
-		}
+		for (int num = xid; num >= 10; num /= 10)
+			pipeStrLen++;
+
+		for (int num = ps->screen; num >= 10; num /= 10)
+			pipeStrLen++;
 
 		const char * path = config_get(config, "system", "pipePath", "/tmp/skippy-xd-fifo");
 		pipeStrLen += strlen(path);
 
 		char * pipePath = malloc (pipeStrLen * sizeof(unsigned char));
-		sprintf(pipePath, "%s-%i-%i", path, uid, xid);
+		sprintf(pipePath, "%s-%i-%i-%i", path, uid, xid, ps->screen);
 
 		ps->o.pipePath = pipePath;
 	}
@@ -2154,6 +2153,7 @@ load_config_file(session_t *ps)
 
     config_get_bool_wrap(config, "filter", "showOnlyCurrentMonitor", &ps->o.xinerama_showAll);
 	ps->o.xinerama_showAll = !ps->o.xinerama_showAll;
+    config_get_bool_wrap(config, "filter", "showOnlyCurrentScreen", &ps->o.filterxscreen);
     config_get_bool_wrap(config, "filter", "showShadow", &ps->o.showShadow);
     config_get_bool_wrap(config, "filter", "showSticky", &ps->o.showSticky);
     config_get_bool_wrap(config, "filter", "switchShowAllDesktops", &ps->o.switchShowAllDesktops);
@@ -2334,6 +2334,8 @@ int main(int argc, char *argv[]) {
 
 	ps->screen = DefaultScreen(dpy);
 	ps->root = RootWindow(dpy, ps->screen);
+	printfdf(false, "(): Working on screen %d root window %d",
+			ps->screen, ps->root);
 
 	wm_get_atoms(ps);
 
