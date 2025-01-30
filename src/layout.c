@@ -766,17 +766,15 @@ inverse2(float dx, float dy, float m1, float m2, float *ax, float *ay) {
 	dy *= 100;
 
 	float dist = sqrt(dx*dx + dy*dy);
-	float acc = m2 / dist / dist;
+	if (dist < 1e-6) {
+		*ax = *ay = 0;
+		return;
+	}
 
-//	if (ABS(dx) <= 0.2)
-//		*ax = 0;
-//	else
-		*ax = acc * dx / dist;
+	float acc = m2 / dist;
 
-//	if (ABS(dy) <= 0.2)
-//		*ay = 0;
-//	else
-		*ay = acc * dy / dist;
+	*ax = acc * dx / dist;
+	*ay = acc * dy / dist;
 }
 
 void
@@ -785,7 +783,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 {
 	// scatter windows with identical centre of mass
 	{
-		srand(0); // randomness when two windows have identical com
+		srand(0);
 		int iterations = -1;
 		bool colliding = true;
 		while (colliding && iterations <= 1000) {
@@ -819,6 +817,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 			iterations++;
 		}
 		printfdf(true, "(): %d iterations to resolve identical COM", iterations);
+		printfdf(true, "():");
 	}
 
 	// cosmic expansion
@@ -832,7 +831,31 @@ layout_cosmos(MainWin *mw, dlist *windows,
 		float deltat = 1e-1;
 		float aratio = (float)mw->width / (float)mw->height;
 		bool colliding = true;
-		while (colliding && iterations <= 1000) {
+		while (true) {// (colliding && iterations <= 1000) {
+
+			{
+				int minx = INT_MAX, maxx = INT_MIN;
+				int miny = INT_MAX, maxy = INT_MIN;
+				foreach_dlist (dlist_first(windows)) {
+					ClientWin *cw = iter->data;
+					minx = MIN(minx, cw->x);
+					maxx = MAX(maxx, cw->x + cw->src.width);
+					miny = MIN(miny, cw->y);
+					maxy = MAX(maxy, cw->y + cw->src.height);
+				}
+
+				foreach_dlist (dlist_first(windows)) {
+					ClientWin *cw = iter->data;
+					cw->x -= minx;
+					cw->y -= miny;
+				}
+
+				*total_width = maxx - minx;
+				*total_height = maxy - miny;
+			}
+
+			if (!colliding || iterations > 1000)
+				break;
 			colliding = false;
 
 			for (dlist *iter1 = dlist_first(windows);
@@ -847,21 +870,21 @@ layout_cosmos(MainWin *mw, dlist *windows,
 					if (intersectArea(cw1, cw2) > 0) {
 						colliding = true;
 						float m1 = cw1->src.width * cw1->src.height
-								/ (float)mw->width / (float)mw->height,
+								/ (float)*total_width / (float)*total_height,
 							  m2 = cw2->src.width * cw2->src.height
-								/ (float)mw->width / (float)mw->height;
+								/ (float)*total_width / (float)*total_height;
 						int x1=0, y1=0;
 						com(cw1, &x1, &y1);
 						int x2=0, y2=0;
 						com(cw2, &x2, &y2);
 						float dx = x2 - x1;
 						float dy = y2 - y1;
-						dx /= (float)mw->width;
-						dy /= (float)mw->height;
+						dx /= (float)*total_width;
+						dy /= (float)*total_height;
 						float ax=0, ay=0;
 						inverse2(dx, dy, m1, m2, &ax, &ay);
-						cw1->ax -= 1.0e3 *ax;
-						cw1->ay -= 1.0e3 *ay / aratio;
+						cw1->ax -= 1.0e2 *ax;
+						cw1->ay -= 1.0e2 *ay / aratio;
 					}
 				}
 			}
@@ -870,37 +893,27 @@ layout_cosmos(MainWin *mw, dlist *windows,
 				ClientWin *cw = iter->data;
 				cw->vx += cw->ax * deltat;
 				cw->vy += cw->ay * deltat;
-				cw->x += cw->vx * (float)mw->width * deltat;
-				cw->y += cw->vy * (float)mw->height * deltat;
+				cw->oldx1 = cw->x;
+				cw->oldy1 = cw->y;
+				cw->x += cw->vx * (float)*total_width * deltat;
+				cw->y += cw->vy * (float)*total_height * deltat;
+
+				printfdf(true,"(): (%#010lx) (%d,%d), %dx%d -> (%f,%f) -> (%d,%d)",
+						cw->wid_client,
+						cw->oldx1, cw->oldy1,
+						cw->src.width, cw->src.height,
+						cw->vx, cw->vy,
+						cw->x, cw->y);
+
 				cw->vx = 0;
 				cw->vy = 0;
 			}
+			printfdf(true,"():");
 
 			iterations++;
 		}
 		printfdf(true, "(): %d expansion iterations", iterations);
-	
-		// calculate total width and height
-		{
-			int minx = INT_MAX, maxx = INT_MIN;
-			int miny = INT_MAX, maxy = INT_MIN;
-			foreach_dlist (dlist_first(windows)) {
-				ClientWin *cw = iter->data;
-				minx = MIN(minx, cw->x);
-				maxx = MAX(maxx, cw->x + cw->src.width);
-				miny = MIN(miny, cw->y);
-				maxy = MAX(maxy, cw->y + cw->src.height);
-			}
-
-			foreach_dlist (dlist_first(windows)) {
-				ClientWin *cw = iter->data;
-				cw->x -= minx;
-				cw->y -= miny;
-			}
-
-			*total_width = maxx - minx;
-			*total_height = maxy - miny;
-		}
+		printfdf(true, "():");
 	}
 
 	// gravitational collapse
@@ -929,68 +942,49 @@ layout_cosmos(MainWin *mw, dlist *windows,
 						continue;
 
 					float m1 = cw1->src.width * cw1->src.height
-							/ (float)mw->width / (float)mw->height,
+							/ (float)*total_width / (float)*total_height,
 						  m2 = cw2->src.width * cw2->src.height
-							/ (float)mw->width / (float)mw->height;
+							/ (float)*total_width / (float)*total_height;
 					int x1=0, y1=0;
 					com(cw1, &x1, &y1);
 					int x2=0, y2=0;
 					com(cw2, &x2, &y2);
-					float dx = (float)(x2 - x1) / (float)*total_width;
-					float dy = (float)(y2 - y1) / (float)*total_height;
+					float dx = x2 - x1;
+					float dy = y2 - y1;
+					dx /= (float)*total_width;
+					dy /= (float)*total_height;
 					float ax=0, ay=0;
 					inverse2(dx, dy, m1, m2, &ax, &ay);
-					cw1->ax += 1.0e2 * ax;
-					cw1->ay += 1.0e2 * ay;
-					//printfdf(true,"(): %f %f", cw1->ax, cw1->ay);
+					cw1->ax += 1.0e3 * ax;
+					cw1->ay += 1.0e3 * ay;
 				}
 			}
 
 			foreach_dlist (dlist_first(windows)) {
 				ClientWin *cw1 = iter->data;
-//				float norm = sqrt(cw1->ax * cw1->ax + cw1->ay * cw1->ay);
-				//cw1->vx = cw1->vy = 0;
-//				float velocity = 100;//mw->distance;
-//				if (norm > velocity / deltat) {
-//					cw1->ax = cw1->ax / norm * velocity / deltat; //(float)dis;
-//					cw1->ay = cw1->ay / norm * velocity / deltat; //(float)dis;
-//				}
-	//			if (cw1->vx * deltat < -dis)
-	//				cw1->vx = -dis / deltat; //-cw1->src.width / deltat;
-	//			if (cw1->vy * deltat < -dis)
-	//				cw1->vy = -dis / deltat; //-cw1->src.height / deltat;
-	//			if (cw1->vx * deltat > dis)
-	//				cw1->vx = dis / deltat; //cw1->src.width / deltat;
-	//			if (cw1->vy * deltat > dis)
-	//				cw1->vy = dis / deltat; //cw1->src.height / deltat;
-	//			if (cw1->vx * deltat < -cw1->src.width)
-	//				cw1->vx = -cw1->src.width / deltat;
-	//			if (cw1->vy * deltat < -cw1->src.height)
-	//				cw1->vy = -cw1->src.height / deltat;
-	//			if (cw1->vx * deltat > cw1->src.width)
-	//				cw1->vx = cw1->src.width / deltat;
-	//			if (cw1->vy * deltat > cw1->src.height)
-	//				cw1->vy = cw1->src.height / deltat;
 				cw1->vx += cw1->ax * deltat;
 				cw1->vy += cw1->ay * deltat;
 				cw1->oldx1 = cw1->x;
 				cw1->oldy1 = cw1->y;
+
+				float norm = sqrt(cw1->vx * cw1->vx + cw1->vy * cw1->vy);
+				float maxvelocity = 0.1;
+				if (norm > maxvelocity) {
+					cw1->vx *= maxvelocity / norm;
+					cw1->vy *= maxvelocity / norm;
+				}
+
 				cw1->x += cw1->vx * (float)*total_width * deltat;
 				cw1->y += cw1->vy * (float)*total_height * deltat;
 				cw1->oldx2 = cw1->x;
 				cw1->oldy2 = cw1->y;
-				cw1->ax = 0;
-				cw1->ay = 0;
 
-				/*foreach_dlist (dlist_first(windows)) {
-					ClientWin *cw1 = iter->data;
-					printfdf(true,"(): %d (%d,%d),%dx%d -> (%d,%d),(%f,%f)", cw1->wid_client,
-							cw1->oldx1, cw1->oldy1,
-							cw1->src.width, cw1->src.height,
-							cw1->x, cw1->y,
-							cw1->vx, cw1->vy);
-				}
-				printfdf(true,"():");*/
+				printfdf(true,"(): (%#010lx) (%d,%d), %dx%d -> (%f,%f) -> (%d,%d)",
+						cw1->wid_client,
+						cw1->oldx1, cw1->oldy1,
+						cw1->src.width, cw1->src.height,
+						cw1->vx, cw1->vy,
+						cw1->x, cw1->y);
 
 				for (dlist *iter2 = dlist_first(windows);
 						iter2; iter2=iter2->next) {
@@ -1018,7 +1012,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 							cw1->x, cw1->y, cw1->src.width, cw1->src.height,
 							cw2->x, cw2->y, cw2->src.width, cw2->src.height);*/
 
-					/*cw1->x = cw1->oldx2;
+					cw1->x = cw1->oldx2;
 					cw1->y = cw1->oldy2;
 					if (direction == 0)
 						cw1->x = cw2->x + cw2->src.width + dis;
@@ -1029,32 +1023,21 @@ layout_cosmos(MainWin *mw, dlist *windows,
 					else if (direction == 3)
 						cw1->y = cw2->y - cw1->src.height - dis;
 
-					if (direction % 2 == 0) {
-						cw1->x = cw2->x + cw2->src.width/2;
-						cw1->x += (2*dis + cw2->src.width/2) * xoffset[direction];
-						cw1->y = cw1->oldy1;
-					}
-					else {
-						cw1->x = cw1->oldx1;
-						cw1->y = cw2->y + cw2->src.height/2;
-						cw1->y += (2*dis + cw2->src.height/2) * yoffset[direction];
-					}*/
-
 					//printfdf(true,"(): new coordinates for window");
 					//printfdf(true,"(): (%d,%d) %dx%d",
 							//cw1->x, cw1->y, cw1->src.width, cw1->src.height);
 					//printfdf(true,"(): shifting on direction %d", direction);
 
-					cw1->x = cw1->oldx2;
+					/*cw1->x = cw1->oldx2;
 					cw1->y = cw1->oldy2;
 					while (intersectArea(cw1, cw2) > 0) {
 						cw1->x += xoffset[direction]*dis;
 						cw1->y += yoffset[direction]*dis;
-					}
+					}*/
 				}
 			}
+			printfdf(true,"():");
 
-			// calculate total width and height
 			{
 				int minx = INT_MAX, maxx = INT_MIN;
 				int miny = INT_MAX, maxy = INT_MIN;
@@ -1072,8 +1055,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 					cw->y -= miny;
 					cw->vx = 0;
 					cw->vy = 0;
-					//cw->ax -= minx;
-					//cw->ay -= miny;
+					cw->ax = 0;
+					cw->ay = 0;
 				}
 
 				*total_width = maxx - minx;
@@ -1082,13 +1065,13 @@ layout_cosmos(MainWin *mw, dlist *windows,
 
 			foreach_dlist (dlist_first(windows)) {
 				ClientWin *cw1 = iter->data;
-				//if (cw1->x != cw1->oldx1 || cw1->y != cw1->oldy1)
-				if (ABS(cw1->x - cw1->oldx1) >= 0
-				 && ABS(cw1->y - cw1->oldy1) >= 0)
+				if (ABS(cw1->x - cw1->oldx1) > 0
+				 || ABS(cw1->y - cw1->oldy1) > 0)
 					stable = false;
 			}
 			iterations++;
 		}
 		printfdf(true, "(): %d collapse iterations", iterations);
+		printfdf(true, "():");
 	}
 }
