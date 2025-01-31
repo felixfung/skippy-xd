@@ -19,24 +19,12 @@
 
 #include "skippy.h"
 
-// this is the "abstract" function to determine exposd window layout
-// if you want to introduce new layout algorithm/implementation,
-// do it here
-// by introducing new function and hook here
-//
-// here, ((ClientWin*) windows)->src.x, ((ClientWin*) windows)->src.y
-// hold the original coordinates
-// ((ClientWin*) windows)->src.width, ((ClientWin*) windows)->src.height
-// hold the window size
-// ((ClientWin*) windows)->x, ((ClientWin*) windows)->y
-// hold the final window position
-// better NOT to change the final window size...
-// which is implicitly handled by MainWin transformation
-//
-// in summary, use this function to implement the exposed layout
-// by controlling the windows position
-// and calculating the final screen width and height
-// = total windows width and height + minimal distance between windows
+// this function redirects to different functions
+// which performs the expose layout
+// by calaculating cw->x, cw->y (new coordinates)
+// and total_width, total_height
+// given cw->src.x, cw->src.y (original coordinates)
+
 void layout_run(MainWin *mw, dlist *windows,
 		unsigned int *total_width, unsigned int *total_height,
 		enum layoutmode layout) {
@@ -816,8 +804,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 			}
 			iterations++;
 		}
-		printfdf(true, "(): %d iterations to resolve identical COM", iterations);
-		printfdf(true, "():");
+		printfdf(false, "(): %d iterations to resolve identical COM", iterations);
+		printfdf(false, "():");
 	}
 
 	// cosmic expansion
@@ -898,7 +886,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 				cw->x += cw->vx * (float)*total_width * deltat;
 				cw->y += cw->vy * (float)*total_height * deltat;
 
-				printfdf(true,"(): (%#010lx) (%d,%d), %dx%d -> (%f,%f) -> (%d,%d)",
+				printfdf(false,"(): (%#010lx) (%d,%d), %dx%d -> (%f,%f) -> (%d,%d)",
 						cw->wid_client,
 						cw->oldx1, cw->oldy1,
 						cw->src.width, cw->src.height,
@@ -908,12 +896,12 @@ layout_cosmos(MainWin *mw, dlist *windows,
 				cw->vx = 0;
 				cw->vy = 0;
 			}
-			printfdf(true,"():");
+			printfdf(false,"():");
 
 			iterations++;
 		}
-		printfdf(true, "(): %d expansion iterations", iterations);
-		printfdf(true, "():");
+		printfdf(false, "(): %d expansion iterations", iterations);
+		printfdf(false, "():");
 	}
 
 	// gravitational collapse
@@ -979,7 +967,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 				cw1->oldx2 = cw1->x;
 				cw1->oldy2 = cw1->y;
 
-				printfdf(true,"(): (%#010lx) (%d,%d), %dx%d -> (%f,%f) -> (%d,%d)",
+				printfdf(false,"(): (%#010lx) (%d,%d), %dx%d -> (%f,%f) -> (%d,%d)",
 						cw1->wid_client,
 						cw1->oldx1, cw1->oldy1,
 						cw1->src.width, cw1->src.height,
@@ -1036,7 +1024,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 					}*/
 				}
 			}
-			printfdf(true,"():");
+			printfdf(false,"():");
 
 			{
 				int minx = INT_MAX, maxx = INT_MIN;
@@ -1071,7 +1059,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 			}
 			iterations++;
 		}
-		printfdf(true, "(): %d collapse iterations", iterations);
-		printfdf(true, "():");
+		printfdf(false, "(): %d collapse iterations", iterations);
+		printfdf(false, "():");
 	}
 }
