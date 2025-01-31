@@ -2153,6 +2153,11 @@ load_config_file(session_t *ps)
 				ps->o.exposeLayout = LAYOUT_XD;
 			}
 			else {
+				printfef(true, "(): exposeLayout \"%s\" not found. Valid exposeLayout are:",
+						s);
+				printfef(true, "(): xd");
+				printfef(true, "(): boxy (default)");
+				printfef(true, "(): cosmos");
 				ps->o.exposeLayout = LAYOUT_BOXY;
 			}
 		}

@@ -56,7 +56,7 @@ distance = 50
 
 # xd layout is the switch layout
 # boxy layout uses box heuristics
-# cosmos layout uses physics based modeling
+# cosmos layout uses physics based modeling [EXPERIMENTAL]
 exposeLayout = boxy
 
 # Whether to show the window bigger than its original size
