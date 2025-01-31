@@ -709,6 +709,7 @@ shadow_clientwindow(ClientWin* cw, enum cliop op) {
 
 	clientwin_update(cw);
 
+	clientwin_prepmove(cw);
 	clientwin_move(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
 	clientwin_map(cw);
 
