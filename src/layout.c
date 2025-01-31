@@ -19,24 +19,12 @@
 
 #include "skippy.h"
 
-// this is the "abstract" function to determine exposd window layout
-// if you want to introduce new layout algorithm/implementation,
-// do it here
-// by introducing new function and hook here
-//
-// here, ((ClientWin*) windows)->src.x, ((ClientWin*) windows)->src.y
-// hold the original coordinates
-// ((ClientWin*) windows)->src.width, ((ClientWin*) windows)->src.height
-// hold the window size
-// ((ClientWin*) windows)->x, ((ClientWin*) windows)->y
-// hold the final window position
-// better NOT to change the final window size...
-// which is implicitly handled by MainWin transformation
-//
-// in summary, use this function to implement the exposed layout
-// by controlling the windows position
-// and calculating the final screen width and height
-// = total windows width and height + minimal distance between windows
+// this function redirects to different functions
+// which performs the expose layout
+// by calaculating cw->x, cw->y (new coordinates)
+// and total_width, total_height
+// given cw->src.x, cw->src.y (original coordinates)
+
 void layout_run(MainWin *mw, dlist *windows,
 		unsigned int *total_width, unsigned int *total_height,
 		enum layoutmode layout) {
