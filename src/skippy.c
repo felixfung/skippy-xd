@@ -2146,7 +2146,7 @@ load_config_file(session_t *ps)
 			if (strcmp(s,"boxy") == 0) {
 				ps->o.exposeLayout = LAYOUT_BOXY;
 			}
-			if (strcmp(s,"cosmos") == 0) {
+			else if (strcmp(s,"cosmos") == 0) {
 				ps->o.exposeLayout = LAYOUT_COSMOS;
 			}
 			else if (strcmp(s,"xd") == 0) {
