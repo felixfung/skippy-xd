@@ -623,7 +623,7 @@ wm_identify_panel(session_t *ps, Window wid) {
 		long v = winprop_get_int(&prop);
 		if (_NET_WM_WINDOW_TYPE_DOCK == v)
 			result = WINTYPE_PANEL;
-		if (ps->o.panel_show_desktop && _NET_WM_WINDOW_TYPE_DESKTOP == v)
+		if (_NET_WM_WINDOW_TYPE_DESKTOP == v)
 			result = WINTYPE_DESKTOP;
 	}
 	free_winprop(&prop);
