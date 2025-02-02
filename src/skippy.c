@@ -453,7 +453,7 @@ receive_string_in_daemon_via_fifo(session_t *ps, struct pollfd *r_fd,
 	char buffer[BUF_LEN];
 	int ret_read = read_pipe(ps, r_fd, &buffer[0]);
 	char cmdlen = 0;
-	if (ret_read < 1 || (cmdlen = buffer[0]) < ret_read - 2) {
+	if (ret_read < 1 || (cmdlen = buffer[0]+2) > ret_read) {
 		printfef(true, "(): stubbed command received");
 		exit(1);
 	}
