@@ -39,9 +39,11 @@ void clientwin_round_corners(ClientWin *cw);
 int
 clientwin_validate_panel(dlist *l, void *data) {
 	ClientWin *cw = l->data;
-	MainWin *mw = cw->mainwin;
-	cw->paneltype = wm_identify_panel(mw->ps, cw->wid_client);
-	return cw->paneltype != WINTYPE_WINDOW;
+	session_t *ps = cw->mainwin->ps;
+	cw->paneltype = wm_identify_panel(ps, cw->wid_client);
+	return cw->paneltype == WINTYPE_PANEL? ps->o.panel_show:
+			cw->paneltype == WINTYPE_DESKTOP? ps->o.panel_show_desktop:
+			0;
 }
 
 int
