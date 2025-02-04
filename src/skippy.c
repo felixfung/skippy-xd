@@ -1191,27 +1191,35 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 			// Focus the client window only after the main window get unmapped and
 			// keyboard gets ungrabbed.
+
+			int pipe_return = 0;
 			if (mw->client_to_focus && layout != LAYOUTMODE_PAGING) {
 				if (!mw->refocus) {
 					dlist *iter = dlist_find(ps->mainwin->clients,
 							clientwin_cmp_func,
 							(void *) mw->client_to_focus);
-					if (iter)
+					if (iter) {
 						childwin_focus(mw->client_to_focus);
+						pipe_return = mw->client_to_focus->wid_client;
+					}
 				}
 				else {
 					dlist *iter = dlist_find(ps->mainwin->clients,
 							clientwin_cmp_func,
 							(void *) mw->client_to_focus_on_cancel);
-					if (iter)
+					if (iter) {
 						childwin_focus(mw->client_to_focus_on_cancel);
+						pipe_return = mw->client_to_focus_on_cancel->wid_client;
+					}
 				}
 			}
+
 			if (mw->client_to_focus && layout == LAYOUTMODE_PAGING ) {
 				if (!mw->refocus &&
 						mw->client_to_focus->slots
 						!= wm_get_current_desktop(ps)) {
 					wm_set_desktop_ewmh(ps, mw->client_to_focus->slots);
+					pipe_return = mw->client_to_focus->slots;
 				}
 				else {
 					if (mw->client_to_focus_on_cancel){
@@ -1225,8 +1233,16 @@ mainloop(session_t *ps, bool activate_on_start) {
 								% wm_get_desktops(mw->ps));
 						wm_set_desktop_ewmh(ps, wm_get_current_desktop(ps));
 					}
+					pipe_return = wm_get_current_desktop(ps);
 				}
 			}
+
+			int fd = open(ps->o.pipePath2, O_WRONLY | O_NONBLOCK);
+			int bytes_written = write(fd, &pipe_return, sizeof(int));
+			if (bytes_written < sizeof(int)) {
+				printfef(true, "(): daemon-to-client packet incomplete!");
+			}
+			close(fd);
 
 			mw->refocus = false;
 			mw->client_to_focus = NULL;
@@ -2097,29 +2113,38 @@ load_config_file(session_t *ps)
     // Read configuration into ps->o, because searching all the time is much
     // less efficient, may introduce inconsistent default value, and
     // occupies a lot more memory for non-string types.
+
 	{
 		// two -'s, the first digit of uid/xid and null terminator
-		int pipeStrLen = 7;
+		int pipeStrLen0 = 7;
 
 		int uid = getuid();
 		for (int num = uid; num >= 10; num /= 10)
-			pipeStrLen++;
+			pipeStrLen0++;
 
 		int xid = XConnectionNumber(ps->dpy);
 		for (int num = xid; num >= 10; num /= 10)
-			pipeStrLen++;
+			pipeStrLen0++;
 
 		for (int num = ps->screen; num >= 10; num /= 10)
-			pipeStrLen++;
+			pipeStrLen0++;
 
 		const char * path = config_get(config, "system", "pipePath", "/tmp/skippy-xd-fifo");
-		pipeStrLen += strlen(path);
+		int pipeStrLen1 = pipeStrLen0 + strlen(path);
 
-		char * pipePath = malloc (pipeStrLen * sizeof(unsigned char));
+		const char * path2 = config_get(config, "system", "pipePath2", "/tmp/skippy-xd-fofi");
+		int pipeStrLen2 = pipeStrLen0 + strlen(path);
+
+		char * pipePath = malloc (pipeStrLen1 * sizeof(unsigned char));
 		sprintf(pipePath, "%s-%i-%i-%i", path, uid, xid, ps->screen);
 
+		char * pipePath2 = malloc (pipeStrLen2 * sizeof(unsigned char));
+		sprintf(pipePath2, "%s-%i-%i-%i", path2, uid, xid, ps->screen);
+
 		ps->o.pipePath = pipePath;
+		ps->o.pipePath2 = pipePath2;
 	}
+
 	{
 		ps->o.clientList = 0;
 		const char *tmp = config_get(config, "system", "clientList", "_NET_CLIENT_LIST");
@@ -2379,6 +2404,35 @@ int main(int argc, char *argv[]) {
 			// potentially with flags of prev/next
 			// or multi-byte pipe command
 			activate_via_fifo(ps, pipePath);
+
+			// wait and read daemon-to-client pipe
+			// then print result to stdout
+			int fd = open(ps->o.pipePath2, O_RDONLY | O_NONBLOCK);
+			int buffer;
+			struct pollfd r_fd;
+			r_fd.fd = ps->fd_pipe2;
+			r_fd.events = POLLIN;
+			if (ps->fd_pipe2 >= 0) {
+				close(ps->fd_pipe2);
+				ps->fd_pipe2 = -1;
+				r_fd.fd = ps->fd_pipe2;
+			}
+			ps->fd_pipe2 = open(ps->o.pipePath2, O_RDONLY | O_NONBLOCK);
+			if (ps->fd_pipe2 >= 0) {
+				r_fd.fd = ps->fd_pipe2;
+			}
+			else {
+				printfef(true, "(): Failed to open pipe \"%s\": %d", ps->o.pipePath2, errno);
+				perror("open");
+			}
+			poll(&r_fd, 1, -1);
+			int read_ret = read(fd, &buffer, sizeof(int));
+			if (read_ret < sizeof(int)) {
+				printfef(true, "(): daemon-to-client packet incompletely received!");
+			}
+			close(fd);
+			printf("%d\n", buffer);
+
 			goto main_end;
 	}
 
@@ -2407,6 +2461,16 @@ int main(int argc, char *argv[]) {
 			int result = mkfifo(pipePath, S_IRUSR | S_IWUSR);
 			if (result < 0  && EEXIST != errno) {
 				printfef(true, "(): Failed to create named pipe \"%s\": %d", pipePath, result);
+				perror("mkfifo");
+				ret = 2;
+				goto main_end;
+			}
+		}
+
+		{
+			int result = mkfifo(ps->o.pipePath2, S_IRUSR | S_IWUSR);
+			if (result < 0  && EEXIST != errno) {
+				printfef(true, "(): Failed to create named pipe \"%s\": %d", ps->o.pipePath2, result);
 				perror("mkfifo");
 				ret = 2;
 				goto main_end;
@@ -2448,6 +2512,7 @@ main_end:
 		{
 			free(ps->o.config_path);
 			free(ps->o.pipePath);
+			free(ps->o.pipePath2);
 			free(ps->o.clientDisplayModes);
 			free(ps->o.normal_tint);
 			free(ps->o.highlight_tint);

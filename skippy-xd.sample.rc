@@ -20,8 +20,11 @@
 
 [system]
 
-# File path of skippy-xd pipe daemon communication
+# File path for client-to-daemon communication
 pipePath = /tmp/skippy-xd-fifo
+
+# File path for daemon-to-client communication
+pipePath2 = /tmp/skippy-xd-fofi
 
 # Frequency to update pixmaps
 updateFreq = 60.0
