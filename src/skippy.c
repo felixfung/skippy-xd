@@ -1737,8 +1737,8 @@ xerror(Display *dpy, XErrorEvent *ev) {
 
 	print_timestamp(ps);
 	{
-		char buf[BUF_LEN] = "";
-		XGetErrorText(ps->dpy, ev->error_code, buf, BUF_LEN);
+		char buf[128] = "";
+		XGetErrorText(ps->dpy, ev->error_code, buf, 128);
 		printfef(false, "(): error %d (%s) request %d minor %d serial %lu (\"%s\")",
 				ev->error_code, name, ev->request_code,
 				ev->minor_code, ev->serial, buf);
