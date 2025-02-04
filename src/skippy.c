@@ -1949,11 +1949,13 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		while ((o = getopt_long(argc, argv, opts_short, opts_long, NULL)) >= 0) {
 			switch (o) {
 				case OPT_CONFIG:
-					custom_config = true;
 					if (ps->o.config_path)
 						free(ps->o.config_path);
 					ps->o.config_path = realpath(optarg, NULL);
-					if (strlen(ps->o.config_path) + 3 + 1 > BUF_LEN)
+					if (ps->o.config_path)
+						custom_config = true;
+					if (ps->o.config_path &&
+							strlen(ps->o.config_path) + 3 + 1 > BUF_LEN)
 						printfef(true, "(): config file path exceeds %d character limit",
 								BUF_LEN - 3 - 1);
 					break;
