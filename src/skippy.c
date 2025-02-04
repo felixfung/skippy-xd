@@ -553,6 +553,7 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 	}
 
 	if (ps->o.config_reload_path) {
+		printfdf(true, "(): loading new config file path \"%s\"", ps->o.config_path);
 		cmd_len += 1+1+strlen(ps->o.config_path)+1;
 		char cfg_cmd[1+1+strlen(ps->o.config_path)+1];
 		sprintf(cfg_cmd, "%c%c%s",
@@ -561,6 +562,7 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 		strcat(command, cfg_cmd);
 	}
 	else if (ps->o.config_reload) {
+		printfdf(true, "(): reloading existing config file");
 		cmd_len += 2;
 		char cfg_cmd[2];
 		sprintf(cfg_cmd, "%c", PIPEPRM_RELOAD_CONFIG);
@@ -1989,7 +1991,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 				if (realpath(optarg, NULL))
 					custom_config = true;
 				else
-					printfef(true, "(): config path %s not found, ignored",
+					printfef(true, "(): config path \"%s\" not found, ignored",
 							optarg);
 				break;
 			case OPT_CONFIG_RELOAD:
