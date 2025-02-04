@@ -1579,84 +1579,90 @@ mainloop(session_t *ps, bool activate_on_start) {
 				unlink(ps->o.pipePath);
 				return;
 			}
-			else {
-				ps->o.focus_initial = -((piped_input & PIPECMD_PREV) > 0)
-					+ ((piped_input & PIPECMD_NEXT) > 0);
 
-				if (!mw || !mw->mapped)
-				{
-					animating = activate = true;
-					if (piped_input & PIPECMD_SWITCH) {
-						ps->o.mode = PROGMODE_SWITCH;
-						layout = LAYOUTMODE_SWITCH;
-					}
-					if (piped_input & PIPECMD_EXPOSE) {
-						ps->o.mode = PROGMODE_EXPOSE;
-						layout = LAYOUTMODE_EXPOSE;
-					}
-					if (piped_input & PIPECMD_PAGING) {
-						ps->o.mode = PROGMODE_PAGING;
-						layout = LAYOUTMODE_PAGING;
-					}
-
-					if (!ps->o.persistentFiltering && ps->o.wm_class) {
-						free(ps->o.wm_class);
-						ps->o.wm_class = NULL;
-					}
-
-					toggling = true;
-					for (int i=0; i<nparams; i++) {
-						if (param[i] & PIPEPRM_WM_CLASS) {
-							if (ps->o.wm_class)
-								free(ps->o.wm_class);
-							ps->o.wm_class = mstrdup(str[i]);
-							printfdf(false, "(): receiving new wm_class=%s",
-									ps->o.wm_class);
-						}
-						if (param[i] & PIPEPRM_PIVOTING) {
-							ps->o.pivotkey = str[i][0];
-							printfdf(false, "(): receiving new pivot key=%d",ps->o.pivotkey);
-							toggling = false;
-						}
-						if (param[i] == PIPEPRM_RELOAD_CONFIG_PATH) {
-							if (ps->o.config_path)
-								free(ps->o.config_path);
-							ps->o.config_path = mstrdup(str[i]);
-							load_config_file(ps);
-							mainwin_reload(ps, ps->mainwin);
-						}
-						if (param[i] == PIPEPRM_RELOAD_CONFIG) {
-							load_config_file(ps);
-							mainwin_reload(ps, ps->mainwin);
-						}
-					}
-
-					printfdf(false, "(): skippy activating: metaphor=%d", layout);
+			for (int i=0; i<nparams; i++) {
+				if (param[i] == PIPEPRM_RELOAD_CONFIG_PATH) {
+					if (ps->o.config_path)
+						free(ps->o.config_path);
+					ps->o.config_path = mstrdup(str[i]);
+					load_config_file(ps);
+					mainwin_reload(ps, ps->mainwin);
 				}
-				// parameter == 0, toggle
-				// otherwise shift window focus
-				else if (mw && ps->o.focus_initial == 0) {
-					if (toggling) {
-						printfdf(false, "(): toggling skippy off");
-						mw->refocus = die = true;
+				if (param[i] == PIPEPRM_RELOAD_CONFIG) {
+					load_config_file(ps);
+					mainwin_reload(ps, ps->mainwin);
+				}
+			}
+
+			ps->o.focus_initial = -((piped_input & PIPECMD_PREV) > 0)
+				+ ((piped_input & PIPECMD_NEXT) > 0);
+
+			if (!mw || !mw->mapped)
+			{
+				if (piped_input & PIPECMD_SWITCH) {
+					ps->o.mode = PROGMODE_SWITCH;
+					layout = LAYOUTMODE_SWITCH;
+				}
+				else if (piped_input & PIPECMD_EXPOSE) {
+					ps->o.mode = PROGMODE_EXPOSE;
+					layout = LAYOUTMODE_EXPOSE;
+				}
+				else if (piped_input & PIPECMD_PAGING) {
+					ps->o.mode = PROGMODE_PAGING;
+					layout = LAYOUTMODE_PAGING;
+				}
+				else
+					goto forget_activating;
+
+				if (!ps->o.persistentFiltering && ps->o.wm_class) {
+					free(ps->o.wm_class);
+					ps->o.wm_class = NULL;
+				}
+
+				animating = activate = true;
+
+				toggling = true;
+				for (int i=0; i<nparams; i++) {
+					if (param[i] & PIPEPRM_WM_CLASS) {
+						if (ps->o.wm_class)
+							free(ps->o.wm_class);
+						ps->o.wm_class = mstrdup(str[i]);
+						printfdf(false, "(): receiving new wm_class=%s",
+								ps->o.wm_class);
+					}
+					if (param[i] & PIPEPRM_PIVOTING) {
+						ps->o.pivotkey = str[i][0];
+						printfdf(false, "(): receiving new pivot key=%d",ps->o.pivotkey);
+						toggling = false;
 					}
 				}
-				else if (mw && mw->mapped)
-				{
-					printfdf(false, "(): cycling window");
-					fflush(stdout);fflush(stderr);
 
-					if (ps->o.focus_initial < 0)
-						ps->o.focus_initial = dlist_len(mw->focuslist) + ps->o.focus_initial;
-
-					while (ps->o.focus_initial > 0 && mw->client_to_focus) {
-						focus_miniw_next(ps, mw->client_to_focus);
-						ps->o.focus_initial--;
-					}
-
-					if (mw->client_to_focus)
-						clientwin_render(mw->client_to_focus);
+				printfdf(false, "(): skippy activating: metaphor=%d", layout);
+forget_activating:
+			}
+			// parameter == 0, toggle
+			// otherwise shift window focus
+			else if (mw && ps->o.focus_initial == 0) {
+				if (toggling) {
+					printfdf(false, "(): toggling skippy off");
+					mw->refocus = die = true;
 				}
+			}
+			else if (mw && mw->mapped)
+			{
+				printfdf(false, "(): cycling window");
+				fflush(stdout);fflush(stderr);
+
+				if (ps->o.focus_initial < 0)
+					ps->o.focus_initial = dlist_len(mw->focuslist) + ps->o.focus_initial;
+
+				while (ps->o.focus_initial > 0 && mw->client_to_focus) {
+					focus_miniw_next(ps, mw->client_to_focus);
+					ps->o.focus_initial--;
+				}
+
+				if (mw->client_to_focus)
+					clientwin_render(mw->client_to_focus);
 			}
 
 			// free receive_string_in_daemon_via_fifo() paramters
@@ -2349,6 +2355,10 @@ int main(int argc, char *argv[]) {
 	// Handle special modes
 	switch (ps->o.mode) {
 		case PROGMODE_NORMAL:
+			if (!ps->o.runAsDaemon && (ps->o.config_reload || ps->o.config_reload_path)) {
+				activate_via_fifo(ps, pipePath);
+				goto main_end;
+			}
 			break;
 		case PROGMODE_DM_STOP:
 			exit_daemon(pipePath);
