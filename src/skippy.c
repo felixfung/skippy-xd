@@ -2129,10 +2129,10 @@ load_config_file(session_t *ps)
 		for (int num = ps->screen; num >= 10; num /= 10)
 			pipeStrLen0++;
 
-		const char * path = config_get(config, "system", "pipePath", "/tmp/skippy-xd-fifo");
+		const char * path = config_get(config, "system", "daemonPath", "/tmp/skippy-xd-fifo");
 		int pipeStrLen1 = pipeStrLen0 + strlen(path);
 
-		const char * path2 = config_get(config, "system", "pipePath2", "/tmp/skippy-xd-fofi");
+		const char * path2 = config_get(config, "system", "clientPath", "/tmp/skippy-xd-fofi");
 		int pipeStrLen2 = pipeStrLen0 + strlen(path);
 
 		char * pipePath = malloc (pipeStrLen1 * sizeof(unsigned char));
