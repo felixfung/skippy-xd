@@ -88,7 +88,6 @@ enum progmode {
 	PROGMODE_SWITCH,
 	PROGMODE_EXPOSE,
 	PROGMODE_PAGING,
-	PROGMODE_RELOAD_CONFIG,
 	PROGMODE_DM_STOP,
 };
 
@@ -190,6 +189,7 @@ typedef enum {
 /// @brief Option structure.
 typedef struct {
 	char *config_path;
+	bool config_reload_path;
 	bool config_reload;
 	enum progmode mode;
 	bool runAsDaemon;
@@ -274,6 +274,7 @@ typedef struct {
 
 #define OPTIONST_INIT { \
 	.config_path = NULL, \
+	.config_reload_path = false, \
 	.config_reload = false, \
 	.mode = PROGMODE_NORMAL, \
 	.runAsDaemon = false, \
