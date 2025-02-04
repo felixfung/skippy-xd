@@ -754,7 +754,7 @@ inverse2(float dx, float dy, float m1, float m2, float *ax, float *ay) {
 	dy *= 100;
 
 	float dist = sqrt(dx*dx + dy*dy);
-	if (dist < 1e-6) {
+	if (dist < 0.1) {
 		*ax = *ay = 0;
 		return;
 	}
@@ -955,76 +955,82 @@ layout_cosmos(MainWin *mw, dlist *windows,
 				cw1->oldx1 = cw1->x;
 				cw1->oldy1 = cw1->y;
 
-				float norm = sqrt(cw1->vx * cw1->vx + cw1->vy * cw1->vy);
-				float maxvelocity = 0.1;
-				if (norm > maxvelocity) {
-					cw1->vx *= maxvelocity / norm;
-					cw1->vy *= maxvelocity / norm;
-				}
-
-				cw1->x += cw1->vx * (float)*total_width * deltat;
-				cw1->y += cw1->vy * (float)*total_height * deltat;
-				cw1->oldx2 = cw1->x;
-				cw1->oldy2 = cw1->y;
-
-				printfdf(false,"(): (%#010lx) (%d,%d), %dx%d -> (%f,%f) -> (%d,%d)",
-						cw1->wid_client,
-						cw1->oldx1, cw1->oldy1,
-						cw1->src.width, cw1->src.height,
-						cw1->vx, cw1->vy,
-						cw1->x, cw1->y);
-
-				for (dlist *iter2 = dlist_first(windows);
-						iter2; iter2=iter2->next) {
-					ClientWin *cw2 = iter2->data;
-					if (cw1 == cw2 || intersectArea(cw1, cw2) == 0)
-						continue;
-
-					int dis = cw1->mainwin->distance;
-					unsigned int direction = 0, intersect = INT_MAX;
-					int xoffset[4] = {1, 0, -1, 0};
-					int yoffset[4] = {0, 1, 0, -1};
-					for (int i=0; i<4; i++) {
-						cw1->x = cw1->oldx2;
-						cw1->y = cw1->oldy2;
-						cw1->x += xoffset[i] * dis;
-						cw1->y += yoffset[i] * dis;
-						if (intersectArea(cw1, cw2) < intersect) {
-							direction = i;
-							intersect = intersectArea(cw1, cw2);
-						}
+				float speed = sqrt(cw1->vx * cw1->vx + cw1->vy * cw1->vy);
+				float vx = cw1->vx, vy = cw1->vy;
+				float speedsegment = 0.05;
+				while (speed > 0) {
+					if (speed > speedsegment) {
+						cw1->vx = vx * speedsegment / speed;
+						cw1->vy = vy * speedsegment / speed;
 					}
 
-					/*printfdf(true,"(): DIR %d (%d,%d) %dx%d <-> (%d,%d) %dx%d",
-							direction,
-							cw1->x, cw1->y, cw1->src.width, cw1->src.height,
-							cw2->x, cw2->y, cw2->src.width, cw2->src.height);*/
+					cw1->x += cw1->vx * (float)*total_width * deltat;
+					cw1->y += cw1->vy * (float)*total_height * deltat;
+					cw1->oldx2 = cw1->x;
+					cw1->oldy2 = cw1->y;
 
-					cw1->x = cw1->oldx2;
-					cw1->y = cw1->oldy2;
-					if (direction == 0)
-						cw1->x = cw2->x + cw2->src.width + dis;
-					else if (direction == 1)
-						cw1->y = cw2->y + cw2->src.height + dis;
-					else if (direction == 2)
-						cw1->x = cw2->x - cw1->src.width - dis;
-					else if (direction == 3)
-						cw1->y = cw2->y - cw1->src.height - dis;
+					printfdf(true,"(): (%#010lx) (%d,%d), %dx%d -> (%f,%f) -> (%d,%d)",
+							cw1->wid_client,
+							cw1->oldx1, cw1->oldy1,
+							cw1->src.width, cw1->src.height,
+							cw1->vx, cw1->vy,
+							cw1->x, cw1->y);
 
-					//printfdf(true,"(): new coordinates for window");
-					//printfdf(true,"(): (%d,%d) %dx%d",
-							//cw1->x, cw1->y, cw1->src.width, cw1->src.height);
-					//printfdf(true,"(): shifting on direction %d", direction);
+					for (dlist *iter2 = dlist_first(windows);
+							iter2; iter2=iter2->next) {
+						ClientWin *cw2 = iter2->data;
+						if (cw1 == cw2 || intersectArea(cw1, cw2) == 0)
+							continue;
 
-					/*cw1->x = cw1->oldx2;
-					cw1->y = cw1->oldy2;
-					while (intersectArea(cw1, cw2) > 0) {
-						cw1->x += xoffset[direction]*dis;
-						cw1->y += yoffset[direction]*dis;
-					}*/
+						int dis = cw1->mainwin->distance;
+						unsigned int direction = 0, intersect = INT_MAX;
+						int xoffset[4] = {1, 0, -1, 0};
+						int yoffset[4] = {0, 1, 0, -1};
+						for (int i=0; i<4; i++) {
+							cw1->x = cw1->oldx2;
+							cw1->y = cw1->oldy2;
+							cw1->x += xoffset[i] * dis;
+							cw1->y += yoffset[i] * dis;
+							if (intersectArea(cw1, cw2) < intersect) {
+								direction = i;
+								intersect = intersectArea(cw1, cw2);
+							}
+						}
+
+//						printfdf(true,"(): DIR %d (%d,%d) %dx%d <-> (%d,%d) %dx%d",
+//								direction,
+//								cw1->x, cw1->y, cw1->src.width, cw1->src.height,
+//								cw2->x, cw2->y, cw2->src.width, cw2->src.height);
+
+						cw1->x = cw1->oldx2;
+						cw1->y = cw1->oldy2;
+						if (direction == 0)
+							cw1->x = cw2->x + cw2->src.width + dis;
+						else if (direction == 1)
+							cw1->y = cw2->y + cw2->src.height + dis;
+						else if (direction == 2)
+							cw1->x = cw2->x - cw1->src.width - dis;
+						else if (direction == 3)
+							cw1->y = cw2->y - cw1->src.height - dis;
+
+						//printfdf(true,"(): new coordinates for window");
+						//printfdf(true,"(): (%d,%d) %dx%d",
+								//cw1->x, cw1->y, cw1->src.width, cw1->src.height);
+						//printfdf(true,"(): shifting on direction %d", direction);
+
+//						cw1->x = cw1->oldx2;
+//						cw1->y = cw1->oldy2;
+//						while (intersectArea(cw1, cw2) > 0) {
+//							cw1->x += xoffset[direction]*dis;
+//							cw1->y += yoffset[direction]*dis;
+//						}
+					}
+					speed -= speedsegment;
+					if (speed < 0)
+						speed = 0;
 				}
 			}
-			printfdf(false,"():");
+			printfdf(true,"():");
 
 			{
 				int minx = INT_MAX, maxx = INT_MIN;
@@ -1053,13 +1059,16 @@ layout_cosmos(MainWin *mw, dlist *windows,
 
 			foreach_dlist (dlist_first(windows)) {
 				ClientWin *cw1 = iter->data;
+				printfdf(true,"(): (%d,%d) -> (%d,%d)",
+						cw1->oldx1, cw1->oldy1,
+						cw1->x, cw1->y);
 				if (ABS(cw1->x - cw1->oldx1) > 0
 				 || ABS(cw1->y - cw1->oldy1) > 0)
 					stable = false;
 			}
 			iterations++;
 		}
-		printfdf(false, "(): %d collapse iterations", iterations);
+		printfdf(true, "(): %d collapse iterations", iterations);
 		printfdf(false, "():");
 	}
 }
