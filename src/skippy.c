@@ -1954,6 +1954,8 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 					ps->o.config_path = realpath(optarg, NULL);
 					if (ps->o.config_path)
 						custom_config = true;
+					else
+						ps->o.config_blank = true;
 					if (ps->o.config_path &&
 							strlen(ps->o.config_path) + 3 + 1 > BUF_LEN)
 						printfef(true, "(): config file path exceeds %d character limit",
@@ -1984,7 +1986,11 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		switch (o) {
 			case OPT_DEBUGLOG: break;
 			case OPT_CONFIG:
-				custom_config = true;
+				if (realpath(optarg, NULL))
+					custom_config = true;
+				else
+					printfef(true, "(): config path %s not found, ignored",
+							optarg);
 				break;
 			case OPT_CONFIG_RELOAD:
 				config_reload = true;
@@ -2042,7 +2048,6 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 			ps->o.pivotkey = 0; // expose/paging defaults to toggle
 		}
 	}
-
 	if (custom_config && !ps->o.runAsDaemon)
 		ps->o.config_reload_path = true;
 
@@ -2357,7 +2362,9 @@ int main(int argc, char *argv[]) {
 	// Handle special modes
 	switch (ps->o.mode) {
 		case PROGMODE_NORMAL:
-			if (!ps->o.runAsDaemon && (ps->o.config_reload || ps->o.config_reload_path)) {
+			if (!ps->o.runAsDaemon &&
+					(ps->o.config_reload || ps->o.config_reload_path
+					 || ps->o.config_blank)) {
 				activate_via_fifo(ps, pipePath);
 				goto main_end;
 			}
