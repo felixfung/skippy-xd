@@ -553,7 +553,7 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 	}
 
 	if (ps->o.config_reload_path) {
-		printfdf(true, "(): loading new config file path \"%s\"", ps->o.config_path);
+		printfef(true, "(): loading new config file path \"%s\"", ps->o.config_path);
 		cmd_len += 1+1+strlen(ps->o.config_path)+1;
 		char cfg_cmd[1+1+strlen(ps->o.config_path)+1];
 		sprintf(cfg_cmd, "%c%c%s",
@@ -562,7 +562,7 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 		strcat(command, cfg_cmd);
 	}
 	else if (ps->o.config_reload) {
-		printfdf(true, "(): reloading existing config file");
+		printfef(true, "(): reloading existing config file");
 		cmd_len += 2;
 		char cfg_cmd[2];
 		sprintf(cfg_cmd, "%c", PIPEPRM_RELOAD_CONFIG);
@@ -1811,7 +1811,8 @@ init_xexts(session_t *ps) {
 #ifdef CFG_XINERAMA
 	ps->xinfo.xinerama_exist = XineramaQueryExtension(dpy,
 			&ps->xinfo.xinerama_ev_base, &ps->xinfo.xinerama_err_base);
-	printfef(true, "(): Xinerama extension: %s",
+	if (ps->o.runAsDaemon)
+		printfef(true, "(): Xinerama extension: %s",
 			(ps->xinfo.xinerama_exist ? "yes": "no"));
 #endif /* CFG_XINERAMA */
 
@@ -1985,6 +1986,9 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 				case OPT_DEBUGLOG:
 					debuglog = true;
 					break;
+				case OPT_DM_START:
+					ps->o.runAsDaemon = true;
+					break;
 				// case 't':
 				// 	developer_tests();
 				// 	exit('t' == o ? RET_SUCCESS: RET_BADARG);
@@ -2099,8 +2103,13 @@ load_config_file(session_t *ps)
         bool user_specified_config = ps->o.config_path;
         if (!ps->o.config_path)
             ps->o.config_path = get_cfg_path();
-        if (ps->o.config_path)
+
+		if (ps->o.runAsDaemon)
+			printfef(true, "(): using \"%s\"", ps->o.config_path);
+
+        if (ps->o.config_path) {
             config = config_load(ps->o.config_path);
+		}
         else
             printfef(true, "(): WARNING: No configuration file found.");
         if (!config && user_specified_config)
