@@ -30,7 +30,6 @@ bool debuglog = false;
 
 enum pipe_cmd_t {
 	PIPECMD_EXIT_DAEMON = 1,
-	PIPECMD_RELOAD_CONFIG = 2,
 	PIPECMD_SWITCH = 4,
 	PIPECMD_EXPOSE = 8,
 	PIPECMD_PAGING = 16,
@@ -42,6 +41,8 @@ enum pipe_cmd_t {
 enum pipe_param_t {
 	PIPEPRM_PIVOTING = 1,
 	PIPEPRM_WM_CLASS = 2,
+	PIPEPRM_RELOAD_CONFIG_PATH = 4,
+	PIPEPRM_RELOAD_CONFIG = 8,
 };
 
 session_t *ps_g = NULL;
@@ -507,32 +508,6 @@ exit_daemon(const char *pipePath) {
 	send_command_to_daemon_via_fifo(PIPECMD_EXIT_DAEMON, pipePath);
 }
 
-static inline void
-queue_reload_config(session_t *ps, const char *pipePath) {
-	if (!ps->o.config_reload) {
-		{
-			int cmd_len = 5+strlen(ps->o.config_path);
-			if (cmd_len >= BUF_LEN) {
-				printfef(true,
-						"(): attempting to send %d character commands, exceeding %d limit",
-						cmd_len, BUF_LEN);
-				exit(1);
-			}
-		}
-		char command[BUF_LEN];
-		sprintf(command, "%c%c%c%c%s",
-				PIPECMD_RELOAD_CONFIG | PIPECMD_MULTI_BYTE,
-				1, PIPECMD_RELOAD_CONFIG,
-				(char)strlen(ps->o.config_path), ps->o.config_path);
-		send_string_command_to_daemon_via_fifo(pipePath, command);
-	}
-	else {
-		char command[BUF_LEN];
-		sprintf(command, "%c", PIPECMD_RELOAD_CONFIG);
-		send_string_command_to_daemon_via_fifo(pipePath, command);
-	}
-}
-
 static void
 activate_via_fifo(session_t *ps, const char *pipePath) {
 	char master_command = 0;
@@ -548,8 +523,11 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 	else if (ps->o.focus_initial < 0)
 		master_command |= PIPECMD_PREV;
 
-	char command[BUF_LEN];
+	char command[BUF_LEN*2];
 	char nparams = (ps->o.wm_class != NULL) + (ps->o.pivotkey != 0);
+	if (ps->o.config_reload_path || ps->o.config_reload)
+		nparams++;
+
 	int cmd_len = 1;
 	if (nparams > 0) {
 		master_command |= PIPECMD_MULTI_BYTE;
@@ -568,16 +546,27 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 
 	if (ps->o.wm_class) {
 		cmd_len += 1+1+strlen(ps->o.wm_class)+1;
-		if (cmd_len >= BUF_LEN) {
-			printfef(true, "(): attempting to send %d character commands, exceeding %d limit",
-					cmd_len, BUF_LEN);
-			exit(1);
-		}
 		char wm_cmd[1+1+strlen(ps->o.wm_class)+1];
 		sprintf(wm_cmd, "%c%c%s",
 				PIPEPRM_WM_CLASS, (char)strlen(ps->o.wm_class), ps->o.wm_class);
 		strcat(command, wm_cmd);
 	}
+
+	if (ps->o.config_reload_path) {
+		cmd_len += 1+1+strlen(ps->o.config_path)+1;
+		char cfg_cmd[1+1+strlen(ps->o.config_path)+1];
+		sprintf(cfg_cmd, "%c%c%s",
+				PIPEPRM_RELOAD_CONFIG_PATH,
+				(char)strlen(ps->o.config_path), ps->o.config_path);
+		strcat(command, cfg_cmd);
+	}
+	else if (ps->o.config_reload) {
+		cmd_len += 2;
+		char cfg_cmd[2];
+		sprintf(cfg_cmd, "%c", PIPEPRM_RELOAD_CONFIG);
+		strcat(command, cfg_cmd);
+	}
+
 	send_string_command_to_daemon_via_fifo(pipePath, command);
 }
 
@@ -1590,84 +1579,90 @@ mainloop(session_t *ps, bool activate_on_start) {
 				unlink(ps->o.pipePath);
 				return;
 			}
-			else if (piped_input & PIPECMD_RELOAD_CONFIG) {
-				for (int i=0; i<nparams; i++) {
-					if (param[i] == PIPECMD_RELOAD_CONFIG) {
-						if (ps->o.config_path)
-							free(ps->o.config_path);
-						ps->o.config_path = mstrdup(str[i]);
-					}
+
+			for (int i=0; i<nparams; i++) {
+				if (param[i] == PIPEPRM_RELOAD_CONFIG_PATH) {
+					if (ps->o.config_path)
+						free(ps->o.config_path);
+					ps->o.config_path = mstrdup(str[i]);
+					load_config_file(ps);
+					mainwin_reload(ps, ps->mainwin);
 				}
-				load_config_file(ps);
-				mainwin_reload(ps, ps->mainwin);
+				if (param[i] == PIPEPRM_RELOAD_CONFIG) {
+					load_config_file(ps);
+					mainwin_reload(ps, ps->mainwin);
+				}
 			}
-			else {
-				ps->o.focus_initial = -((piped_input & PIPECMD_PREV) > 0)
-					+ ((piped_input & PIPECMD_NEXT) > 0);
 
-				if (!mw || !mw->mapped)
-				{
-					animating = activate = true;
-					if (piped_input & PIPECMD_SWITCH) {
-						ps->o.mode = PROGMODE_SWITCH;
-						layout = LAYOUTMODE_SWITCH;
-					}
-					if (piped_input & PIPECMD_EXPOSE) {
-						ps->o.mode = PROGMODE_EXPOSE;
-						layout = LAYOUTMODE_EXPOSE;
-					}
-					if (piped_input & PIPECMD_PAGING) {
-						ps->o.mode = PROGMODE_PAGING;
-						layout = LAYOUTMODE_PAGING;
-					}
+			ps->o.focus_initial = -((piped_input & PIPECMD_PREV) > 0)
+				+ ((piped_input & PIPECMD_NEXT) > 0);
 
-					if (!ps->o.persistentFiltering && ps->o.wm_class) {
-						free(ps->o.wm_class);
-						ps->o.wm_class = NULL;
-					}
-
-					toggling = true;
-					for (int i=0; i<nparams; i++) {
-						if (param[i] & PIPEPRM_WM_CLASS) {
-							if (ps->o.wm_class)
-								free(ps->o.wm_class);
-							ps->o.wm_class = mstrdup(str[i]);
-							printfdf(false, "(): receiving new wm_class=%s",
-									ps->o.wm_class);
-						}
-						if (param[i] & PIPEPRM_PIVOTING) {
-							ps->o.pivotkey = str[i][0];
-							printfdf(false, "(): receiving new pivot key=%d",ps->o.pivotkey);
-							toggling = false;
-						}
-					}
-
-					printfdf(false, "(): skippy activating: metaphor=%d", layout);
+			if (!mw || !mw->mapped)
+			{
+				if (piped_input & PIPECMD_SWITCH) {
+					ps->o.mode = PROGMODE_SWITCH;
+					layout = LAYOUTMODE_SWITCH;
 				}
-				// parameter == 0, toggle
-				// otherwise shift window focus
-				else if (mw && ps->o.focus_initial == 0) {
-					if (toggling) {
-						printfdf(false, "(): toggling skippy off");
-						mw->refocus = die = true;
+				else if (piped_input & PIPECMD_EXPOSE) {
+					ps->o.mode = PROGMODE_EXPOSE;
+					layout = LAYOUTMODE_EXPOSE;
+				}
+				else if (piped_input & PIPECMD_PAGING) {
+					ps->o.mode = PROGMODE_PAGING;
+					layout = LAYOUTMODE_PAGING;
+				}
+				else
+					goto forget_activating;
+
+				if (!ps->o.persistentFiltering && ps->o.wm_class) {
+					free(ps->o.wm_class);
+					ps->o.wm_class = NULL;
+				}
+
+				animating = activate = true;
+
+				toggling = true;
+				for (int i=0; i<nparams; i++) {
+					if (param[i] & PIPEPRM_WM_CLASS) {
+						if (ps->o.wm_class)
+							free(ps->o.wm_class);
+						ps->o.wm_class = mstrdup(str[i]);
+						printfdf(false, "(): receiving new wm_class=%s",
+								ps->o.wm_class);
+					}
+					if (param[i] & PIPEPRM_PIVOTING) {
+						ps->o.pivotkey = str[i][0];
+						printfdf(false, "(): receiving new pivot key=%d",ps->o.pivotkey);
+						toggling = false;
 					}
 				}
-				else if (mw && mw->mapped)
-				{
-					printfdf(false, "(): cycling window");
-					fflush(stdout);fflush(stderr);
 
-					if (ps->o.focus_initial < 0)
-						ps->o.focus_initial = dlist_len(mw->focuslist) + ps->o.focus_initial;
-
-					while (ps->o.focus_initial > 0 && mw->client_to_focus) {
-						focus_miniw_next(ps, mw->client_to_focus);
-						ps->o.focus_initial--;
-					}
-
-					if (mw->client_to_focus)
-						clientwin_render(mw->client_to_focus);
+				printfdf(false, "(): skippy activating: metaphor=%d", layout);
+forget_activating:
+			}
+			// parameter == 0, toggle
+			// otherwise shift window focus
+			else if (mw && ps->o.focus_initial == 0) {
+				if (toggling) {
+					printfdf(false, "(): toggling skippy off");
+					mw->refocus = die = true;
 				}
+			}
+			else if (mw && mw->mapped)
+			{
+				printfdf(false, "(): cycling window");
+				fflush(stdout);fflush(stderr);
+
+				if (ps->o.focus_initial < 0)
+					ps->o.focus_initial = dlist_len(mw->focuslist) + ps->o.focus_initial;
+
+				while (ps->o.focus_initial > 0 && mw->client_to_focus) {
+					focus_miniw_next(ps, mw->client_to_focus);
+					ps->o.focus_initial--;
+				}
+
+				if (mw->client_to_focus)
+					clientwin_render(mw->client_to_focus);
 			}
 
 			// free receive_string_in_daemon_via_fifo() paramters
@@ -1742,8 +1737,8 @@ xerror(Display *dpy, XErrorEvent *ev) {
 
 	print_timestamp(ps);
 	{
-		char buf[BUF_LEN] = "";
-		XGetErrorText(ps->dpy, ev->error_code, buf, BUF_LEN);
+		char buf[128] = "";
+		XGetErrorText(ps->dpy, ev->error_code, buf, 128);
 		printfef(false, "(): error %d (%s) request %d minor %d serial %lu (\"%s\")",
 				ev->error_code, name, ev->request_code,
 				ev->minor_code, ev->serial, buf);
@@ -1954,10 +1949,17 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		while ((o = getopt_long(argc, argv, opts_short, opts_long, NULL)) >= 0) {
 			switch (o) {
 				case OPT_CONFIG:
-					custom_config = true;
 					if (ps->o.config_path)
 						free(ps->o.config_path);
 					ps->o.config_path = realpath(optarg, NULL);
+					if (ps->o.config_path)
+						custom_config = true;
+					else
+						ps->o.config_blank = true;
+					if (ps->o.config_path &&
+							strlen(ps->o.config_path) + 3 + 1 > BUF_LEN)
+						printfef(true, "(): config file path exceeds %d character limit",
+								BUF_LEN - 3 - 1);
 					break;
 				case OPT_CONFIG_RELOAD:
 					config_reload = true;
@@ -1984,7 +1986,11 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		switch (o) {
 			case OPT_DEBUGLOG: break;
 			case OPT_CONFIG:
-				custom_config = true;
+				if (realpath(optarg, NULL))
+					custom_config = true;
+				else
+					printfef(true, "(): config path %s not found, ignored",
+							optarg);
 				break;
 			case OPT_CONFIG_RELOAD:
 				config_reload = true;
@@ -2042,14 +2048,11 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 			ps->o.pivotkey = 0; // expose/paging defaults to toggle
 		}
 	}
-
 	if (custom_config && !ps->o.runAsDaemon)
-		ps->o.mode = PROGMODE_RELOAD_CONFIG;
+		ps->o.config_reload_path = true;
 
-	if (config_reload && !ps->o.runAsDaemon) {
+	if (config_reload && !ps->o.runAsDaemon)
 		ps->o.config_reload = true;
-		ps->o.mode = PROGMODE_RELOAD_CONFIG;
-	}
 }
 
 static bool
@@ -2359,12 +2362,15 @@ int main(int argc, char *argv[]) {
 	// Handle special modes
 	switch (ps->o.mode) {
 		case PROGMODE_NORMAL:
+			if (!ps->o.runAsDaemon &&
+					(ps->o.config_reload || ps->o.config_reload_path
+					 || ps->o.config_blank)) {
+				activate_via_fifo(ps, pipePath);
+				goto main_end;
+			}
 			break;
 		case PROGMODE_DM_STOP:
 			exit_daemon(pipePath);
-			goto main_end;
-		case PROGMODE_RELOAD_CONFIG:
-			queue_reload_config(ps, pipePath);
 			goto main_end;
 		default:
 			// this is switch/expose/paging
