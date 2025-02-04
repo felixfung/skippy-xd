@@ -26,7 +26,7 @@
 #ifndef SKIPPY_H
 #define SKIPPY_H
 
-#define BUF_LEN 128
+#define BUF_LEN 1024
 
 #define _GNU_SOURCE
 
