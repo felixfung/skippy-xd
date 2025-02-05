@@ -199,6 +199,7 @@ typedef struct {
 	KeyCode pivotkey;
 
 	char *pipePath;
+	char *pipePath2;
 	double updateFreq;
 	int clientList;
 	bool pseudoTrans;
@@ -283,6 +284,7 @@ typedef struct {
 	.pivotkey = 0, \
 \
 	.pipePath = NULL, \
+	.pipePath2 = NULL, \
 	.updateFreq = 60.0, \
 	.clientList = 0, \
 	.pseudoTrans = true, \
@@ -384,6 +386,8 @@ typedef struct {
 	Visual *argb_visual;
 	/// @brief File descriptor of command pipe, in daemon mode.
 	int fd_pipe;
+	/// @brief File descriptor of reverse command pipe, in daemon mode.
+	int fd_pipe2;
 	/// @brief Main window.
 	MainWin *mainwin;
 } session_t;
@@ -393,6 +397,7 @@ typedef struct {
 	.xinfo = XINFOT_INIT, \
 	.time_start = { .tv_sec = 0, .tv_usec = 0 }, \
 	.fd_pipe = -1, \
+	.fd_pipe2 = -1, \
 }
 
 /// @brief Print out a debug message with function name.
