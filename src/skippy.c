@@ -2416,31 +2416,31 @@ int main(int argc, char *argv[]) {
 
 			// wait and read daemon-to-client pipe
 			// then print result to stdout
-			int fd = open(ps->o.pipePath2, O_RDONLY | O_NONBLOCK);
-			int buffer;
-			struct pollfd r_fd;
-			r_fd.fd = ps->fd_pipe2;
-			r_fd.events = POLLIN;
-			if (ps->fd_pipe2 >= 0) {
+			{
+				if (ps->fd_pipe2 >= 0) {
+					close(ps->fd_pipe2);
+					ps->fd_pipe2 = -1;
+				}
+
+				struct pollfd r_fd;
+				r_fd.fd = ps->fd_pipe2 = open(ps->o.pipePath2, O_RDONLY | O_NONBLOCK);
+				r_fd.events = POLLIN;
+				if (ps->fd_pipe2 < 0) {
+					printfef(true, "(): Failed to open pipe \"%s\": %d", ps->o.pipePath2, errno);
+					perror("open");
+					goto main_end;
+				}
+
+				poll(&r_fd, 1, -1);
+				int buffer;
+				int read_ret = read(ps->fd_pipe2, &buffer, sizeof(int));
+				if (read_ret < sizeof(int)) {
+					printfef(true, "(): daemon-to-client packet incompletely received!");
+				}
 				close(ps->fd_pipe2);
-				ps->fd_pipe2 = -1;
-				r_fd.fd = ps->fd_pipe2;
+
+				printf("%d\n", buffer);
 			}
-			ps->fd_pipe2 = open(ps->o.pipePath2, O_RDONLY | O_NONBLOCK);
-			if (ps->fd_pipe2 >= 0) {
-				r_fd.fd = ps->fd_pipe2;
-			}
-			else {
-				printfef(true, "(): Failed to open pipe \"%s\": %d", ps->o.pipePath2, errno);
-				perror("open");
-			}
-			poll(&r_fd, 1, -1);
-			int read_ret = read(fd, &buffer, sizeof(int));
-			if (read_ret < sizeof(int)) {
-				printfef(true, "(): daemon-to-client packet incompletely received!");
-			}
-			close(fd);
-			printf("%d\n", buffer);
 
 			goto main_end;
 	}
