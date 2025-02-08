@@ -102,12 +102,9 @@ cornerRadius = 0
 showIconsOnThumbnails = true
 preferredIconSize = 48
 
-# Box display when live preview is not available
-# Format: [left|mid|right] [left|mid|right] [COLOR|#FFFFFFFF]
-iconFillSpec = mid mid #333333
-# Box display when live preview is not available, and icon is not available
-# Format: [COLOR|#FFFFFFFF]
-fillSpec = #333333
+[filler]
+tint = #333333
+icon = mid mid
 
 [normal]
 tint = black

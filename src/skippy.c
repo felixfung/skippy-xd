@@ -2297,13 +2297,16 @@ load_config_file(session_t *ps)
     }
 	{
 		char defaultstr[256] = "orig mid mid ";
-		const char* sspec = config_get(config, "display", "fillSpec", "#333333");
+		const char* sspec = config_get(config, "filler", "tint", "#333333");
 		strcat(defaultstr, sspec);
 		if (!parse_pictspec(ps, defaultstr, &ps->o.fillSpec))
 			return RET_BADARG;
 		char defaultstr2[256] = "orig ";
-		const char* sspec2 = config_get(config, "display", "iconFillSpec", "mid mid #333333");
+		const char* sspec2 = config_get(config, "filler", "icon", "mid mid");
 		strcat(defaultstr2, sspec2);
+		const char space[] = " ";
+		strcat(defaultstr2, space);
+		strcat(defaultstr2, sspec);
 		if (!parse_pictspec(ps, defaultstr2, &ps->o.iconFillSpec))
 			return RET_BADARG;
 		if (!simg_cachespec(ps, &ps->o.fillSpec))
