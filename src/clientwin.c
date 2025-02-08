@@ -268,7 +268,7 @@ clientwin_update(ClientWin *cw) {
 	// Get window icon
 	if (cw->icon_pict)
 		free_pictw(ps, &cw->icon_pict);
-	cw->icon_pict = simg_load_icon(ps, cw->wid_client, ps->o.preferredIconSize);
+	cw->icon_pict = simg_load_icon(ps, cw->wid_client, ps->o.iconSize);
 	if (!cw->icon_pict && ps->o.iconDefault)
 		cw->icon_pict = clone_pictw(ps, ps->o.iconDefault);
 

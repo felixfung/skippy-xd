@@ -98,13 +98,14 @@ includeFrame = true
 # with corner radius in pixels
 cornerRadius = 0
 
-# Icon parameters
-showIconsOnThumbnails = true
-preferredIconSize = 48
+# Whether to show icons on live preview thumbnails
+icon = true
+iconSize = 48
 
 [filler]
 tint = #333333
 icon = mid mid
+iconSize = 48
 
 [normal]
 tint = black
