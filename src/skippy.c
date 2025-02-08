@@ -929,8 +929,9 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 				.border_pixel = 0,
 				.background_pixel = 0,
 				.colormap = mw->colormap,
-				.event_mask = ButtonPressMask | ButtonReleaseMask | KeyPressMask
-					| KeyReleaseMask | PointerMotionMask | FocusChangeMask,
+				/*.event_mask = ButtonPressMask | ButtonReleaseMask | KeyPressMask
+					| KeyReleaseMask | EnterWindowMask | LeaveWindowMask
+					| PointerMotionMask | ExposureMask | FocusChangeMask,*/
 				.override_redirect = false,
                 // exclude window frame
 			};
@@ -975,7 +976,6 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 					CompositeRedirectAutomatic);
 			cw->redirected = true;
 
-			clientwin_prepmove(cw);
 			clientwin_move(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
 
 			if (mw->ps->o.tooltip_show) {
@@ -1309,10 +1309,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 					mainwin_map(mw);
 
 				if (first_animating) {
-					foreach_dlist (mw->clientondesktop) {
-						ClientWin *cw = iter->data;
-						clientwin_prepmove(cw);
-					}
 					foreach_dlist (mw->panels) {
 						ClientWin *cw = iter->data;
 						panel_map(cw);
@@ -1336,10 +1332,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 					mainwin_map(mw);
 
 				if (first_animating) {
-					foreach_dlist (mw->clientondesktop) {
-						ClientWin *cw = iter->data;
-						clientwin_prepmove(cw);
-					}
 					foreach_dlist (mw->panels) {
 						ClientWin *cw = iter->data;
 						panel_map(cw);
@@ -1497,9 +1489,25 @@ mainloop(session_t *ps, bool activate_on_start) {
 				if (iter) {
 					((ClientWin *)iter->data)->damaged = true;
 				}
+				//iter = dlist_find(ps->mainwin->dminis,
+						//clientwin_cmp_func, (void *) wid);
+				//if (iter) {
+					//((ClientWin *)iter->data)->damaged = true;
+				//}
 			}
 			else if (mw && wid == mw->window)
 				die = mainwin_handle(mw, &ev);
+			else if (mw && PropertyNotify == ev.type) {
+				printfdf(false, "(): else if (ev.type == PropertyNotify) {");
+
+				/*if (!ps->o.background &&
+						(ESETROOT_PMAP_ID == ev.xproperty.atom
+						 || _XROOTPMAP_ID == ev.xproperty.atom)) {
+
+					mainwin_update_background(mw);
+					REDUCE(clientwin_render((ClientWin *)iter->data), mw->clientondesktop);
+				}*/
+			}
 			else if (mw && wid) {
 				bool processing = true;
 				dlist *iter = mw->clientondesktop;
@@ -2459,7 +2467,7 @@ int main(int argc, char *argv[]) {
 	}
 	ps->mainwin = mw;
 
-	XSelectInput(ps->dpy, ps->root, SubstructureNotifyMask);
+	XSelectInput(ps->dpy, ps->root, PropertyChangeMask | SubstructureNotifyMask);
 
 	// Daemon mode
 	if (ps->o.runAsDaemon) {
