@@ -42,6 +42,7 @@ struct _clientwin_t {
 	pictw_t *pict_filled;
 	pictw_t *icon_pict;
 	pictw_t *icon_pict_filled;
+	pictw_t *icon_pict_filler;
 
 	SkippyWindow mini;
 
@@ -86,6 +87,7 @@ clientwin_free_res(session_t *ps, ClientWin *cw) {
 	free_pixmap(ps, &cw->cpixmap);
 	free_picture(ps, &cw->origin);
 	free_pictw(ps, &cw->icon_pict);
+	free_pictw(ps, &cw->icon_pict_filler);
 }
 
 int clientwin_validate_panel(dlist *, void *);

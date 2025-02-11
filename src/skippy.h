@@ -219,8 +219,10 @@ typedef struct {
 	bool includeFrame;
 	int cornerRadius;
 	client_disp_mode_t *clientDisplayModes;
+	pictspec_t iconSpec;
 	int iconSize;
 	pictw_t *iconDefault;
+	pictw_t *iconFiller;
 	pictw_t *background;
 	Picture from;
 
@@ -315,6 +317,7 @@ typedef struct {
 	.includeFrame = false, \
 	.cornerRadius = 0, \
 	.clientDisplayModes = NULL, \
+	.iconSpec = PICTSPECT_INIT, \
 	.iconSize = 48, \
 \
 	.fillSpec = PICTSPECT_INIT, \

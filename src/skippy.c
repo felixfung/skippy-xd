@@ -2294,27 +2294,53 @@ load_config_file(session_t *ps)
             memcpy(ps->o.clientDisplayModes, &DEF_CLIDISPM, sizeof(DEF_CLIDISPM));
         }
     }
-	config_get_int_wrap(config, "display", "iconSize", &ps->o.iconSize, 1, INT_MAX);
+	{
+		char defaultstr2[256] = "orig ";
+		const char* sspec2 = config_get(config, "display", "iconPlace", "left left");
+		strcat(defaultstr2, sspec2);
+		const char space[] = " ";
+		strcat(defaultstr2, space);
+		char sspec[] = "#333333";
+		strcat(defaultstr2, sspec);
+
+		config_get_int_wrap(config, "display", "iconSize",
+				&ps->o.iconSize, 1, INT_MAX);
+
+		if (!parse_pictspec(ps, defaultstr2, &ps->o.iconSpec))
+			return RET_BADARG;
+		if (!simg_cachespec(ps, &ps->o.iconSpec))
+			return RET_BADARG;
+
+		if (ps->o.iconSpec.path
+				&& !(ps->o.iconDefault = simg_load(ps, ps->o.iconSpec.path,
+						PICTPOSP_SCALEK, ps->o.iconSize, ps->o.iconSize,
+						ALIGN_MID, ALIGN_MID, NULL)))
+			return RET_BADARG;
+}
 	{
 		char defaultstr[256] = "orig mid mid ";
 		const char* sspec = config_get(config, "filler", "tint", "#333333");
 		strcat(defaultstr, sspec);
 		if (!parse_pictspec(ps, defaultstr, &ps->o.fillSpec))
 			return RET_BADARG;
+
 		char defaultstr2[256] = "orig ";
-		const char* sspec2 = config_get(config, "filler", "icon", "mid mid");
+		const char* sspec2 = config_get(config, "filler", "iconPlace", "mid mid");
 		strcat(defaultstr2, sspec2);
 		const char space[] = " ";
 		strcat(defaultstr2, space);
 		strcat(defaultstr2, sspec);
+
 		config_get_int_wrap(config, "filler", "iconSize",
 				&ps->o.fillerIconSize, 0, 256);
+
 		if (!parse_pictspec(ps, defaultstr2, &ps->o.iconFillSpec))
 			return RET_BADARG;
-		if (!simg_cachespec(ps, &ps->o.fillSpec))
+		if (!simg_cachespec(ps, &ps->o.iconFillSpec))
 			return RET_BADARG;
+
 		if (ps->o.iconFillSpec.path
-				&& !(ps->o.iconDefault = simg_load(ps, ps->o.iconFillSpec.path,
+				&& !(ps->o.iconFiller = simg_load(ps, ps->o.iconFillSpec.path,
 						PICTPOSP_SCALEK, ps->o.fillerIconSize, ps->o.fillerIconSize,
 						ALIGN_MID, ALIGN_MID, NULL)))
 			return RET_BADARG;
@@ -2600,8 +2626,9 @@ main_end:
 			free_pictw(ps, &ps->o.background);
 			free_pictspec(ps, &ps->o.bg_spec);
 			free_pictw(ps, &ps->o.iconDefault);
-			free_pictspec(ps, &ps->o.iconFillSpec);
+			free_pictw(ps, &ps->o.iconFiller);
 			free_pictspec(ps, &ps->o.fillSpec);
+			free_pictspec(ps, &ps->o.iconFillSpec);
 			free(ps->o.bindings_keysUp);
 			free(ps->o.bindings_keysDown);
 			free(ps->o.bindings_keysLeft);

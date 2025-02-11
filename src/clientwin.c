@@ -272,6 +272,13 @@ clientwin_update(ClientWin *cw) {
 	if (!cw->icon_pict && ps->o.iconDefault)
 		cw->icon_pict = clone_pictw(ps, ps->o.iconDefault);
 
+	// Get window icon for filler
+	if (cw->icon_pict_filler)
+		free_pictw(ps, &cw->icon_pict_filler);
+	cw->icon_pict_filler = simg_load_icon(ps, cw->wid_client, ps->o.fillerIconSize);
+	if (!cw->icon_pict_filler && ps->o.iconFiller)
+		cw->icon_pict_filler = clone_pictw(ps, ps->o.iconFiller);
+
 	// modes are CLIDISP_THUMBNAIL_ICON, CLIDISP_THUMBNAIL, CLIDISP_ZOMBIE,
 	// CLIDISP_ZOMBIE_ICON, CLIDISP_ICON, CLIDISP_FILLED, CLIDISP_NONE
 	// if we ever got a thumbnail for the window,
@@ -312,8 +319,9 @@ static inline bool
 clientwin_update2_icon(session_t *ps, MainWin *mw, ClientWin *cw) {
 	if (cw->icon_pict_filled)
 		free_pictw(ps, &cw->icon_pict_filled);
+
 	cw->icon_pict_filled = simg_postprocess(ps,
-			clone_pictw(ps, cw->icon_pict),
+			clone_pictw(ps, cw->icon_pict_filler),
 			ps->o.iconFillSpec.mode,
 			cw->mini.width, cw->mini.height,
 			ps->o.iconFillSpec.alg, ps->o.iconFillSpec.valg,
@@ -362,6 +370,7 @@ clientwin_destroy(ClientWin *cw, bool destroyed) {
 	free_pixmap(ps, &cw->pixmap);
 	free_pixmap(ps, &cw->cpixmap);
 	free_pictw(ps, &cw->icon_pict);
+	free_pictw(ps, &cw->icon_pict_filler);
 	free_pictw(ps, &cw->icon_pict_filled);
 	free_pictw(ps, &cw->pict_filled);
 
@@ -458,7 +467,7 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 			img_composite_params_t params = IMG_COMPOSITE_PARAMS_INIT;
 			simg_get_composite_params(cw->icon_pict,
 					cw->mini.width, cw->mini.height,
-					ps->o.iconFillSpec.mode, ps->o.iconFillSpec.alg, ps->o.iconFillSpec.valg,
+					ps->o.fillSpec.mode, ps->o.fillSpec.alg, ps->o.fillSpec.valg,
 					&params);
 			simg_composite(ps, cw->icon_pict, cw->destination,
 					cw->mini.width, cw->mini.height, &params, NULL, mask, pbound);

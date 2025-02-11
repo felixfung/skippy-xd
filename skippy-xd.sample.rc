@@ -100,11 +100,12 @@ cornerRadius = 0
 
 # Whether to show icons on live preview thumbnails
 icon = true
+iconPlace = left left
 iconSize = 48
 
 [filler]
 tint = #333333
-icon = mid mid
+iconPlace = mid mid
 iconSize = 48
 
 [normal]
