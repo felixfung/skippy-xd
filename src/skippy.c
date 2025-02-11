@@ -1475,7 +1475,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				{
 					int evtype = ev.type;
 					XEvent ev_next = { };
-					while(num_events > 0)
+					/*while(num_events > 0)
 					{
 						XPeekEvent(ps->dpy, &ev_next);
 
@@ -1486,7 +1486,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 						wid = ev_window(ps, &ev);
 
 						num_events--;
-					}
+					}*/
 				}
 			}
 			else if (mw && (ps->xinfo.damage_ev_base + XDamageNotify == ev.type)) {
