@@ -1423,6 +1423,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				// The queue gets filled up with consquetive MotionNotify events
 				// discard all except the last MotionNotify event in a contiguous block of MotionNotify events
 
+				num_events--;
 				XEvent ev_next = { };
 				while(num_events > 0)
 				{
@@ -1467,6 +1468,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					clientwin_update(cw);
 					clientwin_update2(cw);
 				}
+				num_events--;
 
 				// when there are many windows on a virtual desktop
 				// switching virtual desktop leads to many mapping and unmapping events
@@ -1475,7 +1477,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				{
 					int evtype = ev.type;
 					XEvent ev_next = { };
-					/*while(num_events > 0)
+					while(num_events > 0)
 					{
 						XPeekEvent(ps->dpy, &ev_next);
 
@@ -1486,7 +1488,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 						wid = ev_window(ps, &ev);
 
 						num_events--;
-					}*/
+					}
 				}
 			}
 			else if (mw && (ps->xinfo.damage_ev_base + XDamageNotify == ev.type)) {
