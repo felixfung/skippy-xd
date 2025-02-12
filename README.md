@@ -1,6 +1,6 @@
 Welcome to skippy-xd!
 
-Skippy-xd is a lightweight, window-manager-agnostic window selector on X server. With skippy, you get live-preview on your alt-tab motions; you get the much coveted expose feature from Mac; you get a handy overview of all your virtual desktops in one glance with paging mode.
+Skippy-xd is a lightweight, window-manager-agnostic window selector on the X server. With skippy-xd, you get live-preview on your alt-tab motions; you get the much coveted expose feature from Mac; you get a handy overview of all your virtual desktops in one glance with paging mode.
 
 Switch is similar to Alt-Tab:
 
@@ -14,9 +14,7 @@ Paging shows you your entire desktop:
 
 ![](https://github.com/felixfung/skippy-xd-gifs/blob/main/paging.gif)
 
-If you want to fly around your daily window flow, if you want cool window motions that adds to your productivity, if you want to manage your windows like a boss, skippy-xd might be the thing for you.
-
-Checkout the youtube videos:
+Check out the youtube videos:
 
 [![Skippy-xd window selector!](https://img.youtube.com/vi/R__zua04xe0/mqdefault.jpg)](https://youtu.be/R__zua04xe0)
 [![Skippy-xd and tiling managers](https://img.youtube.com/vi/reUDapFGnmQ/mqdefault.jpg)](https://youtu.be/reUDapFGnmQ)
