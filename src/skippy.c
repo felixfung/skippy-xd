@@ -1131,6 +1131,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 	bool animating = activate;
 	long first_animated = 0L;
 	bool first_animating = false;
+	int pipereturns = 0;
 
 	switch (ps->o.mode) {
 		case PROGMODE_SWITCH:
@@ -1237,12 +1238,17 @@ mainloop(session_t *ps, bool activate_on_start) {
 				}
 			}
 
-			int fd = open(ps->o.pipePath2, O_WRONLY | O_NONBLOCK);
-			int bytes_written = write(fd, &pipe_return, sizeof(int));
-			if (bytes_written < sizeof(int)) {
-				printfef(true, "(): daemon-to-client packet incomplete!");
+			{
+				int fd = open(ps->o.pipePath2, O_WRONLY | O_NONBLOCK);
+				// send output to all clients
+				for (int i=0; i<pipereturns; i++) {
+					int bytes_written = write(fd, &pipe_return, sizeof(int));
+					if (bytes_written < sizeof(int)) {
+						printfef(true, "(): daemon-to-client packet incomplete!");
+					}
+				}
+				close(fd);
 			}
-			close(fd);
 
 			mw->refocus = false;
 			mw->client_to_focus = NULL;
@@ -1658,6 +1664,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				}
 
 				printfdf(false, "(): skippy activating: metaphor=%d", layout);
+				pipereturns = 1;
 forget_activating:
 			}
 			// parameter == 0, toggle
@@ -1667,6 +1674,7 @@ forget_activating:
 					printfdf(false, "(): toggling skippy off");
 					mw->refocus = die = true;
 				}
+				pipereturns++;
 			}
 			else if (mw && mw->mapped)
 			{
@@ -1683,6 +1691,8 @@ forget_activating:
 
 				if (mw->client_to_focus)
 					clientwin_render(mw->client_to_focus);
+
+				pipereturns++;
 			}
 
 			// free receive_string_in_daemon_via_fifo() paramters
@@ -2435,9 +2445,12 @@ int main(int argc, char *argv[]) {
 
 				poll(&r_fd, 1, -1);
 				int buffer;
-				int read_ret = read(ps->fd_pipe2, &buffer, sizeof(int));
-				if (read_ret < sizeof(int)) {
-					printfef(true, "(): daemon-to-client packet incompletely received!");
+				int read_ret = 0;
+				// there may be many clients polling
+				// for the daemon-to-client pipe
+				// keep trying to read until successful
+				while (read_ret < sizeof(int)) {
+					read_ret = read(ps->fd_pipe2, &buffer, sizeof(int));
 				}
 				close(ps->fd_pipe2);
 
