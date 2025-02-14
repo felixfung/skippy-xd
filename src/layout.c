@@ -872,7 +872,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 						float ax=0, ay=0;
 						inverse2(dx, dy, m1, m2, &ax, &ay);
 						cw1->ax -= 1.0e2 *ax;
-						cw1->ay -= 1.0e2 *ay / aratio;
+						cw1->ay -= 1.0e2 *ay / aratio * 2.0;
 					}
 				}
 			}
@@ -917,9 +917,6 @@ layout_cosmos(MainWin *mw, dlist *windows,
 		while (!stable && iterations < 1000) {
 			stable = true;
 
-			//dlist_sort(windows, sort_cw_by_id, 0);
-			//dlist_sort(windows, sort_cw_by_column, 0);
-
 			for (dlist *iter1 = dlist_first(windows);
 					iter1; iter1=iter1->next) {
 				for (dlist *iter2 = dlist_first(windows);
@@ -956,25 +953,16 @@ layout_cosmos(MainWin *mw, dlist *windows,
 				cw1->oldy1 = cw1->y;
 
 				float speed = sqrt(cw1->vx * cw1->vx + cw1->vy * cw1->vy);
-				float vx = cw1->vx, vy = cw1->vy;
-				float speedsegment = 0.05;
 				while (speed > 0) {
+					float vx = cw1->vx, vy = cw1->vy;
+					float speedsegment = 0.05;
 					if (speed > speedsegment) {
-						cw1->vx = vx * speedsegment / speed;
-						cw1->vy = vy * speedsegment / speed;
+						vx = cw1->vx * speedsegment / speed;
+						vy = cw1->vy * speedsegment / speed;
 					}
 
-					cw1->x += cw1->vx * (float)*total_width * deltat;
-					cw1->y += cw1->vy * (float)*total_height * deltat;
-					cw1->oldx2 = cw1->x;
-					cw1->oldy2 = cw1->y;
-
-					printfdf(true,"(): (%#010lx) (%d,%d), %dx%d -> (%f,%f) -> (%d,%d)",
-							cw1->wid_client,
-							cw1->oldx1, cw1->oldy1,
-							cw1->src.width, cw1->src.height,
-							cw1->vx, cw1->vy,
-							cw1->x, cw1->y);
+					cw1->x += vx * (float)*total_width * deltat;
+					cw1->y += vy * (float)*total_height * deltat;
 
 					for (dlist *iter2 = dlist_first(windows);
 							iter2; iter2=iter2->next) {
@@ -983,54 +971,29 @@ layout_cosmos(MainWin *mw, dlist *windows,
 							continue;
 
 						int dis = cw1->mainwin->distance;
-						unsigned int direction = 0, intersect = INT_MAX;
-						int xoffset[4] = {1, 0, -1, 0};
-						int yoffset[4] = {0, 1, 0, -1};
-						for (int i=0; i<4; i++) {
-							cw1->x = cw1->oldx2;
-							cw1->y = cw1->oldy2;
-							cw1->x += xoffset[i] * dis;
-							cw1->y += yoffset[i] * dis;
-							if (intersectArea(cw1, cw2) < intersect) {
-								direction = i;
-								intersect = intersectArea(cw1, cw2);
-							}
+						int overlapx = MIN(cw1->x + cw1->src.width - cw2->x,
+											cw2->x + cw2->src.width - cw1->x);
+						int overlapy = MIN(cw1->y + cw1->src.height - cw2->y,
+											cw2->y + cw2->src.height - cw1->y);
+
+						if (overlapy < overlapx) {
+							if (vy > 0)
+								cw1->y = cw2->y - cw1->src.height - dis;
+							else
+								cw1->y = cw2->y + cw2->src.height + dis;
 						}
-
-//						printfdf(true,"(): DIR %d (%d,%d) %dx%d <-> (%d,%d) %dx%d",
-//								direction,
-//								cw1->x, cw1->y, cw1->src.width, cw1->src.height,
-//								cw2->x, cw2->y, cw2->src.width, cw2->src.height);
-
-						cw1->x = cw1->oldx2;
-						cw1->y = cw1->oldy2;
-						if (direction == 0)
-							cw1->x = cw2->x + cw2->src.width + dis;
-						else if (direction == 1)
-							cw1->y = cw2->y + cw2->src.height + dis;
-						else if (direction == 2)
-							cw1->x = cw2->x - cw1->src.width - dis;
-						else if (direction == 3)
-							cw1->y = cw2->y - cw1->src.height - dis;
-
-						//printfdf(true,"(): new coordinates for window");
-						//printfdf(true,"(): (%d,%d) %dx%d",
-								//cw1->x, cw1->y, cw1->src.width, cw1->src.height);
-						//printfdf(true,"(): shifting on direction %d", direction);
-
-//						cw1->x = cw1->oldx2;
-//						cw1->y = cw1->oldy2;
-//						while (intersectArea(cw1, cw2) > 0) {
-//							cw1->x += xoffset[direction]*dis;
-//							cw1->y += yoffset[direction]*dis;
-//						}
+						else {
+							if (vx > 0)
+								cw1->x = cw2->x - cw1->src.width - dis;
+							else
+								cw1->x = cw2->x + cw2->src.width + dis;
+						}
 					}
 					speed -= speedsegment;
 					if (speed < 0)
 						speed = 0;
 				}
 			}
-			printfdf(true,"():");
 
 			{
 				int minx = INT_MAX, maxx = INT_MIN;
@@ -1059,16 +1022,13 @@ layout_cosmos(MainWin *mw, dlist *windows,
 
 			foreach_dlist (dlist_first(windows)) {
 				ClientWin *cw1 = iter->data;
-				printfdf(true,"(): (%d,%d) -> (%d,%d)",
-						cw1->oldx1, cw1->oldy1,
-						cw1->x, cw1->y);
 				if (ABS(cw1->x - cw1->oldx1) > 0
 				 || ABS(cw1->y - cw1->oldy1) > 0)
 					stable = false;
 			}
 			iterations++;
 		}
-		printfdf(true, "(): %d collapse iterations", iterations);
+		printfdf(false, "(): %d collapse iterations", iterations);
 		printfdf(false, "():");
 	}
 }
