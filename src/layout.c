@@ -761,8 +761,8 @@ inverse2(float dx, float dy, float *ax, float *ay) {
 
 	float acc = 1.0 / dist / dist;
 
-	*ax = acc * dx;
-	*ay = acc * dy;
+	*ax = acc * dx / dist;
+	*ay = acc * dy / dist;
 }
 
 static inline void

@@ -1369,20 +1369,23 @@ sort_cw_by_column(dlist* dlist1, dlist* dlist2, void* data)
 	ClientWin *cw1 = (ClientWin *) dlist1->data;
 	ClientWin *cw2 = (ClientWin *) dlist2->data;
 
-	if (cw1->x + cw1->src.width / 2
-			< cw2->x + cw2->src.width / 2)
+	int tilewidth = MIN(cw1->src.width, cw2->src.width);
+	int tileheight = MIN(cw1->src.height, cw2->src.height);
+
+	int cw1x = cw1->x / tilewidth,
+		cw1y = cw1->y / tileheight,
+		cw2x = cw2->x / tilewidth,
+		cw2y = cw2->y / tileheight;
+
+	if (cw1y < cw2y)
 		return -1;
-	else if (cw1->x + cw1->src.width / 2
-			> cw2->x + cw2->src.width / 2)
+	else if (cw2y < cw1y)
 		return 1;
-	else if (cw1->y + cw1->src.height / 2
-			< cw2->y + cw2->src.height / 2)
+	else if (cw1x < cw2x)
 		return -1;
-	else if (cw1->y + cw1->src.height / 2
-			> cw2->y + cw2->src.height / 2)
+	else if (cw2x < cw1x)
 		return 1;
-	else
-		return 0;
+	return 0;
 }
 
 static inline int
