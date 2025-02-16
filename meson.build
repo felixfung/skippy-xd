@@ -1,6 +1,6 @@
 project(
   'skippy-xd', 'c',
-  version: '2024.12.26'
+  version: 'v0.9.0 (2024.12.26) - \'Marble\' Edition'
 )
 
 cc = meson.get_compiler('c')
