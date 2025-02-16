@@ -3,62 +3,83 @@ project(
   version: 'v0.9.0 (2024.12.26) - \'Marble\' Edition'
 )
 
+skippy_sources = [
+  'src/clientwin.c',
+  'src/config.c',
+  'src/dlist.c',
+  'src/focus.c',
+  'src/img-xlib.c',
+  'src/img.c',
+  'src/layout.c',
+  'src/mainwin.c',
+  'src/skippy.c',
+  'src/tooltip.c',
+  'src/wm.c',
+]
+
+# dependencies
 cc = meson.get_compiler('c')
-giflib_dep = cc.find_library('libgif')
 m_dep = cc.find_library('m')
 
-libjpeg_dep = dependency('libjpeg')
-libpng_dep = dependency('libpng')
 x11_dep = dependency('x11')
 xcomposite_dep = dependency('xcomposite')
 xdamage_dep = dependency('xdamage')
 xext_dep = dependency('xext')
 xfixes_dep = dependency('xfixes')
 xft_dep = dependency('xft')
-xinerama_dep = dependency('xinerama')
 xrender_dep = dependency('xrender')
-zlib_dep = dependency('zlib')
+
+# optional
+if get_option('skippy_gif').allowed()
+  giflib_dep = cc.find_library('libgif', required: get_option('skippy_gif'))
+  if giflib_dep.found()
+    add_project_arguments('-DCFG_GIFLIB', language: 'c')
+    skippy_sources += ['src/img-gif.c']
+    add_project_dependencies(giflib_dep, language: 'c')
+  endif
+endif
+
+if get_option('skippy_jpeg').allowed()
+  libjpeg_dep = dependency('libjpeg', required: get_option('skippy_jpeg'))
+  if libjpeg_dep.found()
+    add_project_arguments('-DCFG_JPEG', language: 'c')
+    skippy_sources += ['src/img-jpeg.c']
+    add_project_dependencies(libjpeg_dep, language: 'c')
+  endif
+endif
+
+if get_option('skippy_png').allowed()
+  libpng_dep = dependency('libpng', required: get_option('skippy_png'))
+  zlib_dep = dependency('zlib', required: get_option('skippy_png'))
+  if libpng_dep.found() and zlib_dep.found()
+    add_project_arguments('-DCFG_LIBPNG', language: 'c')
+    skippy_sources += ['src/img-png.c']
+    add_project_dependencies([libpng_dep, zlib_dep], language: 'c')
+  endif
+endif
+
+if get_option('skippy_xinerama').allowed()
+  xinerama_dep = dependency('xinerama', required: get_option('skippy_xinerama'))
+  if xinerama_dep.found()
+    add_project_arguments('-DCFG_XINERAMA', language: 'c')
+    add_project_dependencies(xinerama_dep, language: 'c')
+  endif
+endif
 
 executable(
   meson.project_name(),
-  sources: [
-    'src/clientwin.c',
-    'src/config.c',
-    'src/dlist.c',
-    'src/focus.c',
-    'src/img-gif.c',
-    'src/img-jpeg.c',
-    'src/img-png.c',
-    'src/img-xlib.c',
-    'src/img.c',
-    'src/layout.c',
-    'src/mainwin.c',
-    'src/skippy.c',
-    'src/tooltip.c',
-    'src/wm.c',
-  ],
+  sources: skippy_sources,
   dependencies: [
-    giflib_dep,
     m_dep,
-    libjpeg_dep,
-    libpng_dep,
     x11_dep,
     xcomposite_dep,
     xdamage_dep,
     xext_dep,
     xfixes_dep,
     xft_dep,
-    xinerama_dep,
     xrender_dep,
-    zlib_dep,
   ],
-  c_args: [
-    '-DSKIPPYXD_VERSION="' + meson.project_version() + '"',
-    '-DCFG_GIFLIB',
-    '-DCFG_JPEG',
-    '-DCFG_LIBPNG',
-    '-DCFG_XINERAMA',
-  ],
+  c_args: [ '-DSKIPPYXD_VERSION="' + meson.project_version() + '"' ],
   install: true,
 )
 
