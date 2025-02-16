@@ -886,8 +886,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 						dy /= (float)*total_height;
 						float ax=0, ay=0;
 						inverse2(dx, dy, &ax, &ay);
-						cw1->ax -= 1.0e2 *ax * m2;
-						cw1->ay -= 1.0e2 *ay * m2 / aratio * 2.0;
+						cw1->ax -= 1.0e1 *ax;
+						cw1->ay -= 1.0e1 *ay / aratio * 2.0;
 					}
 				}
 			}
