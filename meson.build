@@ -34,8 +34,8 @@ if get_option('skippy_gif').allowed()
   giflib_dep = cc.find_library('libgif', required: get_option('skippy_gif'))
   if giflib_dep.found()
     add_project_arguments('-DCFG_GIFLIB', language: 'c')
-    skippy_sources += ['src/img-gif.c']
     add_project_dependencies(giflib_dep, language: 'c')
+    skippy_sources += ['src/img-gif.c']
   endif
 endif
 
@@ -43,8 +43,8 @@ if get_option('skippy_jpeg').allowed()
   libjpeg_dep = dependency('libjpeg', required: get_option('skippy_jpeg'))
   if libjpeg_dep.found()
     add_project_arguments('-DCFG_JPEG', language: 'c')
-    skippy_sources += ['src/img-jpeg.c']
     add_project_dependencies(libjpeg_dep, language: 'c')
+    skippy_sources += ['src/img-jpeg.c']
   endif
 endif
 
@@ -53,8 +53,8 @@ if get_option('skippy_png').allowed()
   zlib_dep = dependency('zlib', required: get_option('skippy_png'))
   if libpng_dep.found() and zlib_dep.found()
     add_project_arguments('-DCFG_LIBPNG', language: 'c')
-    skippy_sources += ['src/img-png.c']
     add_project_dependencies([libpng_dep, zlib_dep], language: 'c')
+    skippy_sources += ['src/img-png.c']
   endif
 endif
 
