@@ -749,7 +749,7 @@ com(ClientWin *cw, int *x, int *y) {
 }
 
 static inline void
-inverse2(float dx, float dy, float m1, float m2, float *ax, float *ay) {
+inverse2(float dx, float dy, float *ax, float *ay) {
 	dx *= 100;
 	dy *= 100;
 
@@ -759,10 +759,25 @@ inverse2(float dx, float dy, float m1, float m2, float *ax, float *ay) {
 		return;
 	}
 
-	float acc = m2 / dist;
+	float acc = 1.0 / dist / dist;
 
-	*ax = acc * dx / dist;
-	*ay = acc * dy / dist;
+	*ax = acc * dx;
+	*ay = acc * dy;
+}
+
+static inline void
+inverse1(float dx, float dy, float *ax, float *ay) {
+	dx *= 100;
+	dy *= 100;
+
+	float dist = sqrt(dx*dx + dy*dy);
+	if (dist < 0.1) {
+		*ax = *ay = 0;
+		return;
+	}
+
+	*ax = dx / dist;
+	*ay = dy / dist;
 }
 
 void
@@ -870,9 +885,9 @@ layout_cosmos(MainWin *mw, dlist *windows,
 						dx /= (float)*total_width;
 						dy /= (float)*total_height;
 						float ax=0, ay=0;
-						inverse2(dx, dy, m1, m2, &ax, &ay);
-						cw1->ax -= 1.0e2 *ax;
-						cw1->ay -= 1.0e2 *ay / aratio * 2.0;
+						inverse2(dx, dy, &ax, &ay);
+						cw1->ax -= 1.0e2 *ax * m2;
+						cw1->ay -= 1.0e2 *ay * m2 / aratio * 2.0;
 					}
 				}
 			}
@@ -885,13 +900,6 @@ layout_cosmos(MainWin *mw, dlist *windows,
 				cw->oldy1 = cw->y;
 				cw->x += cw->vx * (float)*total_width * deltat;
 				cw->y += cw->vy * (float)*total_height * deltat;
-
-				printfdf(false,"(): (%#010lx) (%d,%d), %dx%d -> (%f,%f) -> (%d,%d)",
-						cw->wid_client,
-						cw->oldx1, cw->oldy1,
-						cw->src.width, cw->src.height,
-						cw->vx, cw->vy,
-						cw->x, cw->y);
 
 				cw->vx = 0;
 				cw->vy = 0;
@@ -939,9 +947,9 @@ layout_cosmos(MainWin *mw, dlist *windows,
 					dx /= (float)*total_width;
 					dy /= (float)*total_height;
 					float ax=0, ay=0;
-					inverse2(dx, dy, m1, m2, &ax, &ay);
-					cw1->ax += 1.0e3 * ax;
-					cw1->ay += 1.0e3 * ay;
+					inverse1(dx, dy, &ax, &ay);
+					cw1->ax += 1.0e1 * ax * m2;
+					cw1->ay += 1.0e1 * ay * m2;
 				}
 			}
 
