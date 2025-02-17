@@ -961,8 +961,11 @@ layout_cosmos(MainWin *mw, dlist *windows,
 				cw1->oldy = cw1->y;
 
 				float speed = sqrt(cw1->vx * cw1->vx + cw1->vy * cw1->vy);
-				float vx = cw1->vx / speed * dis / 2.0,
-					  vy = cw1->vy / speed * dis / 2.0;
+				float vx = 0, vy = 0;
+				if (speed > 0) {
+					vx = cw1->vx / speed * dis / 2.0,
+					vy = cw1->vy / speed * dis / 2.0;
+				}
 
 				cw1->x += vx;
 				cw1->y += vy;
