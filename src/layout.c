@@ -896,8 +896,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 				ClientWin *cw = iter->data;
 				cw->vx += cw->ax * deltat;
 				cw->vy += cw->ay * deltat;
-				cw->oldx1 = cw->x;
-				cw->oldy1 = cw->y;
+				cw->oldx = cw->x;
+				cw->oldy = cw->y;
 				cw->x += cw->vx * (float)*total_width * deltat;
 				cw->y += cw->vy * (float)*total_height * deltat;
 
@@ -957,8 +957,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 				ClientWin *cw1 = iter->data;
 				cw1->vx += cw1->ax;
 				cw1->vy += cw1->ay;
-				cw1->oldx1 = cw1->x;
-				cw1->oldy1 = cw1->y;
+				cw1->oldx = cw1->x;
+				cw1->oldy = cw1->y;
 
 				float speed = sqrt(cw1->vx * cw1->vx + cw1->vy * cw1->vy);
 				float vx = cw1->vx / speed * dis,
@@ -1020,8 +1020,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 
 			foreach_dlist (dlist_first(windows)) {
 				ClientWin *cw1 = iter->data;
-				if (ABS(cw1->x - cw1->oldx1) > 0
-				 || ABS(cw1->y - cw1->oldy1) > 0)
+				if (ABS(cw1->x - cw1->oldx) > 0
+				 || ABS(cw1->y - cw1->oldy) > 0)
 					stable = false;
 			}
 			iterations++;
