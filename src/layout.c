@@ -920,8 +920,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 		}
 
 		int iterations = 0;
-		float deltat = 1e-1;
 		bool stable = false;
+		int dis = mw->distance;
 		while (!stable && iterations < 1000) {
 			stable = true;
 
@@ -955,51 +955,41 @@ layout_cosmos(MainWin *mw, dlist *windows,
 
 			foreach_dlist (dlist_first(windows)) {
 				ClientWin *cw1 = iter->data;
-				cw1->vx += cw1->ax * deltat;
-				cw1->vy += cw1->ay * deltat;
+				cw1->vx += cw1->ax;
+				cw1->vy += cw1->ay;
 				cw1->oldx1 = cw1->x;
 				cw1->oldy1 = cw1->y;
 
 				float speed = sqrt(cw1->vx * cw1->vx + cw1->vy * cw1->vy);
-				while (speed > 0) {
-					float vx = cw1->vx, vy = cw1->vy;
-					float speedsegment = 0.05;
-					if (speed > speedsegment) {
-						vx = cw1->vx * speedsegment / speed;
-						vy = cw1->vy * speedsegment / speed;
+				float vx = cw1->vx / speed * dis,
+					  vy = cw1->vy / speed * dis;
+
+				cw1->x += vx;
+				cw1->y += vy;
+
+				for (dlist *iter2 = dlist_first(windows);
+						iter2; iter2=iter2->next) {
+					ClientWin *cw2 = iter2->data;
+					if (cw1 == cw2 || intersectArea(cw1, cw2) == 0)
+						continue;
+
+					int overlapx = MIN(cw1->x + cw1->src.width - cw2->x,
+										cw2->x + cw2->src.width - cw1->x);
+					int overlapy = MIN(cw1->y + cw1->src.height - cw2->y,
+										cw2->y + cw2->src.height - cw1->y);
+
+					if (overlapy < overlapx) {
+						if (vy > 0)
+							cw1->y = cw2->y - cw1->src.height - dis;
+						else
+							cw1->y = cw2->y + cw2->src.height + dis;
 					}
-
-					cw1->x += vx * (float)*total_width * deltat;
-					cw1->y += vy * (float)*total_height * deltat;
-
-					for (dlist *iter2 = dlist_first(windows);
-							iter2; iter2=iter2->next) {
-						ClientWin *cw2 = iter2->data;
-						if (cw1 == cw2 || intersectArea(cw1, cw2) == 0)
-							continue;
-
-						int dis = cw1->mainwin->distance;
-						int overlapx = MIN(cw1->x + cw1->src.width - cw2->x,
-											cw2->x + cw2->src.width - cw1->x);
-						int overlapy = MIN(cw1->y + cw1->src.height - cw2->y,
-											cw2->y + cw2->src.height - cw1->y);
-
-						if (overlapy < overlapx) {
-							if (vy > 0)
-								cw1->y = cw2->y - cw1->src.height - dis;
-							else
-								cw1->y = cw2->y + cw2->src.height + dis;
-						}
-						else {
-							if (vx > 0)
-								cw1->x = cw2->x - cw1->src.width - dis;
-							else
-								cw1->x = cw2->x + cw2->src.width + dis;
-						}
+					else {
+						if (vx > 0)
+							cw1->x = cw2->x - cw1->src.width - dis;
+						else
+							cw1->x = cw2->x + cw2->src.width + dis;
 					}
-					speed -= speedsegment;
-					if (speed < 0)
-						speed = 0;
 				}
 			}
 
