@@ -58,9 +58,9 @@ animationDuration = 200
 distance = 50
 
 # xd layout is the switch layout
-# boxy layout uses box heuristics
-# cosmos layout uses physics based modeling [EXPERIMENTAL]
-exposeLayout = boxy
+# boxy layout uses box heuristics (legacy)
+# cosmos layout uses physics based modeling
+exposeLayout = cosmos
 
 # Whether to show the window bigger than its original size
 allowUpscale = false
