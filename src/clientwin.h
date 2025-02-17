@@ -59,7 +59,7 @@ struct _clientwin_t {
 	/* XserverRegion repair; */
 	
 	/* These are virtual positions set by the layout routine */
-	int x, y, oldx1, oldy1, oldx2, oldy2;
+	int x, y, oldx, oldy;
 	float vx, vy, ax, ay;
 	struct _Tooltip *tooltip;
     int slots;

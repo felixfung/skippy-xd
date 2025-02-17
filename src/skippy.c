@@ -2199,8 +2199,8 @@ load_config_file(session_t *ps)
 				printfef(true, "(): exposeLayout \"%s\" not found. Valid exposeLayout are:",
 						s);
 				printfef(true, "(): xd");
-				printfef(true, "(): boxy (default)");
-				printfef(true, "(): cosmos");
+				printfef(true, "(): boxy (legacy)");
+				printfef(true, "(): cosmos (default)");
 				ps->o.exposeLayout = LAYOUT_BOXY;
 			}
 		}
