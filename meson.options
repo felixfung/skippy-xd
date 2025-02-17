@@ -1,0 +1,4 @@
+option('skippy_gif', type: 'feature', value: 'auto')
+option('skippy_jpeg', type: 'feature', value: 'auto')
+option('skippy_png', type: 'feature', value: 'auto')
+option('skippy_xinerama', type: 'feature', value: 'auto')
