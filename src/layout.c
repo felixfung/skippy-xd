@@ -872,10 +872,10 @@ layout_cosmos(MainWin *mw, dlist *windows,
 
 					if (intersectArea(cw1, cw2) > 0) {
 						colliding = true;
-						float m1 = cw1->src.width * cw1->src.height
+						/*float m1 = cw1->src.width * cw1->src.height
 								/ (float)*total_width / (float)*total_height,
 							  m2 = cw2->src.width * cw2->src.height
-								/ (float)*total_width / (float)*total_height;
+								/ (float)*total_width / (float)*total_height;*/
 						int x1=0, y1=0;
 						com(cw1, &x1, &y1);
 						int x2=0, y2=0;
@@ -934,8 +934,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 					if (cw1 == cw2)
 						continue;
 
-					float m1 = cw1->src.width * cw1->src.height
-							/ (float)*total_width / (float)*total_height,
+					float /*m1 = cw1->src.width * cw1->src.height
+							/ (float)*total_width / (float)*total_height,*/
 						  m2 = cw2->src.width * cw2->src.height
 							/ (float)*total_width / (float)*total_height;
 					int x1=0, y1=0;
@@ -961,8 +961,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 				cw1->oldy = cw1->y;
 
 				float speed = sqrt(cw1->vx * cw1->vx + cw1->vy * cw1->vy);
-				float vx = cw1->vx / speed * dis,
-					  vy = cw1->vy / speed * dis;
+				float vx = cw1->vx / speed * dis / 2.0,
+					  vy = cw1->vy / speed * dis / 2.0;
 
 				cw1->x += vx;
 				cw1->y += vy;
