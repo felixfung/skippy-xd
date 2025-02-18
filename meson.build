@@ -30,40 +30,32 @@ xft_dep = dependency('xft')
 xrender_dep = dependency('xrender')
 
 # optional
-if get_option('skippy_gif').allowed()
-  giflib_dep = cc.find_library('libgif', required: get_option('skippy_gif'))
-  if giflib_dep.found()
-    add_project_arguments('-DCFG_GIFLIB', language: 'c')
-    add_project_dependencies(giflib_dep, language: 'c')
-    skippy_sources += ['src/img-gif.c']
-  endif
+giflib_dep = cc.find_library('libgif', required: get_option('skippy_gif'))
+if giflib_dep.found()
+  add_project_arguments('-DCFG_GIFLIB', language: 'c')
+  add_project_dependencies(giflib_dep, language: 'c')
+  skippy_sources += ['src/img-gif.c']
 endif
 
-if get_option('skippy_jpeg').allowed()
-  libjpeg_dep = dependency('libjpeg', required: get_option('skippy_jpeg'))
-  if libjpeg_dep.found()
-    add_project_arguments('-DCFG_JPEG', language: 'c')
-    add_project_dependencies(libjpeg_dep, language: 'c')
-    skippy_sources += ['src/img-jpeg.c']
-  endif
+libjpeg_dep = dependency('libjpeg', required: get_option('skippy_jpeg'))
+if libjpeg_dep.found()
+  add_project_arguments('-DCFG_JPEG', language: 'c')
+  add_project_dependencies(libjpeg_dep, language: 'c')
+  skippy_sources += ['src/img-jpeg.c']
 endif
 
-if get_option('skippy_png').allowed()
-  libpng_dep = dependency('libpng', required: get_option('skippy_png'))
-  zlib_dep = dependency('zlib', required: get_option('skippy_png'))
-  if libpng_dep.found() and zlib_dep.found()
-    add_project_arguments('-DCFG_LIBPNG', language: 'c')
-    add_project_dependencies([libpng_dep, zlib_dep], language: 'c')
-    skippy_sources += ['src/img-png.c']
-  endif
+libpng_dep = dependency('libpng', required: get_option('skippy_png'))
+zlib_dep = dependency('zlib', required: get_option('skippy_png'))
+if libpng_dep.found() and zlib_dep.found()
+  add_project_arguments('-DCFG_LIBPNG', language: 'c')
+  add_project_dependencies([libpng_dep, zlib_dep], language: 'c')
+  skippy_sources += ['src/img-png.c']
 endif
 
-if get_option('skippy_xinerama').allowed()
-  xinerama_dep = dependency('xinerama', required: get_option('skippy_xinerama'))
-  if xinerama_dep.found()
-    add_project_arguments('-DCFG_XINERAMA', language: 'c')
-    add_project_dependencies(xinerama_dep, language: 'c')
-  endif
+xinerama_dep = dependency('xinerama', required: get_option('skippy_xinerama'))
+if xinerama_dep.found()
+  add_project_arguments('-DCFG_XINERAMA', language: 'c')
+  add_project_dependencies(xinerama_dep, language: 'c')
 endif
 
 executable(
