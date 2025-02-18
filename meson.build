@@ -1,6 +1,6 @@
 project(
   'skippy-xd', 'c',
-  version: 'v0.9.0 (2024.12.26) - \'Marble\' Edition',
+  version: 'v0.10.0 (2025.2.28) - \'Spacesuit\' Edition',
 )
 
 skippy_sources = [
