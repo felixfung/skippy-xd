@@ -14,6 +14,8 @@ Paging shows you your entire desktop:
 
 ![](https://github.com/felixfung/skippy-xd-gifs/blob/main/paging.gif)
 
+If you are looking for a slick and minimalistic window selector that turns every of your little grrrrh throughout the day into a little bit of a yay, skippy-xd may be for you.
+
 Check out the youtube videos:
 
 [![Skippy-xd window selector!](https://img.youtube.com/vi/R__zua04xe0/mqdefault.jpg)](https://youtu.be/R__zua04xe0)

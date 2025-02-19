@@ -58,7 +58,7 @@ INCS = $(shell pkg-config --cflags $(PACKAGES))
 LIBS += -lm $(shell pkg-config --libs $(PACKAGES))
 
 # === Version string ===
-SKIPPYXD_VERSION = "$(shell grep -Pom1 '(?<=version: '"')(.*)(?=',)" meson.build | sed 's/\\//g')"
+SKIPPYXD_VERSION = "$(shell cat version.txt)"
 CPPFLAGS += -DSKIPPYXD_VERSION=\"${SKIPPYXD_VERSION}\"
 
 # === Recipes ===
