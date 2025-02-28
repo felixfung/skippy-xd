@@ -1,5 +1,15 @@
 Skippy-XD changelog
 
+0.10.0 -- "Spacesuit" (28 Feb 2025) ~/felixfung
+ - New "cosmos" layout
+ - XScreen support
+ - Config reloading can be used in conjunction with skippy-xd invocation
+ - Daemon-to-client pipe to return selected window id
+ - Window resizing tracked properly
+ - Pivot locking config option
+ - Performance: no more lag when switching virtual desktops
+ - Performance: remove bogus code and unsubscribe from unneeded X events
+
 0.9.0 -- "Marble" (26 Dec 2024) ~/felixfung
  - Revamped pipe command protocol
  - Reloading config file allows changing file path
