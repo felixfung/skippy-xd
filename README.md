@@ -18,9 +18,8 @@ If you are looking for a slick and minimalistic window selector that turns every
 
 Check out the youtube videos:
 
-[![Skippy-xd window selector!](https://img.youtube.com/vi/R__zua04xe0/mqdefault.jpg)](https://youtu.be/R__zua04xe0)
-[![Skippy-xd and tiling managers](https://img.youtube.com/vi/reUDapFGnmQ/mqdefault.jpg)](https://youtu.be/reUDapFGnmQ)
-[![Skippy-xd advanced uses and config options](https://img.youtube.com/vi/lS33Z2s8xrs/mqdefault.jpg)](https://youtu.be/lS33Z2s8xrs)
+[![Skippy-xd window selector!](https://img.youtube.com/vi/6zEvYXWIQyg/mqdefault.jpg)](https://youtu.be/6zEvYXWIQyg)
+[![Skippy-xd and tiling managers](https://img.youtube.com/vi/ENnxntTvWY4/mqdefault.jpg)](https://youtu.be/ENnxntTvWY4)
 
 skippy-xd works on anything X. See https://github.com/felixfung/skippy-xd/wiki/Adoption#compatible-desktop-environmentswindow-managers for details.
 
