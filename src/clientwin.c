@@ -464,6 +464,7 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 	}
 
 	// Tinting
+	if (cw->paneltype == WINTYPE_WINDOW)
 	{
 		XRenderColor *tint = &cw->mainwin->normalTint;
 		if (cw->focused)
@@ -500,9 +501,9 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 			}
 #endif /* CFG_XINERAMA */
 		}
-	}
 
-	clientwin_round_corners(cw);
+		clientwin_round_corners(cw);
+	}
 
 	XClearArea(cw->mainwin->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
 }
