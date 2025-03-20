@@ -370,6 +370,16 @@ ev_dump(session_t *ps, const MainWin *mw, const XEvent *ev) {
 	printfdf(false, "(): Event %-13.13s wid %#010lx %s", name, wid, wextra);
 }
 
+static char *
+DaemonToClientPipeName(session_t *ps, pid_t pid) {
+	int pipeStrLen = strlen(ps->o.pipePath2) + 1;
+	for (int num = pid; num >= 10; num /= 10)
+		pipeStrLen++;
+	char* daemon2client_pipe = malloc(pipeStrLen);
+	sprintf(daemon2client_pipe, "%s-%010i", ps->o.pipePath2, pid);
+	return daemon2client_pipe;
+}
+
 static inline bool
 open_pipe(session_t *ps, struct pollfd *r_fd) {
 	if (ps->fd_pipe >= 0) {
@@ -421,7 +431,7 @@ send_string_command_to_daemon_via_fifo(
 	}
 
 	// reserve space for first char and null terminator
-	int command_len = strlen(command) + 2;
+	int command_len = strlen(command) + 2 + 10;
 	if (command_len > BUF_LEN) {
 		printfef(true, "(): attempting to send %d character commands, exceeding %d limit",
 				command_len, BUF_LEN);
@@ -430,7 +440,7 @@ send_string_command_to_daemon_via_fifo(
 	printfdf(false, "(): sending string command to pipe of length %d", command_len);
 
 	char final_cmd[command_len];
-	sprintf(final_cmd, "%c%s", (char)strlen(command), command);
+	sprintf(final_cmd, "%010i%c%s", getpid(), (char)strlen(command), command);
 	printfdf(false, "(): string command: %s", final_cmd);
 
 	int fp = open(pipePath, O_WRONLY);
@@ -450,16 +460,21 @@ send_command_to_daemon_via_fifo(char command, const char *pipePath) {
 
 static char
 receive_string_in_daemon_via_fifo(session_t *ps, struct pollfd *r_fd,
-		char *nparams, char **param, char ***str) {
+		pid_t *pid, char *nparams, char **param, char ***str) {
 	char buffer[BUF_LEN];
 	int ret_read = read_pipe(ps, r_fd, &buffer[0]);
 	char cmdlen = 0;
-	if (ret_read < 1 || (cmdlen = buffer[0]+2) > ret_read) {
-		printfef(true, "(): stubbed command received");
+	if (ret_read < 1 || (cmdlen = buffer[10]+2+10) > ret_read) {
+		printfef(true, "(): stubbed command received %i %d", cmdlen, ret_read);
 		exit(1);
 	}
 
-	char *pbuffer = &buffer[1];
+	char pidbuffer[11];
+	memcpy(pidbuffer, buffer, 10);
+	pidbuffer[10] = '\0';
+	*pid = atoi(pidbuffer);
+
+	char *pbuffer = &buffer[11];
 	char master_command = pbuffer[0];
 
 	if ((master_command & PIPECMD_MULTI_BYTE) == 0) {
@@ -1131,7 +1146,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 	bool animating = activate;
 	long first_animated = 0L;
 	bool first_animating = false;
-	int pipereturns = 0;
+	pid_t trigger_client = 0;
 
 	switch (ps->o.mode) {
 		case PROGMODE_SWITCH:
@@ -1239,15 +1254,14 @@ mainloop(session_t *ps, bool activate_on_start) {
 			}
 
 			{
-				int fd = open(ps->o.pipePath2, O_WRONLY | O_NONBLOCK);
-				// send output to all clients
-				for (int i=0; i<pipereturns; i++) {
-					int bytes_written = write(fd, &pipe_return, sizeof(int));
-					if (bytes_written < sizeof(int)) {
-						printfef(true, "(): daemon-to-client packet incomplete!");
-					}
+				char *daemon2clientpipe = DaemonToClientPipeName(ps, trigger_client);
+				int fd = open(daemon2clientpipe, O_WRONLY | O_NONBLOCK);
+				int bytes_written = write(fd, &pipe_return, sizeof(int));
+				if (bytes_written < sizeof(int)) {
+					printfef(true, "(): daemon-to-client packet incomplete!");
 				}
 				close(fd);
+				free(daemon2clientpipe);
 			}
 
 			mw->refocus = false;
@@ -1596,13 +1610,21 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// Handle daemon commands
 		if (POLLIN & r_fd[1].revents) {
 			char nparams=0, *param=0, **str=0;
+			pid_t pid = 0;
 			char piped_input = receive_string_in_daemon_via_fifo(ps, r_fd,
-					&nparams, &param, &str);
-			printfdf(false, "(): Received pipe command: %d", piped_input);
+					&pid, &nparams, &param, &str);
+			printfdf(false, "(): Received pipe command: %d from %010i",
+					piped_input, pid);
 
 			if (piped_input & PIPECMD_EXIT_DAEMON) {
 				printfdf(false, "(): Exit command received, killing daemon...");
 				unlink(ps->o.pipePath);
+
+				char *daemon2clientpipe = DaemonToClientPipeName(ps, pid);
+				int fd = open(daemon2clientpipe, O_WRONLY | O_NONBLOCK);
+				close(fd);
+				free(daemon2clientpipe);
+
 				return;
 			}
 
@@ -1663,8 +1685,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 					}
 				}
 
+				trigger_client = pid;
 				printfdf(false, "(): skippy activating: metaphor=%d", layout);
-				pipereturns = 1;
 forget_activating:
 			}
 			// parameter == 0, toggle
@@ -1674,7 +1696,6 @@ forget_activating:
 					printfdf(false, "(): toggling skippy off");
 					mw->refocus = die = true;
 				}
-				pipereturns++;
 			}
 			else if (mw && mw->mapped)
 			{
@@ -1691,8 +1712,14 @@ forget_activating:
 
 				if (mw->client_to_focus)
 					clientwin_render(mw->client_to_focus);
+			}
 
-				pipereturns++;
+			// if the client did not trigger activation, return to it immediately
+			if (mw) {
+				char *daemon2clientpipe = DaemonToClientPipeName(ps, pid);
+				int fd = open(daemon2clientpipe, O_WRONLY | O_NONBLOCK);
+				close(fd);
+				free(daemon2clientpipe);
 			}
 
 			// free receive_string_in_daemon_via_fifo() paramters
@@ -2434,8 +2461,21 @@ int main(int argc, char *argv[]) {
 					ps->fd_pipe2 = -1;
 				}
 
+				char* daemon2client_pipe = DaemonToClientPipeName(ps, getpid());
+				{
+					int result = mkfifo(daemon2client_pipe, S_IRUSR | S_IWUSR);
+					if (result < 0  && EEXIST != errno) {
+						printfef(true,
+								"(): Failed to create named pipe \"%s\": %d",
+								ps->o.pipePath2, result);
+						perror("mkfifo");
+						ret = 2;
+						goto main_end;
+					}
+				}
+
 				struct pollfd r_fd;
-				r_fd.fd = ps->fd_pipe2 = open(ps->o.pipePath2, O_RDONLY | O_NONBLOCK);
+				r_fd.fd = ps->fd_pipe2 = open(daemon2client_pipe, O_RDONLY | O_NONBLOCK);
 				r_fd.events = POLLIN;
 				if (ps->fd_pipe2 < 0) {
 					printfef(true, "(): Failed to open pipe \"%s\": %d", ps->o.pipePath2, errno);
@@ -2446,15 +2486,15 @@ int main(int argc, char *argv[]) {
 				poll(&r_fd, 1, -1);
 				int buffer;
 				int read_ret = 0;
-				// there may be many clients polling
-				// for the daemon-to-client pipe
-				// keep trying to read until successful
-				while (read_ret < sizeof(int)) {
-					read_ret = read(ps->fd_pipe2, &buffer, sizeof(int));
-				}
+				read_ret = read(ps->fd_pipe2, &buffer, sizeof(int));
 				close(ps->fd_pipe2);
+				unlink(daemon2client_pipe);
+				free(daemon2client_pipe);
 
-				printf("%d\n", buffer);
+				if (read_ret == 0)
+					printf("%d\n", -1);
+				else
+					printf("%d\n", buffer);
 			}
 
 			goto main_end;
@@ -2485,16 +2525,6 @@ int main(int argc, char *argv[]) {
 			int result = mkfifo(pipePath, S_IRUSR | S_IWUSR);
 			if (result < 0  && EEXIST != errno) {
 				printfef(true, "(): Failed to create named pipe \"%s\": %d", pipePath, result);
-				perror("mkfifo");
-				ret = 2;
-				goto main_end;
-			}
-		}
-
-		{
-			int result = mkfifo(ps->o.pipePath2, S_IRUSR | S_IWUSR);
-			if (result < 0  && EEXIST != errno) {
-				printfef(true, "(): Failed to create named pipe \"%s\": %d", ps->o.pipePath2, result);
 				perror("mkfifo");
 				ret = 2;
 				goto main_end;
