@@ -1329,7 +1329,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				if (first_animating) {
 					foreach_dlist (mw->clientondesktop) {
 						ClientWin *cw = iter->data;
-						//clientwin_prepmove(cw);
+						clientwin_prepmove(cw);
 					}
 					foreach_dlist (mw->panels) {
 						ClientWin *cw = iter->data;
@@ -1356,7 +1356,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				if (first_animating) {
 					foreach_dlist (mw->clientondesktop) {
 						ClientWin *cw = iter->data;
-						//clientwin_prepmove(cw);
+						clientwin_prepmove(cw);
 					}
 					foreach_dlist (mw->panels) {
 						ClientWin *cw = iter->data;
