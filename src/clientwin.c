@@ -248,9 +248,11 @@ clientwin_update(ClientWin *cw) {
 				cw->src.window, cw->src.format, CPSubwindowMode, &pa);
 		XRenderSetPictureFilter(ps->dpy, cw->origin, FilterBest, 0, 0);
 
-		XCompositeRedirectWindow(ps->dpy, cw->src.window,
-				CompositeRedirectAutomatic);
-		cw->redirected = true;
+		if (!cw->redirected) {
+			XCompositeRedirectWindow(ps->dpy, cw->src.window,
+					CompositeRedirectAutomatic);
+			cw->redirected = true;
+		}
 
 		if (cw->cpixmap)
 			free_pixmap(ps, &cw->cpixmap);

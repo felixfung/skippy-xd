@@ -1097,8 +1097,8 @@ skippy_activate(MainWin *mw, enum layoutmode layout)
 
 	daemon_count_clients(mw);
 	foreach_dlist(mw->clients) {
-		//clientwin_update((ClientWin *) iter->data);
-		//clientwin_update2((ClientWin *) iter->data);
+		clientwin_update((ClientWin *) iter->data);
+		clientwin_update2((ClientWin *) iter->data);
 	}
 
 	if (layout == LAYOUTMODE_PAGING) {
@@ -1130,8 +1130,8 @@ skippy_activate(MainWin *mw, enum layoutmode layout)
 		ClientWin *cw = iter->data;
 		cw->factor = 1;
 		cw->paneltype = wm_identify_panel(mw->ps, cw->wid_client);
-		//clientwin_update(cw);
-		//clientwin_update2(cw);
+		clientwin_update(cw);
+		clientwin_update2(cw);
 	}
 
 	return true;
@@ -1365,14 +1365,14 @@ mainloop(session_t *ps, bool activate_on_start) {
 					}
 					foreach_dlist (mw->panels) {
 						ClientWin *cw = iter->data;
-						//panel_map(cw);
-						//clientwin_map(cw);
+						panel_map(cw);
+						clientwin_map(cw);
 					}
 
 					first_animating = false;
 				}
 
-				/*if (layout == LAYOUTMODE_PAGING && mw->ps->o.preservePages) {
+				if (layout == LAYOUTMODE_PAGING && mw->ps->o.preservePages) {
 					foreach_dlist (mw->dminis) {
 						ClientWin *cw = (ClientWin *) iter->data;
 						XRenderComposite(mw->ps->dpy,
@@ -1386,7 +1386,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 						XSetWindowBackgroundPixmap(ps->dpy, mw->window, mw->bg_pixmap);
 						XClearWindow(ps->dpy, mw->window);
 					}
-				}*/
+				}
 
 				//anime(ps->mainwin, ps->mainwin->clients, 1);
 				animating = false;
@@ -1394,8 +1394,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 				if (layout == LAYOUTMODE_PAGING) {
 					foreach_dlist (mw->dminis) {
-						//clientwin_update2(iter->data);
-						//desktopwin_map(((ClientWin *) iter->data));
+						clientwin_update2(iter->data);
+						desktopwin_map(((ClientWin *) iter->data));
 					}
 				}
 
@@ -1478,8 +1478,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 				if (iter)
 					cw = (ClientWin *) iter->data;
 				if (cw) {
-					//clientwin_update(cw);
-					//clientwin_update2(cw);
+					clientwin_update(cw);
+					clientwin_update2(cw);
 				}
             }
 			else if (ev.type == CreateNotify || ev.type == UnmapNotify) {
