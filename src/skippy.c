@@ -1340,8 +1340,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 					first_animating = false;
 				}
 
-				//anime(ps->mainwin, ps->mainwin->clients,
-					//((float)timeslice)/(float)ps->o.animationDuration);
+				anime(ps->mainwin, ps->mainwin->clients,
+					((float)timeslice)/(float)ps->o.animationDuration);
 				last_rendered = time_in_millis();
 
 				XFlush(ps->dpy);
@@ -1383,7 +1383,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					}
 				}
 
-				//anime(ps->mainwin, ps->mainwin->clients, 1);
+				anime(ps->mainwin, ps->mainwin->clients, 1);
 				animating = false;
 				last_rendered = time_in_millis();
 
