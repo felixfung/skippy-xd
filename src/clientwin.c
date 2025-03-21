@@ -596,10 +596,6 @@ void clientwin_prepmove(ClientWin *cw)
 void
 clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 {
-	/* int border = MAX(1, (double)DISTANCE(cw->mainwin) * f * 0.25); */
-	int border = 0;
-	XSetWindowBorderWidth(cw->mainwin->ps->dpy, cw->mini.window, border);
-
 	cw->factor = f;
 	{
 		// animate window by changing these in time linearly:
@@ -612,7 +608,7 @@ clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 		cw->mini.height = cw->src.height * f;
 	}
 
-	XMoveResizeWindow(cw->mainwin->ps->dpy, cw->mini.window, cw->mini.x - border, cw->mini.y - border, cw->mini.width, cw->mini.height);
+	XMoveResizeWindow(cw->mainwin->ps->dpy, cw->mini.window, cw->mini.x, cw->mini.y, cw->mini.width, cw->mini.height);
 
 	clientwin_round_corners(cw);
 }
