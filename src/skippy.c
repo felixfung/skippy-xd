@@ -1088,11 +1088,6 @@ skippy_activate(MainWin *mw, enum layoutmode layout)
 		mw->xin_active = 0;
 #endif /* CFG_XINERAMA */
 
-	/*foreach_dlist(mw->clients) {
-		clientwin_destroy((ClientWin *) iter->data, True);
-	}
-	mw->clients = NULL;*/
-
 	mw->client_to_focus = NULL;
 
 	daemon_count_clients(mw);
@@ -1582,7 +1577,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					// some desktops never receive refresh events
 					// so we need to refresh all desktops
 					if (cw->damaged || ps->o.pseudoTrans) {
-						//clientwin_update2(cw);
+						clientwin_update2(cw);
 						desktopwin_map(cw);
 						cw->damaged = false;
 					}
