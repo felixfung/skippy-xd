@@ -984,9 +984,11 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 				cw->y += cw->mainwin->y;
 			}
 
-			XCompositeRedirectWindow(mw->ps->dpy, cw->src.window,
-					CompositeRedirectAutomatic);
-			cw->redirected = true;
+			if (!cw->redirected) {
+				XCompositeRedirectWindow(mw->ps->dpy, cw->src.window,
+						CompositeRedirectAutomatic);
+				cw->redirected = true;
+			}
 
 			clientwin_prepmove(cw);
 			clientwin_move(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
