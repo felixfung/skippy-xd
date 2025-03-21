@@ -620,18 +620,19 @@ clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 void
 clientwin_map(ClientWin *cw) {
 	session_t *ps = cw->mainwin->ps;
-	free_damage(ps, &cw->damage);
 	
 	if (!cw->mode)
 		return;
 
 	if (cw->origin) {
+		free_damage(ps, &cw->damage);
 		cw->damage = XDamageCreate(ps->dpy, cw->src.window, XDamageReportDeltaRectangles);
 		if (cw->paneltype == WINTYPE_WINDOW)
 			XRenderSetPictureTransform(ps->dpy, cw->origin, &cw->mainwin->transform);
 	}
 
 	if (cw->shadow) {
+		free_damage(ps, &cw->damage);
 		cw->damage = XDamageCreate(ps->dpy, cw->src.window, XDamageReportDeltaRectangles);
 		if (cw->paneltype == WINTYPE_WINDOW)
 			XRenderSetPictureTransform(ps->dpy, cw->shadow, &cw->mainwin->transform);

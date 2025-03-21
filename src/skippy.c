@@ -1333,8 +1333,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 					}
 					foreach_dlist (mw->panels) {
 						ClientWin *cw = iter->data;
-						//panel_map(cw);
-						//clientwin_map(cw);
+						panel_map(cw);
+						clientwin_map(cw);
 					}
 
 					first_animating = false;
