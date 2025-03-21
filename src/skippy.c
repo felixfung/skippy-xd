@@ -1490,18 +1490,14 @@ mainloop(session_t *ps, bool activate_on_start) {
 				}
 				num_events--;
 
-				// when there are many windows on a virtual desktop
-				// switching virtual desktop leads to many mapping and unmapping events
-				// below routine clears repeated events
-				if (ev.type == UnmapNotify)
 				{
-					int evtype = ev.type;
+					int ev_prev = ev.type;
 					XEvent ev_next = { };
 					while(num_events > 0)
 					{
 						XPeekEvent(ps->dpy, &ev_next);
 
-						if(ev_next.type != evtype)
+						if(ev_next.type != ev_prev)
 							break;
 
 						XNextEvent(ps->dpy, &ev);
