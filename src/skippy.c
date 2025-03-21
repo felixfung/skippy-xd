@@ -372,9 +372,7 @@ ev_dump(session_t *ps, const MainWin *mw, const XEvent *ev) {
 
 static char *
 DaemonToClientPipeName(session_t *ps, pid_t pid) {
-	int pipeStrLen = strlen(ps->o.pipePath2) + 1;
-	for (int num = pid; num >= 10; num /= 10)
-		pipeStrLen++;
+	int pipeStrLen = strlen(ps->o.pipePath2) + 1 +10 + 1;
 	char* daemon2client_pipe = malloc(pipeStrLen);
 	sprintf(daemon2client_pipe, "%s-%010i", ps->o.pipePath2, pid);
 	return daemon2client_pipe;
