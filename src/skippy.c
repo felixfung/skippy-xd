@@ -1088,12 +1088,17 @@ skippy_activate(MainWin *mw, enum layoutmode layout)
 		mw->xin_active = 0;
 #endif /* CFG_XINERAMA */
 
+	/*foreach_dlist(mw->clients) {
+		clientwin_destroy((ClientWin *) iter->data, True);
+	}
+	mw->clients = NULL;*/
+
 	mw->client_to_focus = NULL;
 
 	daemon_count_clients(mw);
 	foreach_dlist(mw->clients) {
-		clientwin_update((ClientWin *) iter->data);
-		clientwin_update2((ClientWin *) iter->data);
+		//clientwin_update((ClientWin *) iter->data);
+		//clientwin_update2((ClientWin *) iter->data);
 	}
 
 	if (layout == LAYOUTMODE_PAGING) {
@@ -1125,8 +1130,8 @@ skippy_activate(MainWin *mw, enum layoutmode layout)
 		ClientWin *cw = iter->data;
 		cw->factor = 1;
 		cw->paneltype = wm_identify_panel(mw->ps, cw->wid_client);
-		clientwin_update(cw);
-		clientwin_update2(cw);
+		//clientwin_update(cw);
+		//clientwin_update2(cw);
 	}
 
 	return true;
@@ -1329,19 +1334,19 @@ mainloop(session_t *ps, bool activate_on_start) {
 				if (first_animating) {
 					foreach_dlist (mw->clientondesktop) {
 						ClientWin *cw = iter->data;
-						clientwin_prepmove(cw);
+						//clientwin_prepmove(cw);
 					}
 					foreach_dlist (mw->panels) {
 						ClientWin *cw = iter->data;
-						panel_map(cw);
-						clientwin_map(cw);
+						//panel_map(cw);
+						//clientwin_map(cw);
 					}
 
 					first_animating = false;
 				}
 
-				anime(ps->mainwin, ps->mainwin->clients,
-					((float)timeslice)/(float)ps->o.animationDuration);
+				//anime(ps->mainwin, ps->mainwin->clients,
+					//((float)timeslice)/(float)ps->o.animationDuration);
 				last_rendered = time_in_millis();
 
 				XFlush(ps->dpy);
@@ -1356,18 +1361,18 @@ mainloop(session_t *ps, bool activate_on_start) {
 				if (first_animating) {
 					foreach_dlist (mw->clientondesktop) {
 						ClientWin *cw = iter->data;
-						clientwin_prepmove(cw);
+						//clientwin_prepmove(cw);
 					}
 					foreach_dlist (mw->panels) {
 						ClientWin *cw = iter->data;
-						panel_map(cw);
-						clientwin_map(cw);
+						//panel_map(cw);
+						//clientwin_map(cw);
 					}
 
 					first_animating = false;
 				}
 
-				if (layout == LAYOUTMODE_PAGING && mw->ps->o.preservePages) {
+				/*if (layout == LAYOUTMODE_PAGING && mw->ps->o.preservePages) {
 					foreach_dlist (mw->dminis) {
 						ClientWin *cw = (ClientWin *) iter->data;
 						XRenderComposite(mw->ps->dpy,
@@ -1381,16 +1386,16 @@ mainloop(session_t *ps, bool activate_on_start) {
 						XSetWindowBackgroundPixmap(ps->dpy, mw->window, mw->bg_pixmap);
 						XClearWindow(ps->dpy, mw->window);
 					}
-				}
+				}*/
 
-				anime(ps->mainwin, ps->mainwin->clients, 1);
+				//anime(ps->mainwin, ps->mainwin->clients, 1);
 				animating = false;
 				last_rendered = time_in_millis();
 
 				if (layout == LAYOUTMODE_PAGING) {
 					foreach_dlist (mw->dminis) {
-						clientwin_update2(iter->data);
-						desktopwin_map(((ClientWin *) iter->data));
+						//clientwin_update2(iter->data);
+						//desktopwin_map(((ClientWin *) iter->data));
 					}
 				}
 
@@ -1473,8 +1478,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 				if (iter)
 					cw = (ClientWin *) iter->data;
 				if (cw) {
-					clientwin_update(cw);
-					clientwin_update2(cw);
+					//clientwin_update(cw);
+					//clientwin_update2(cw);
 				}
             }
 			else if (ev.type == CreateNotify || ev.type == UnmapNotify) {
@@ -1577,7 +1582,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					// some desktops never receive refresh events
 					// so we need to refresh all desktops
 					if (cw->damaged || ps->o.pseudoTrans) {
-						clientwin_update2(cw);
+						//clientwin_update2(cw);
 						desktopwin_map(cw);
 						cw->damaged = false;
 					}

@@ -552,6 +552,9 @@ clientwin_schedule_repair(ClientWin *cw, XRectangle *area)
 void clientwin_round_corners(ClientWin *cw) {
 	session_t* ps = cw->mainwin->ps;
 	int dia = 2 * ps->o.cornerRadius;
+	if (dia == 0)
+		return;
+
 	int w = cw->mini.width;
 	int h = cw->mini.height;
 	XGCValues xgcv;
@@ -561,12 +564,10 @@ void clientwin_round_corners(ClientWin *cw) {
 	XSetForeground(ps->dpy, shape_gc, 0);
 	XFillRectangle(ps->dpy, mask, shape_gc, 0, 0, w, h);
 	XSetForeground(ps->dpy, shape_gc, 1);
-	if (dia > 0) {
-		XFillArc(ps->dpy, mask, shape_gc, 0, 0, dia, dia, 0, 360 * 64);
-		XFillArc(ps->dpy, mask, shape_gc, w-dia-1, 0, dia, dia, 0, 360 * 64);
-		XFillArc(ps->dpy, mask, shape_gc, 0, h-dia-1, dia, dia, 0, 360 * 64);
-		XFillArc(ps->dpy, mask, shape_gc, w-dia-1, h-dia-1, dia, dia, 0, 360 * 64);
-	}
+	XFillArc(ps->dpy, mask, shape_gc, 0, 0, dia, dia, 0, 360 * 64);
+	XFillArc(ps->dpy, mask, shape_gc, w-dia-1, 0, dia, dia, 0, 360 * 64);
+	XFillArc(ps->dpy, mask, shape_gc, 0, h-dia-1, dia, dia, 0, 360 * 64);
+	XFillArc(ps->dpy, mask, shape_gc, w-dia-1, h-dia-1, dia, dia, 0, 360 * 64);
 	XFillRectangle(ps->dpy, mask, shape_gc, ps->o.cornerRadius, 0, w-dia, h);
 	XFillRectangle(ps->dpy, mask, shape_gc, 0, ps->o.cornerRadius, w, h-dia);
 	XShapeCombineMask(ps->dpy, cw->mini.window, ShapeBounding, 0, 0, mask, ShapeSet);
