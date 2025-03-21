@@ -518,17 +518,16 @@ mainwin_handle(MainWin *mw, XEvent *ev) {
 		case KeyPress:
 		case KeyRelease:
 			printfdf(false, "(): KeyPress or KeyRelease");
-			// if(mw->client_to_focus)
-			// {
-				// printfdf(false, "(): clientwin_handle(mw->client_to_focus, ev);");
-			if(clientwin_handle(mw->client_to_focus, ev))
-				return 1;
-
-			// }
-			// else
-			// {
-			// 	printfdf(false, "(): mw->client_to_focus == NULL");				
-			// }
+			if(mw->client_to_focus)
+			{
+				printfdf(false, "(): clientwin_handle(mw->client_to_focus, ev);");
+				if(clientwin_handle(mw->client_to_focus, ev))
+					return 1;
+			}
+			else
+			{
+				printfdf(false, "(): mw->client_to_focus == NULL");				
+			}
 			break;
 		case ButtonPress:
 			mw->pressed_mouse = true;
