@@ -54,6 +54,9 @@ switchWaitDuration = 100
 # For switch, there is never animation
 animationDuration = 200
 
+# Refresh rate during animation
+animationRefresh = 60
+
 # Relative minimal distance between windows
 distance = 50
 

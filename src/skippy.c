@@ -1324,7 +1324,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 			if (layout != LAYOUTMODE_SWITCH
 					&& timeslice < ps->o.animationDuration
 					&& timeslice + first_animated >=
-					last_rendered + (1000.0 / 60.0)) {
+					last_rendered + (1000.0 / ps->o.animationRefresh)) {
 				if (!mw->mapped)
 					mainwin_map(mw);
 
@@ -2205,6 +2205,7 @@ load_config_file(session_t *ps)
     config_get_int_wrap(config, "layout", "pivotLockingTime", &ps->o.pivotLockingTime, 0, 20000);
     config_get_int_wrap(config, "layout", "switchWaitDuration", &ps->o.switchWaitDuration, 0, 2000);
     config_get_int_wrap(config, "layout", "animationDuration", &ps->o.animationDuration, 0, 2000);
+    config_get_int_wrap(config, "layout", "animationRefresh", &ps->o.animationRefresh, 1, 200);
     config_get_int_wrap(config, "layout", "distance", &ps->o.distance, 1, INT_MAX);
 	{
 		const char *s = config_get(config, "layout", "exposeLayout", NULL);

@@ -207,6 +207,7 @@ typedef struct {
 	int pivotLockingTime;
 	int switchWaitDuration;
 	int animationDuration;;
+	int animationRefresh;;
 	int distance;
 	int exposeLayout;
 	bool allowUpscale;
@@ -292,6 +293,7 @@ typedef struct {
 	.pivotLockingTime = 0, \
 	.switchWaitDuration = 100, \
 	.animationDuration = 200, \
+	.animationRefresh = 60, \
 	.distance = 50, \
 	.exposeLayout = LAYOUT_BOXY, \
 	.allowUpscale = false, \
