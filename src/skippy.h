@@ -213,15 +213,6 @@ typedef struct {
 	int exposeLayout;
 	bool allowUpscale;
 
-	bool xinerama_showAll;
-	bool filterxscreen;
-	bool showShadow;
-	bool showSticky;
-	bool switchShowAllDesktops;
-	bool exposeShowAllDesktops;
-	bool persistentFiltering;
-	char *wm_class;
-
 	bool panel_show_desktop;
 	pictspec_t bg_spec;
 	bool preservePages;
@@ -261,6 +252,15 @@ typedef struct {
 	char *tooltip_textShadow;
 	char *tooltip_font;
 	bool updatetooltip;
+
+	bool xinerama_showAll;
+	bool filterxscreen;
+	bool showShadow;
+	bool showSticky;
+	bool switchShowAllDesktops;
+	bool exposeShowAllDesktops;
+	bool persistentFiltering;
+	char *wm_class;
 
 	enum cliop bindings_miwMouse[MAX_MOUSE_BUTTONS];
 	char *bindings_keysUp;
