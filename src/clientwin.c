@@ -467,7 +467,7 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 			img_composite_params_t params = IMG_COMPOSITE_PARAMS_INIT;
 			simg_get_composite_params(cw->icon_pict,
 					cw->mini.width, cw->mini.height,
-					ps->o.fillSpec.mode, ps->o.fillSpec.alg, ps->o.fillSpec.valg,
+					ps->o.iconSpec.mode, ps->o.iconSpec.alg, ps->o.iconSpec.valg,
 					&params);
 			simg_composite(ps, cw->icon_pict, cw->destination,
 					cw->mini.width, cw->mini.height, &params, NULL, mask, pbound);
