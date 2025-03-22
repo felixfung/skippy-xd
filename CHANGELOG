@@ -1,5 +1,12 @@
 Skippy-XD changelog
 
+0.10.1 -- "Ice" (01 Apr 2025) ~/felixfung
+ - Performance: fixed deterioration due to X resource leak
+ - Performance: no lag when creating many windows
+ - Only activating client is blocked and receives window ID
+ - Add config option system/enforceFocus
+ - Add config option layout/animationRefresh
+
 0.10.0 -- "Spacesuit" (28 Feb 2025) ~/felixfung
  - New "cosmos" layout
  - XScreen support
