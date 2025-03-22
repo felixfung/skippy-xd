@@ -20,6 +20,11 @@
 
 [system]
 
+# When focus is stolen off skippy-xd
+# E.g. a window is newly created during skippy-xd activation
+# Focus back on skippy-xd
+enforceFocus = true
+
 # File path for client-to-daemon communication
 daemonPath = /tmp/skippy-xd-fifo
 

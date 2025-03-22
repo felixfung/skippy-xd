@@ -864,7 +864,7 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 		printfdf(false, "(): main window id = %#010lx", cw->mainwin->window);
 		printfdfWindowName(ps, "(): client window = ", cw->mainwin->window);
 		printfdf(false, "(): client window id = %#010lx", cw->wid_client);
-		printfdfXFocusChangeEvent(ps, evf);
+		printfdfXFocusChangeEvent(ps, evf, false);
 
 		// printfef("(): usleep(10000);");
 		// usleep(10000);
@@ -886,7 +886,7 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 		printfdf(false, "(): main window id = %#010lx", cw->mainwin->window);
 		printfdfWindowName(ps, "(): client window = ", cw->mainwin->window);
 		printfdf(false, "(): client window id = %#010lx", cw->wid_client);
-		printfdfXFocusChangeEvent(ps, evf);
+		printfdfXFocusChangeEvent(ps, evf, false);
 
 		// printfef("(): usleep(10000);");
 		// usleep(10000);

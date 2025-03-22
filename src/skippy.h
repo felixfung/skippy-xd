@@ -198,6 +198,7 @@ typedef struct {
 	char focus_initial;
 	KeyCode pivotkey;
 
+	bool enforceFocus;
 	char *pipePath;
 	char *pipePath2;
 	double updateFreq;
@@ -284,6 +285,7 @@ typedef struct {
 	.runAsDaemon = false, \
 	.pivotkey = 0, \
 \
+	.enforceFocus = true, \
 	.pipePath = NULL, \
 	.pipePath2 = NULL, \
 	.updateFreq = 60.0, \

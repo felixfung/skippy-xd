@@ -1147,6 +1147,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 	long first_animated = 0L;
 	bool first_animating = false;
 	pid_t trigger_client = 0;
+	bool focus_stolen = false;
 
 	switch (ps->o.mode) {
 		case PROGMODE_SWITCH:
@@ -1540,6 +1541,12 @@ mainloop(session_t *ps, bool activate_on_start) {
 								 && ev.type != GravityNotify
 								 && ev.type != ReparentNotify
 								))) {
+
+							if (ev.type == FocusOut)
+								focus_stolen = true;
+							if (ev.type == FocusIn)
+								focus_stolen = false;
+
 							die = clientwin_handle(cw, &ev);
 							if (layout == LAYOUTMODE_PAGING) {
 								cw->damaged = true;
@@ -1557,6 +1564,15 @@ mainloop(session_t *ps, bool activate_on_start) {
 					}
 				}
 			}
+		}
+
+		// prevent focus stealing by newly mapped window
+		// by checking for a FocusOut/FocusIn event pair
+		if (ps->o.enforceFocus && focus_stolen) {
+			printfdf(false,"(): skippy-xd focus stolen... take back focus");
+			XSetInputFocus(ps->dpy, mw->window,
+					RevertToParent, CurrentTime);
+			focus_stolen = false;
 		}
 
 		// Do delayed painting if it's active
@@ -2157,6 +2173,8 @@ load_config_file(session_t *ps)
     // Read configuration into ps->o, because searching all the time is much
     // less efficient, may introduce inconsistent default value, and
     // occupies a lot more memory for non-string types.
+
+	config_get_bool_wrap(config, "system", "enforceFocus", &ps->o.enforceFocus);
 
 	{
 		// two -'s, the first digit of uid/xid and null terminator
