@@ -16,7 +16,7 @@
 # For system config options, stop and then start new skippy daemon
 # To reload config options
 # All other config options can be reloaded on the fly
-# With skippy-xd --config-reload
+# With skippy-xd --config or skippy-xd --config-reload
 
 [system]
 
@@ -38,6 +38,7 @@ updateFreq = 60.0
 # Depending on your window manager, you may want to choose between
 # XQueryTree, _NET_CLIENT_LIST, _WIN_CLIENT_LIST
 # If you see missing windows, or windows that you did not expect,
+# Or even crashes,
 # Try a different option
 clientList = _NET_CLIENT_LIST
 
