@@ -2273,7 +2273,6 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "display", "movePointer", &ps->o.movePointer);
     config_get_bool_wrap(config, "display", "includeFrame", &ps->o.includeFrame);
 	config_get_int_wrap(config, "display", "cornerRadius", &ps->o.cornerRadius, 0, INT_MAX);
-    config_get_int_wrap(config, "display", "preferredIconSize", &ps->o.preferredIconSize, 1, INT_MAX);
     {
         static client_disp_mode_t DEF_CLIDISPM[] = {
             CLIDISP_THUMBNAIL, CLIDISP_ZOMBIE, CLIDISP_ICON, CLIDISP_FILLED, CLIDISP_NONE
@@ -2285,7 +2284,7 @@ load_config_file(session_t *ps)
         };
 
         bool thumbnail_icons = false;
-        config_get_bool_wrap(config, "display", "showIconsOnThumbnails", &thumbnail_icons);
+        config_get_bool_wrap(config, "display", "icon", &thumbnail_icons);
         if (thumbnail_icons) {
             ps->o.clientDisplayModes = allocchk(malloc(sizeof(DEF_CLIDISPM_ICON)));
             memcpy(ps->o.clientDisplayModes, &DEF_CLIDISPM_ICON, sizeof(DEF_CLIDISPM_ICON));
@@ -2296,21 +2295,53 @@ load_config_file(session_t *ps)
         }
     }
 	{
+		char defaultstr2[256] = "orig ";
+		const char* sspec2 = config_get(config, "display", "iconPlace", "left left");
+		strcat(defaultstr2, sspec2);
+		const char space[] = " ";
+		strcat(defaultstr2, space);
+		char sspec[] = "#333333";
+		strcat(defaultstr2, sspec);
+
+		config_get_int_wrap(config, "display", "iconSize",
+				&ps->o.iconSize, 1, INT_MAX);
+
+		if (!parse_pictspec(ps, defaultstr2, &ps->o.iconSpec))
+			return RET_BADARG;
+		if (!simg_cachespec(ps, &ps->o.iconSpec))
+			return RET_BADARG;
+
+		if (ps->o.iconSpec.path
+				&& !(ps->o.iconDefault = simg_load(ps, ps->o.iconSpec.path,
+						PICTPOSP_SCALEK, ps->o.iconSize, ps->o.iconSize,
+						ALIGN_MID, ALIGN_MID, NULL)))
+			return RET_BADARG;
+}
+	{
 		char defaultstr[256] = "orig mid mid ";
-		const char* sspec = config_get(config, "display", "fillSpec", "#333333");
+		const char* sspec = config_get(config, "filler", "tint", "#333333");
 		strcat(defaultstr, sspec);
 		if (!parse_pictspec(ps, defaultstr, &ps->o.fillSpec))
 			return RET_BADARG;
+
 		char defaultstr2[256] = "orig ";
-		const char* sspec2 = config_get(config, "display", "iconFillSpec", "mid mid #333333");
+		const char* sspec2 = config_get(config, "filler", "iconPlace", "mid mid");
 		strcat(defaultstr2, sspec2);
+		const char space[] = " ";
+		strcat(defaultstr2, space);
+		strcat(defaultstr2, sspec);
+
+		config_get_int_wrap(config, "filler", "iconSize",
+				&ps->o.fillerIconSize, 0, 256);
+
 		if (!parse_pictspec(ps, defaultstr2, &ps->o.iconFillSpec))
 			return RET_BADARG;
-		if (!simg_cachespec(ps, &ps->o.fillSpec))
+		if (!simg_cachespec(ps, &ps->o.iconFillSpec))
 			return RET_BADARG;
+
 		if (ps->o.iconFillSpec.path
-				&& !(ps->o.iconDefault = simg_load(ps, ps->o.iconFillSpec.path,
-						PICTPOSP_SCALEK, ps->o.preferredIconSize, ps->o.preferredIconSize,
+				&& !(ps->o.iconFiller = simg_load(ps, ps->o.iconFillSpec.path,
+						PICTPOSP_SCALEK, ps->o.fillerIconSize, ps->o.fillerIconSize,
 						ALIGN_MID, ALIGN_MID, NULL)))
 			return RET_BADARG;
 	}
@@ -2595,8 +2626,9 @@ main_end:
 			free_pictw(ps, &ps->o.background);
 			free_pictspec(ps, &ps->o.bg_spec);
 			free_pictw(ps, &ps->o.iconDefault);
-			free_pictspec(ps, &ps->o.iconFillSpec);
+			free_pictw(ps, &ps->o.iconFiller);
 			free_pictspec(ps, &ps->o.fillSpec);
+			free_pictspec(ps, &ps->o.iconFillSpec);
 			free(ps->o.bindings_keysUp);
 			free(ps->o.bindings_keysDown);
 			free(ps->o.bindings_keysLeft);
