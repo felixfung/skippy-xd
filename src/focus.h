@@ -21,53 +21,53 @@
 #define SKIPPY_FOCUS_H
 
 static inline void
-printfdfXFocusChangeEvent(session_t *ps, XFocusChangeEvent *evf)
+printfdfXFocusChangeEvent(session_t *ps, XFocusChangeEvent *evf, bool print)
 {
 	printfdfWindowName(ps, "(): event window = ", evf->window);
-	printfdf(false, "(): event window id = %#010lx", evf->window);
+	printfdf(print, "(): event window id = %#010lx", evf->window);
 
 	if(evf->mode == NotifyNormal) {
-		printfdf(false, "(): evf->mode = NotifyNormal");
+		printfdf(print, "(): evf->mode = NotifyNormal");
 	}
 	else if(evf->mode == NotifyGrab) {
-		printfdf(false, "(): evf->mode = NotifyGrab");
+		printfdf(print, "(): evf->mode = NotifyGrab");
 	}
 	else if(evf->mode == NotifyUngrab) {
-		printfdf(false, "(): evf->mode = NotifyUngrab");
+		printfdf(print, "(): evf->mode = NotifyUngrab");
 	}
 	else if(evf->mode == NotifyWhileGrabbed) {
-		printfdf(false, "(): evf->mode = NotifyWhileGrabbed");
+		printfdf(print, "(): evf->mode = NotifyWhileGrabbed");
 	}
 	else {
-		printfdf(false, "(): evf->mode = %i (not recognized)", evf->mode);
+		printfdf(print, "(): evf->mode = %i (not recognized)", evf->mode);
 	}
 
 	if(evf->detail == NotifyAncestor) {
-		printfdf(false, "(): evf->detail = NotifyAncestor");
+		printfdf(print, "(): evf->detail = NotifyAncestor");
 	}
 	else if(evf->detail == NotifyVirtual) {
-		printfdf(false, "(): evf->detail = NotifyVirtual");
+		printfdf(print, "(): evf->detail = NotifyVirtual");
 	}
 	else if(evf->detail == NotifyInferior) {
-		printfdf(false, "(): evf->detail = NotifyInferior");
+		printfdf(print, "(): evf->detail = NotifyInferior");
 	}
 	else if(evf->detail == NotifyNonlinear) {
-		printfdf(false, "(): evf->detail = NotifyNonlinear");
+		printfdf(print, "(): evf->detail = NotifyNonlinear");
 	}
 	else if(evf->detail == NotifyNonlinearVirtual) {
-		printfdf(false, "(): evf->detail = NotifyNonlinearVirtual");
+		printfdf(print, "(): evf->detail = NotifyNonlinearVirtual");
 	}
 	else if(evf->detail == NotifyPointer) {
-		printfdf(false, "(): evf->detail = NotifyPointer");
+		printfdf(print, "(): evf->detail = NotifyPointer");
 	}
 	else if(evf->detail == NotifyPointerRoot) {
-		printfdf(false, "(): evf->detail = NotifyPointerRoot");
+		printfdf(print, "(): evf->detail = NotifyPointerRoot");
 	}
 	else if(evf->detail == NotifyDetailNone) {
-		printfdf(false, "(): evf->detail = NotifyDetailNone");
+		printfdf(print, "(): evf->detail = NotifyDetailNone");
 	}
 	else {
-		printfdf(false, "(): evf->detail = %i (not recognized)", evf->detail);
+		printfdf(print, "(): evf->detail = %i (not recognized)", evf->detail);
 	}
 }
 
