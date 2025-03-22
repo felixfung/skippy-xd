@@ -1727,7 +1727,7 @@ forget_activating:
 			}
 
 			// if the client did not trigger activation, return to it immediately
-			if (mw) {
+			if (pid != trigger_client) {
 				char *daemon2clientpipe = DaemonToClientPipeName(ps, pid);
 				int fd = open(daemon2clientpipe, O_WRONLY | O_NONBLOCK);
 				close(fd);
