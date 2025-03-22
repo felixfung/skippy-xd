@@ -47,11 +47,6 @@ pseudoTrans = true
 
 [layout]
 
-# After this time, pivot "locks" into toggle mode
-# And the pivot key no longer needs to be held
-# Set to 0 to disable pivot locking
-pivotLockingTime = 0
-
 # Wait time before displaying switch previews
 switchWaitDuration = 100
 
@@ -72,33 +67,6 @@ exposeLayout = cosmos
 
 # Whether to show the window bigger than its original size
 allowUpscale = false
-
-[filter]
-
-# in Xinerama multi-monitor setting, whether to filter windows by Xinerama monitor
-showOnlyCurrentMonitor = false
-
-# display only windows on the current XScreen
-showOnlyCurrentScreen = true
-
-# Choose whether to show shadow windows:
-# windows that are minimized, shaded, or on other virtual desktops
-showShadow = true
-
-# Choose whether to always display sticky windows
-# Switch shows sticky windows regardless of configuration
-showSticky = true
-
-# For switch and expose,
-# Whether to limit window select on current virtual desktop
-# Or allow window selection on all virtual desktops
-# Paging always show all desktops
-switchShowAllDesktops = false
-exposeShowAllDesktops = false
-
-# Whether the filtering of window class
-# Will be persistent across activations
-persistentFiltering = false
 
 [display]
 
@@ -172,7 +140,39 @@ text = white
 textShadow = black
 font = fixed-11:weight=bold
 
+[filter]
+
+# in Xinerama multi-monitor setting, whether to filter windows by Xinerama monitor
+showOnlyCurrentMonitor = false
+
+# display only windows on the current XScreen
+showOnlyCurrentScreen = true
+
+# Choose whether to show shadow windows:
+# windows that are minimized, shaded, or on other virtual desktops
+showShadow = true
+
+# Choose whether to always display sticky windows
+# Switch shows sticky windows regardless of configuration
+showSticky = true
+
+# For switch and expose,
+# Whether to limit window select on current virtual desktop
+# Or allow window selection on all virtual desktops
+# Paging always show all desktops
+switchShowAllDesktops = false
+exposeShowAllDesktops = false
+
+# Whether the filtering of window class
+# Will be persistent across activations
+persistentFiltering = false
+
 [bindings]
+
+# After this time, pivot "locks" into toggle mode
+# And the pivot key no longer needs to be held
+# Set to 0 to disable pivot locking
+pivotLockingTime = 0
 
 # key* = is a list of valid XWindows KeySym identifiers, case
 # sensitive and <space> seperated list. Run the program 'xev' to find them.

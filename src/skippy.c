@@ -2220,7 +2220,6 @@ load_config_file(session_t *ps)
     config_get_double_wrap(config, "system", "updateFreq", &ps->o.updateFreq, -1000.0, 1000.0);
     config_get_bool_wrap(config, "system", "pseudoTrans", &ps->o.pseudoTrans);
 
-    config_get_int_wrap(config, "layout", "pivotLockingTime", &ps->o.pivotLockingTime, 0, 20000);
     config_get_int_wrap(config, "layout", "switchWaitDuration", &ps->o.switchWaitDuration, 0, 2000);
     config_get_int_wrap(config, "layout", "animationDuration", &ps->o.animationDuration, 0, 2000);
     config_get_int_wrap(config, "layout", "animationRefresh", &ps->o.animationRefresh, 1, 200);
@@ -2250,15 +2249,6 @@ load_config_file(session_t *ps)
 			ps->o.exposeLayout = LAYOUT_BOXY;
     }
     config_get_bool_wrap(config, "layout", "allowUpscale", &ps->o.allowUpscale);
-
-    config_get_bool_wrap(config, "filter", "showOnlyCurrentMonitor", &ps->o.xinerama_showAll);
-	ps->o.xinerama_showAll = !ps->o.xinerama_showAll;
-    config_get_bool_wrap(config, "filter", "showOnlyCurrentScreen", &ps->o.filterxscreen);
-    config_get_bool_wrap(config, "filter", "showShadow", &ps->o.showShadow);
-    config_get_bool_wrap(config, "filter", "showSticky", &ps->o.showSticky);
-    config_get_bool_wrap(config, "filter", "switchShowAllDesktops", &ps->o.switchShowAllDesktops);
-    config_get_bool_wrap(config, "filter", "exposeShowAllDesktops", &ps->o.exposeShowAllDesktops);
-    config_get_bool_wrap(config, "filter", "persistentFiltering", &ps->o.persistentFiltering);
 
     config_get_bool_wrap(config, "display", "showDesktop", &ps->o.panel_show_desktop);
     {
@@ -2357,6 +2347,17 @@ load_config_file(session_t *ps)
 		if (ps->o.tooltip_opacity != old_value)
 			ps->o.updatetooltip = true;
 	}
+
+    config_get_bool_wrap(config, "filter", "showOnlyCurrentMonitor", &ps->o.xinerama_showAll);
+	ps->o.xinerama_showAll = !ps->o.xinerama_showAll;
+    config_get_bool_wrap(config, "filter", "showOnlyCurrentScreen", &ps->o.filterxscreen);
+    config_get_bool_wrap(config, "filter", "showShadow", &ps->o.showShadow);
+    config_get_bool_wrap(config, "filter", "showSticky", &ps->o.showSticky);
+    config_get_bool_wrap(config, "filter", "switchShowAllDesktops", &ps->o.switchShowAllDesktops);
+    config_get_bool_wrap(config, "filter", "exposeShowAllDesktops", &ps->o.exposeShowAllDesktops);
+    config_get_bool_wrap(config, "filter", "persistentFiltering", &ps->o.persistentFiltering);
+
+    config_get_int_wrap(config, "bindings", "pivotLockingTime", &ps->o.pivotLockingTime, 0, 20);
 
     // load keybindings settings
     ps->o.bindings_keysUp = mstrdup(config_get(config, "bindings", "keysUp", "Up"));
