@@ -248,9 +248,11 @@ clientwin_update(ClientWin *cw) {
 				cw->src.window, cw->src.format, CPSubwindowMode, &pa);
 		XRenderSetPictureFilter(ps->dpy, cw->origin, FilterBest, 0, 0);
 
-		XCompositeRedirectWindow(ps->dpy, cw->src.window,
-				CompositeRedirectAutomatic);
-		cw->redirected = true;
+		if (!cw->redirected) {
+			XCompositeRedirectWindow(ps->dpy, cw->src.window,
+					CompositeRedirectAutomatic);
+			cw->redirected = true;
+		}
 
 		if (cw->cpixmap)
 			free_pixmap(ps, &cw->cpixmap);
@@ -594,10 +596,6 @@ void clientwin_prepmove(ClientWin *cw)
 void
 clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 {
-	/* int border = MAX(1, (double)DISTANCE(cw->mainwin) * f * 0.25); */
-	int border = 0;
-	XSetWindowBorderWidth(cw->mainwin->ps->dpy, cw->mini.window, border);
-
 	cw->factor = f;
 	{
 		// animate window by changing these in time linearly:
@@ -610,7 +608,7 @@ clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 		cw->mini.height = cw->src.height * f;
 	}
 
-	XMoveResizeWindow(cw->mainwin->ps->dpy, cw->mini.window, cw->mini.x - border, cw->mini.y - border, cw->mini.width, cw->mini.height);
+	XMoveResizeWindow(cw->mainwin->ps->dpy, cw->mini.window, cw->mini.x, cw->mini.y, cw->mini.width, cw->mini.height);
 
 	clientwin_round_corners(cw);
 }
@@ -618,18 +616,19 @@ clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 void
 clientwin_map(ClientWin *cw) {
 	session_t *ps = cw->mainwin->ps;
-	free_damage(ps, &cw->damage);
 	
 	if (!cw->mode)
 		return;
 
 	if (cw->origin) {
+		free_damage(ps, &cw->damage);
 		cw->damage = XDamageCreate(ps->dpy, cw->src.window, XDamageReportDeltaRectangles);
 		if (cw->paneltype == WINTYPE_WINDOW)
 			XRenderSetPictureTransform(ps->dpy, cw->origin, &cw->mainwin->transform);
 	}
 
 	if (cw->shadow) {
+		free_damage(ps, &cw->damage);
 		cw->damage = XDamageCreate(ps->dpy, cw->src.window, XDamageReportDeltaRectangles);
 		if (cw->paneltype == WINTYPE_WINDOW)
 			XRenderSetPictureTransform(ps->dpy, cw->shadow, &cw->mainwin->transform);
