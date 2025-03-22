@@ -1147,6 +1147,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 	long first_animated = 0L;
 	bool first_animating = false;
 	pid_t trigger_client = 0;
+	bool focus_stolen = false;
 
 	switch (ps->o.mode) {
 		case PROGMODE_SWITCH:
@@ -1541,22 +1542,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 								 && ev.type != ReparentNotify
 								))) {
 
-							// prevent focus stealing by newly created window
-							// by checking for a FocusOut/FocusIn event pair
-							if (ev.type == FocusOut) {
-								bool focus_still_on_skippy = false;
-								if (num_events > 0) {
-									XEvent ev_next = { };
-									XPeekEvent(ps->dpy, &ev_next);
-									if (ev_next.type == FocusIn)
-										 focus_still_on_skippy = true;
-								}
-								if (!focus_still_on_skippy) {
-									printfdf(true,"(): Detected focus stolen... take back focus");
-									XSetInputFocus(ps->dpy, mw->window,
-											RevertToParent, CurrentTime);
-								}
-							}
+							if (ev.type == FocusOut)
+								focus_stolen = true;
+							if (ev.type == FocusIn)
+								focus_stolen = false;
 
 							die = clientwin_handle(cw, &ev);
 							if (layout == LAYOUTMODE_PAGING) {
@@ -1575,6 +1564,15 @@ mainloop(session_t *ps, bool activate_on_start) {
 					}
 				}
 			}
+		}
+
+		// prevent focus stealing by newly mapped window
+		// by checking for a FocusOut/FocusIn event pair
+		if (focus_stolen) {
+			printfdf(false,"(): skippy-xd focus stolen... take back focus");
+			XSetInputFocus(ps->dpy, mw->window,
+					RevertToParent, CurrentTime);
+			focus_stolen = false;
 		}
 
 		// Do delayed painting if it's active
