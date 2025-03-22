@@ -205,7 +205,6 @@ typedef struct {
 	int clientList;
 	bool pseudoTrans;
 
-	int pivotLockingTime;
 	int switchWaitDuration;
 	int animationDuration;;
 	int animationRefresh;;
@@ -262,6 +261,7 @@ typedef struct {
 	bool persistentFiltering;
 	char *wm_class;
 
+	int pivotLockingTime;
 	enum cliop bindings_miwMouse[MAX_MOUSE_BUTTONS];
 	char *bindings_keysUp;
 	char *bindings_keysDown;
@@ -292,7 +292,6 @@ typedef struct {
 	.clientList = 0, \
 	.pseudoTrans = true, \
 \
-	.pivotLockingTime = 0, \
 	.switchWaitDuration = 100, \
 	.animationDuration = 200, \
 	.animationRefresh = 60, \
@@ -343,6 +342,8 @@ typedef struct {
 	.tooltip_text = NULL, \
 	.tooltip_textShadow = NULL, \
 	.tooltip_font = NULL, \
+\
+	.pivotLockingTime = 0, \
 }
 
 /// @brief X information structure.

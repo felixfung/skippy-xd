@@ -2220,7 +2220,6 @@ load_config_file(session_t *ps)
     config_get_double_wrap(config, "system", "updateFreq", &ps->o.updateFreq, -1000.0, 1000.0);
     config_get_bool_wrap(config, "system", "pseudoTrans", &ps->o.pseudoTrans);
 
-    config_get_int_wrap(config, "layout", "pivotLockingTime", &ps->o.pivotLockingTime, 0, 20000);
     config_get_int_wrap(config, "layout", "switchWaitDuration", &ps->o.switchWaitDuration, 0, 2000);
     config_get_int_wrap(config, "layout", "animationDuration", &ps->o.animationDuration, 0, 2000);
     config_get_int_wrap(config, "layout", "animationRefresh", &ps->o.animationRefresh, 1, 200);
@@ -2357,6 +2356,8 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "filter", "switchShowAllDesktops", &ps->o.switchShowAllDesktops);
     config_get_bool_wrap(config, "filter", "exposeShowAllDesktops", &ps->o.exposeShowAllDesktops);
     config_get_bool_wrap(config, "filter", "persistentFiltering", &ps->o.persistentFiltering);
+
+    config_get_int_wrap(config, "bindings", "pivotLockingTime", &ps->o.pivotLockingTime, 0, 20);
 
     // load keybindings settings
     ps->o.bindings_keysUp = mstrdup(config_get(config, "bindings", "keysUp", "Up"));

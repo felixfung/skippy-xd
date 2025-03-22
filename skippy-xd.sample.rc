@@ -47,11 +47,6 @@ pseudoTrans = true
 
 [layout]
 
-# After this time, pivot "locks" into toggle mode
-# And the pivot key no longer needs to be held
-# Set to 0 to disable pivot locking
-pivotLockingTime = 0
-
 # Wait time before displaying switch previews
 switchWaitDuration = 100
 
@@ -173,6 +168,11 @@ exposeShowAllDesktops = false
 persistentFiltering = false
 
 [bindings]
+
+# After this time, pivot "locks" into toggle mode
+# And the pivot key no longer needs to be held
+# Set to 0 to disable pivot locking
+pivotLockingTime = 0
 
 # key* = is a list of valid XWindows KeySym identifiers, case
 # sensitive and <space> seperated list. Run the program 'xev' to find them.
