@@ -6,6 +6,7 @@ Skippy-XD changelog
  - Only activating client is blocked and receives window ID
  - Add config option system/enforceFocus
  - Add config option layout/animationRefresh
+ - Add config option section filler
 
 0.10.0 -- "Spacesuit" (28 Feb 2025) ~/felixfung
  - New "cosmos" layout
