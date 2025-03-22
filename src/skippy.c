@@ -1568,7 +1568,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 		// prevent focus stealing by newly mapped window
 		// by checking for a FocusOut/FocusIn event pair
-		if (focus_stolen) {
+		if (ps->o.enforceFocus && focus_stolen) {
 			printfdf(false,"(): skippy-xd focus stolen... take back focus");
 			XSetInputFocus(ps->dpy, mw->window,
 					RevertToParent, CurrentTime);
@@ -2173,6 +2173,8 @@ load_config_file(session_t *ps)
     // Read configuration into ps->o, because searching all the time is much
     // less efficient, may introduce inconsistent default value, and
     // occupies a lot more memory for non-string types.
+
+	config_get_bool_wrap(config, "system", "enforceFocus", &ps->o.enforceFocus);
 
 	{
 		// two -'s, the first digit of uid/xid and null terminator
