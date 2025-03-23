@@ -218,14 +218,17 @@ typedef struct {
 	bool movePointer;
 	bool includeFrame;
 	int cornerRadius;
-	int preferredIconSize;
 	client_disp_mode_t *clientDisplayModes;
-	pictspec_t iconFillSpec;
+	pictspec_t iconSpec;
+	int iconSize;
 	pictw_t *iconDefault;
-	pictspec_t fillSpec;
+	pictw_t *iconFiller;
 	pictw_t *background;
 	Picture from;
 
+	pictspec_t fillSpec;
+	pictspec_t iconFillSpec;
+	int fillerIconSize;
 	char *normal_tint;
 	int normal_tintOpacity;
 	int normal_opacity;
@@ -313,11 +316,13 @@ typedef struct {
 	.movePointer = false, \
 	.includeFrame = false, \
 	.cornerRadius = 0, \
-	.preferredIconSize = 48, \
 	.clientDisplayModes = NULL, \
-	.iconFillSpec = PICTSPECT_INIT, \
-	.fillSpec = PICTSPECT_INIT, \
+	.iconSpec = PICTSPECT_INIT, \
+	.iconSize = 48, \
 \
+	.fillSpec = PICTSPECT_INIT, \
+	.iconFillSpec = PICTSPECT_INIT, \
+	.fillerIconSize = 48, \
 	.normal_tint = NULL, \
 	.normal_tintOpacity = 0, \
 	.normal_opacity = 255, \
