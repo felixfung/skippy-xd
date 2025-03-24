@@ -378,6 +378,19 @@ DaemonToClientPipeName(session_t *ps, pid_t pid) {
 	return daemon2client_pipe;
 }
 
+static void returnToClient(session_t *ps, pid_t pid, int pipe_return)
+{
+	char *daemon2clientpipe = DaemonToClientPipeName(ps, pid);
+	int fd = open(daemon2clientpipe, O_WRONLY | O_NONBLOCK);
+	int bytes_written = write(fd, &pipe_return, sizeof(int));
+	printfdf(true,"(): %i -> %d (%d)", pid, pipe_return, bytes_written);
+	if (bytes_written < sizeof(int)) {
+		printfef(true, "(): daemon-to-client packet incomplete!");
+	}
+	close(fd);
+	free(daemon2clientpipe);
+}
+
 static inline bool
 open_pipe(session_t *ps, struct pollfd *r_fd) {
 	if (ps->fd_pipe >= 0) {
@@ -1254,16 +1267,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				}
 			}
 
-			{
-				char *daemon2clientpipe = DaemonToClientPipeName(ps, trigger_client);
-				int fd = open(daemon2clientpipe, O_WRONLY | O_NONBLOCK);
-				int bytes_written = write(fd, &pipe_return, sizeof(int));
-				if (bytes_written < sizeof(int)) {
-					printfef(true, "(): daemon-to-client packet incomplete!");
-				}
-				close(fd);
-				free(daemon2clientpipe);
-			}
+			returnToClient(ps, trigger_client, pipe_return);
 
 			mw->refocus = false;
 			mw->client_to_focus = NULL;
@@ -1625,17 +1629,14 @@ mainloop(session_t *ps, bool activate_on_start) {
 			pid_t pid = 0;
 			char piped_input = receive_string_in_daemon_via_fifo(ps, r_fd,
 					&pid, &nparams, &param, &str);
-			printfdf(false, "(): Received pipe command: %d from %010i",
+			printfdf(true, "(): Received pipe command: %d from %010i",
 					piped_input, pid);
 
 			if (piped_input & PIPECMD_EXIT_DAEMON) {
 				printfdf(false, "(): Exit command received, killing daemon...");
 				unlink(ps->o.pipePath);
 
-				char *daemon2clientpipe = DaemonToClientPipeName(ps, pid);
-				int fd = open(daemon2clientpipe, O_WRONLY | O_NONBLOCK);
-				close(fd);
-				free(daemon2clientpipe);
+				returnToClient(ps, pid, -1);
 
 				return;
 			}
@@ -1727,11 +1728,8 @@ forget_activating:
 			}
 
 			// if the client did not trigger activation, return to it immediately
-			if (pid != trigger_client) {
-				char *daemon2clientpipe = DaemonToClientPipeName(ps, pid);
-				int fd = open(daemon2clientpipe, O_WRONLY | O_NONBLOCK);
-				close(fd);
-				free(daemon2clientpipe);
+			if (mw) {
+				returnToClient(ps, pid, -1);
 			}
 
 			// free receive_string_in_daemon_via_fifo() paramters
@@ -2498,50 +2496,51 @@ int main(int argc, char *argv[]) {
 			// this is switch/expose/paging
 			// potentially with flags of prev/next
 			// or multi-byte pipe command
-			activate_via_fifo(ps, pipePath);
 
 			// wait and read daemon-to-client pipe
 			// then print result to stdout
+			if (ps->fd_pipe2 >= 0) {
+				close(ps->fd_pipe2);
+				ps->fd_pipe2 = -1;
+			}
+
+			char* daemon2client_pipe = DaemonToClientPipeName(ps, getpid());
 			{
-				if (ps->fd_pipe2 >= 0) {
-					close(ps->fd_pipe2);
-					ps->fd_pipe2 = -1;
-				}
-
-				char* daemon2client_pipe = DaemonToClientPipeName(ps, getpid());
-				{
-					int result = mkfifo(daemon2client_pipe, S_IRUSR | S_IWUSR);
-					if (result < 0  && EEXIST != errno) {
-						printfef(true,
-								"(): Failed to create named pipe \"%s\": %d",
-								ps->o.pipePath2, result);
-						perror("mkfifo");
-						ret = 2;
-						goto main_end;
-					}
-				}
-
-				struct pollfd r_fd;
-				r_fd.fd = ps->fd_pipe2 = open(daemon2client_pipe, O_RDONLY | O_NONBLOCK);
-				r_fd.events = POLLIN;
-				if (ps->fd_pipe2 < 0) {
-					printfef(true, "(): Failed to open pipe \"%s\": %d", ps->o.pipePath2, errno);
-					perror("open");
+				int result = mkfifo(daemon2client_pipe, S_IRUSR | S_IWUSR);
+				if (result < 0  && EEXIST != errno) {
+					printfef(true,
+							"(): Failed to create named pipe \"%s\": %d",
+							ps->o.pipePath2, result);
+					perror("mkfifo");
+					ret = 2;
 					goto main_end;
 				}
+			}
 
-				poll(&r_fd, 1, -1);
-				int buffer;
-				int read_ret = 0;
-				read_ret = read(ps->fd_pipe2, &buffer, sizeof(int));
-				close(ps->fd_pipe2);
-				unlink(daemon2client_pipe);
-				free(daemon2client_pipe);
+			struct pollfd r_fd;
+			r_fd.fd = ps->fd_pipe2 = open(daemon2client_pipe, O_RDONLY | O_NONBLOCK);
+			r_fd.events = POLLIN;
+			if (ps->fd_pipe2 < 0) {
+				printfef(true, "(): Failed to open pipe \"%s\": %d", ps->o.pipePath2, errno);
+				perror("open");
+				goto main_end;
+			}
 
-				if (read_ret == 0)
-					printf("%d\n", -1);
-				else
-					printf("%d\n", buffer);
+			activate_via_fifo(ps, pipePath);
+
+			poll(&r_fd, 1, 10000);
+			int buffer;
+			int read_ret = 0;
+			read_ret = read(ps->fd_pipe2, &buffer, sizeof(int));
+			close(ps->fd_pipe2);
+			unlink(daemon2client_pipe);
+			free(daemon2client_pipe);
+
+			if (read_ret == 0) {
+				printfef(false,"(): pipe %i leak!", getpid());
+			}
+			else {
+				printf("%d\n", buffer);
 			}
 
 			goto main_end;
