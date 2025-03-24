@@ -383,7 +383,6 @@ static void returnToClient(session_t *ps, pid_t pid, int pipe_return)
 	char *daemon2clientpipe = DaemonToClientPipeName(ps, pid);
 	int fd = open(daemon2clientpipe, O_WRONLY | O_NONBLOCK);
 	int bytes_written = write(fd, &pipe_return, sizeof(int));
-	printfdf(true,"(): %i -> %d (%d)", pid, pipe_return, bytes_written);
 	if (bytes_written < sizeof(int)) {
 		printfef(true, "(): daemon-to-client packet incomplete!");
 	}
@@ -469,17 +468,27 @@ send_command_to_daemon_via_fifo(char command, const char *pipePath) {
 	send_string_command_to_daemon_via_fifo(pipePath, str);
 }
 
-static char
+static char*
 receive_string_in_daemon_via_fifo(session_t *ps, struct pollfd *r_fd,
-		pid_t *pid, char *nparams, char **param, char ***str) {
+		int *pcmdlen) {
 	char buffer[BUF_LEN];
 	int ret_read = read_pipe(ps, r_fd, &buffer[0]);
+
 	char cmdlen = 0;
 	if (ret_read < 1 || (cmdlen = buffer[10]+2+10) > ret_read) {
 		printfef(true, "(): stubbed command received");
 		exit(1);
 	}
 
+	*pcmdlen = ret_read;
+	char *pbuffer = malloc(ret_read);
+	memcpy(pbuffer, buffer, ret_read);
+	return pbuffer;
+}
+
+static char
+read_fifo_command(char *buffer, int cmdlen, int *increment,
+		pid_t *pid, char *nparams, char **param, char ***str) {
 	char pidbuffer[11];
 	memcpy(pidbuffer, buffer, 10);
 	pidbuffer[10] = '\0';
@@ -493,6 +502,7 @@ receive_string_in_daemon_via_fifo(session_t *ps, struct pollfd *r_fd,
 		*nparams = 0;
 		param = NULL;
 		str = NULL;
+		*increment = 11 + 2;
 	}
 	else {
 		if (cmdlen <= 1) {
@@ -501,25 +511,29 @@ receive_string_in_daemon_via_fifo(session_t *ps, struct pollfd *r_fd,
 		}
 
 		*nparams = pbuffer[1];
-		printfdf(false, "(): received multi-byte command %d of %d bytes and %d parameters",
-				master_command, cmdlen, *nparams);
+		printfdf(false, "(): received multi-byte command %d of %d parameters",
+				master_command, *nparams);
 		*param = malloc(*nparams * sizeof(char*));
 		*str = malloc(*nparams * sizeof(char*));
 
 		int k=2;
+		*increment = 12 + 2;
 		for (int i=0; i < *nparams; i++) {
 			(*param)[i] = pbuffer[k];
 			k++;
+			*increment++;
 
 			char nchar = pbuffer[k];
 			printfdf(false, "(): parameter %d takes %d bytes...",
 					(*param)[i], nchar);
 			k++;
+			*increment++;
 
 			(*str)[i] = malloc(nchar+1);
 			strncpy((*str)[i], pbuffer + k, nchar);
 			(*str)[i][(int)nchar] = '\0';
 			k += nchar;
+			*increment += nchar;
 
 			printfdf(false, "(): received parameter %d%s", (*param)[i], (*str)[i]);
 		}
@@ -1625,121 +1639,131 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 		// Handle daemon commands
 		if (POLLIN & r_fd[1].revents) {
-			char nparams=0, *param=0, **str=0;
-			pid_t pid = 0;
-			char piped_input = receive_string_in_daemon_via_fifo(ps, r_fd,
-					&pid, &nparams, &param, &str);
-			printfdf(true, "(): Received pipe command: %d from %010i",
-					piped_input, pid);
+			int cmdlen = 0, increment = 0;
+			char *pipestr = receive_string_in_daemon_via_fifo(ps, r_fd, &cmdlen);
+			char *pipestr2 = pipestr;
 
-			if (piped_input & PIPECMD_EXIT_DAEMON) {
-				printfdf(false, "(): Exit command received, killing daemon...");
-				unlink(ps->o.pipePath);
+			while (cmdlen > 0) {
+				char nparams=0, *param=0, **str=0;
+				pid_t pid = 0;
+				char piped_input = read_fifo_command(pipestr2, cmdlen, &increment,
+						&pid, &nparams, &param, &str);
+				printfdf(false, "(): Received pipe command: %d from %010i",
+						piped_input, pid);
 
-				returnToClient(ps, pid, -1);
+				if (piped_input & PIPECMD_EXIT_DAEMON) {
+					printfdf(false, "(): Exit command received, killing daemon...");
+					unlink(ps->o.pipePath);
 
-				return;
-			}
+					returnToClient(ps, pid, -1);
 
-			for (int i=0; i<nparams; i++) {
-				if (param[i] == PIPEPRM_RELOAD_CONFIG_PATH) {
-					if (ps->o.config_path)
-						free(ps->o.config_path);
-					ps->o.config_path = mstrdup(str[i]);
-					load_config_file(ps);
-					mainwin_reload(ps, ps->mainwin);
-				}
-				if (param[i] == PIPEPRM_RELOAD_CONFIG) {
-					load_config_file(ps);
-					mainwin_reload(ps, ps->mainwin);
-				}
-			}
-
-			ps->o.focus_initial = -((piped_input & PIPECMD_PREV) > 0)
-				+ ((piped_input & PIPECMD_NEXT) > 0);
-
-			if (!mw || !mw->mapped)
-			{
-				if (piped_input & PIPECMD_SWITCH) {
-					ps->o.mode = PROGMODE_SWITCH;
-					layout = LAYOUTMODE_SWITCH;
-				}
-				else if (piped_input & PIPECMD_EXPOSE) {
-					ps->o.mode = PROGMODE_EXPOSE;
-					layout = LAYOUTMODE_EXPOSE;
-				}
-				else if (piped_input & PIPECMD_PAGING) {
-					ps->o.mode = PROGMODE_PAGING;
-					layout = LAYOUTMODE_PAGING;
-				}
-				else
-					goto forget_activating;
-
-				if (!ps->o.persistentFiltering && ps->o.wm_class) {
-					free(ps->o.wm_class);
-					ps->o.wm_class = NULL;
+					return;
 				}
 
-				animating = activate = true;
-
-				toggling = true;
 				for (int i=0; i<nparams; i++) {
-					if (param[i] & PIPEPRM_WM_CLASS) {
-						if (ps->o.wm_class)
-							free(ps->o.wm_class);
-						ps->o.wm_class = mstrdup(str[i]);
-						printfdf(false, "(): receiving new wm_class=%s",
-								ps->o.wm_class);
+					if (param[i] == PIPEPRM_RELOAD_CONFIG_PATH) {
+						if (ps->o.config_path)
+							free(ps->o.config_path);
+						ps->o.config_path = mstrdup(str[i]);
+						load_config_file(ps);
+						mainwin_reload(ps, ps->mainwin);
 					}
-					if (param[i] & PIPEPRM_PIVOTING) {
-						ps->o.pivotkey = str[i][0];
-						printfdf(false, "(): receiving new pivot key=%d",ps->o.pivotkey);
-						toggling = false;
+					if (param[i] == PIPEPRM_RELOAD_CONFIG) {
+						load_config_file(ps);
+						mainwin_reload(ps, ps->mainwin);
 					}
 				}
 
-				trigger_client = pid;
-				printfdf(false, "(): skippy activating: metaphor=%d", layout);
-forget_activating:
-			}
-			// parameter == 0, toggle
-			// otherwise shift window focus
-			else if (mw && ps->o.focus_initial == 0) {
-				if (toggling) {
-					printfdf(false, "(): toggling skippy off");
-					mw->refocus = die = true;
+				ps->o.focus_initial = -((piped_input & PIPECMD_PREV) > 0)
+					+ ((piped_input & PIPECMD_NEXT) > 0);
+
+				if (!mw || !mw->mapped)
+				{
+					if (piped_input & PIPECMD_SWITCH) {
+						ps->o.mode = PROGMODE_SWITCH;
+						layout = LAYOUTMODE_SWITCH;
+					}
+					else if (piped_input & PIPECMD_EXPOSE) {
+						ps->o.mode = PROGMODE_EXPOSE;
+						layout = LAYOUTMODE_EXPOSE;
+					}
+					else if (piped_input & PIPECMD_PAGING) {
+						ps->o.mode = PROGMODE_PAGING;
+						layout = LAYOUTMODE_PAGING;
+					}
+					else
+						goto forget_activating;
+
+					if (!ps->o.persistentFiltering && ps->o.wm_class) {
+						free(ps->o.wm_class);
+						ps->o.wm_class = NULL;
+					}
+
+					animating = activate = true;
+
+					toggling = true;
+					for (int i=0; i<nparams; i++) {
+						if (param[i] & PIPEPRM_WM_CLASS) {
+							if (ps->o.wm_class)
+								free(ps->o.wm_class);
+							ps->o.wm_class = mstrdup(str[i]);
+							printfdf(false, "(): receiving new wm_class=%s",
+									ps->o.wm_class);
+						}
+						if (param[i] & PIPEPRM_PIVOTING) {
+							ps->o.pivotkey = str[i][0];
+							printfdf(false, "(): receiving new pivot key=%d",ps->o.pivotkey);
+							toggling = false;
+						}
+					}
+
+					trigger_client = pid;
+					printfdf(false, "(): skippy activating: metaphor=%d", layout);
+	forget_activating:
 				}
-			}
-			else if (mw && mw->mapped)
-			{
-				printfdf(false, "(): cycling window");
-				fflush(stdout);fflush(stderr);
+				// parameter == 0, toggle
+				// otherwise shift window focus
+				else if (mw && ps->o.focus_initial == 0) {
+					if (toggling) {
+						printfdf(false, "(): toggling skippy off");
+						mw->refocus = die = true;
+					}
+				}
+				else if (mw && mw->mapped)
+				{
+					printfdf(false, "(): cycling window");
+					fflush(stdout);fflush(stderr);
 
-				if (ps->o.focus_initial < 0)
-					ps->o.focus_initial = dlist_len(mw->focuslist) + ps->o.focus_initial;
+					if (ps->o.focus_initial < 0)
+						ps->o.focus_initial = dlist_len(mw->focuslist) + ps->o.focus_initial;
 
-				while (ps->o.focus_initial > 0 && mw->client_to_focus) {
-					focus_miniw_next(ps, mw->client_to_focus);
-					ps->o.focus_initial--;
+					while (ps->o.focus_initial > 0 && mw->client_to_focus) {
+						focus_miniw_next(ps, mw->client_to_focus);
+						ps->o.focus_initial--;
+					}
+
+					if (mw->client_to_focus)
+						clientwin_render(mw->client_to_focus);
 				}
 
-				if (mw->client_to_focus)
-					clientwin_render(mw->client_to_focus);
-			}
+				// if the client did not trigger activation, return to it immediately
+				if (mw) {
+					returnToClient(ps, pid, -1);
+				}
 
-			// if the client did not trigger activation, return to it immediately
-			if (mw) {
-				returnToClient(ps, pid, -1);
-			}
+				// free receive_string_in_daemon_via_fifo() paramters
+				if (param)
+					free(param);
+				for (int i=0; i<nparams; i++)
+					if (str[i])
+						free(str[i]);
+				if (str)
+					free(str);
 
-			// free receive_string_in_daemon_via_fifo() paramters
-			if (param)
-				free(param);
-			for (int i=0; i<nparams; i++)
-				if (str[i])
-					free(str[i]);
-			if (str)
-				free(str);
+				pipestr2 += increment;
+				cmdlen -= increment;
+			}
+			free(pipestr);
 		}
 
 		if (POLLHUP & r_fd[1].revents) {
