@@ -2552,7 +2552,7 @@ int main(int argc, char *argv[]) {
 
 			activate_via_fifo(ps, pipePath);
 
-			poll(&r_fd, 1, 10000);
+			poll(&r_fd, 1, -1);
 			int buffer;
 			int read_ret = 0;
 			read_ret = read(ps->fd_pipe2, &buffer, sizeof(int));
