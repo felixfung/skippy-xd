@@ -521,19 +521,19 @@ read_fifo_command(char *buffer, int cmdlen, int *increment,
 		for (int i=0; i < *nparams; i++) {
 			(*param)[i] = pbuffer[k];
 			k++;
-			*increment++;
+			(*increment)++;
 
 			char nchar = pbuffer[k];
 			printfdf(false, "(): parameter %d takes %d bytes...",
 					(*param)[i], nchar);
 			k++;
-			*increment++;
+			(*increment)++;
 
 			(*str)[i] = malloc(nchar+1);
 			strncpy((*str)[i], pbuffer + k, nchar);
 			(*str)[i][(int)nchar] = '\0';
 			k += nchar;
-			*increment += nchar;
+			(*increment) += nchar;
 
 			printfdf(false, "(): received parameter %d%s", (*param)[i], (*str)[i]);
 		}
