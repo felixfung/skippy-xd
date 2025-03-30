@@ -1169,7 +1169,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 	bool pending_damage = false;
 	long last_rendered = 0L;
 	enum layoutmode layout = LAYOUTMODE_EXPOSE;
-	bool toggling = true;
+	bool toggling = !ps->o.pivotkey;
 	bool animating = activate;
 	long first_animated = 0L;
 	bool first_animating = false;
