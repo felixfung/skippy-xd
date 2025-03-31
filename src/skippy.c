@@ -1538,7 +1538,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					((ClientWin *)iter->data)->damaged = true;
 				}
 			}
-			else if (mw && wid == mw->window)
+			else if (mw && wid == mw->window && !die)
 				die = mainwin_handle(mw, &ev);
 			else if (mw && wid) {
 				bool processing = true;
