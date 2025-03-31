@@ -1281,7 +1281,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 				}
 			}
 
-			returnToClient(ps, trigger_client, pipe_return);
+			if (trigger_client != 0)
+				returnToClient(ps, trigger_client, pipe_return);
+			else
+				printf("%d\n", pipe_return);
 
 			mw->refocus = false;
 			mw->client_to_focus = NULL;
