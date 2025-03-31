@@ -1236,7 +1236,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 			// Focus the client window only after the main window get unmapped and
 			// keyboard gets ungrabbed.
 
-			int pipe_return = 0;
+			int pipe_return = -1;
 			if (mw->client_to_focus && layout != LAYOUTMODE_PAGING) {
 				if (!mw->refocus) {
 					dlist *iter = dlist_find(ps->mainwin->clients,
@@ -1281,7 +1281,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 				}
 			}
 
-			returnToClient(ps, trigger_client, pipe_return);
+			if (trigger_client != 0)
+				returnToClient(ps, trigger_client, pipe_return);
+			else
+				printf("%d\n", pipe_return);
 
 			mw->refocus = false;
 			mw->client_to_focus = NULL;
