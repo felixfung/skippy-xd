@@ -1329,6 +1329,23 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 			char pipe_return[1024];
 			sprintf(pipe_return, "%i", selected);
+			{
+				bool printing = false;
+				foreach_dlist (mw->clientondesktop) {
+					ClientWin *cw = iter->data;
+					if (cw->printing) {
+						if (!printing) {
+							printing = true;
+							sprintf(pipe_return, "%lu", cw->wid_client);
+						}
+						else {
+							char wid[1024];
+							sprintf(wid, " %lu", cw->wid_client);
+							strcat(pipe_return, wid);
+						}
+					}
+				}
+			}
 
 			if (trigger_client != 0)
 				returnToClient(ps, trigger_client, pipe_return);
