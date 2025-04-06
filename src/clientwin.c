@@ -482,8 +482,8 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 			tint = &cw->mainwin->highlightTint;
 		else if (cw->zombie)
 			tint = &cw->mainwin->shadowTint;
-		else if (cw->printing)
-			tint = &cw->mainwin->printTint;
+		else if (cw->special)
+			tint = &cw->mainwin->specialTint;
 
 		if (tint->alpha) {
 #ifdef CFG_XINERAMA
@@ -781,7 +781,7 @@ close_clientwindow(ClientWin* cw, enum cliop op) {
 }
 
 int
-toggleprint_clientwindow(ClientWin* cw, enum cliop op) {
+togglespecial_clientwindow(ClientWin* cw, enum cliop op) {
 	clientwin_action(cw, op);
 	return 0;
 }
@@ -843,8 +843,8 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 				}
 			}
 
-			if (arr_keycodes_includes(mw->keycodes_Print, evk->keycode)) {
-				return toggleprint_clientwindow(mw->client_to_focus, CLIENTOP_PRINT);
+			if (arr_keycodes_includes(mw->keycodes_Special, evk->keycode)) {
+				return togglespecial_clientwindow(mw->client_to_focus, CLIENTOP_SPECIAL);
 			}
 		}
 		else
@@ -873,8 +873,8 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 					}
 				}
 
-				if(ps->o.bindings_miwMouse[button] == CLIENTOP_PRINT) {
-					return toggleprint_clientwindow(cw, ps->o.bindings_miwMouse[button]);
+				if(ps->o.bindings_miwMouse[button] == CLIENTOP_SPECIAL) {
+					return togglespecial_clientwindow(cw, ps->o.bindings_miwMouse[button]);
 				}
 				else {
 					//CLIENTOP_FOCUS, CLIENTOP_PREV, CLIENTOP_NEXT,
@@ -978,8 +978,8 @@ clientwin_action(ClientWin *cw, enum cliop action) {
 		case CLIENTOP_NEXT:
 			focus_miniw_next(ps, cw->mainwin->client_to_focus);
 			break;
-		case CLIENTOP_PRINT:
-			cw->printing = !cw->printing;
+		case CLIENTOP_SPECIAL:
+			cw->special = !cw->special;
 			clientwin_repair(cw);
 			break;
 	}

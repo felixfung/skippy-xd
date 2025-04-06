@@ -52,7 +52,7 @@ struct _clientwin_t {
 	float factor;
 
 	bool focused;
-	bool printing;
+	bool special;
 	bool damaged;
 
 	bool zombie;

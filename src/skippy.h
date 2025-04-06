@@ -107,7 +107,7 @@ enum cliop {
 	CLIENTOP_DESTROY,
 	CLIENTOP_PREV,
 	CLIENTOP_NEXT,
-	CLIENTOP_PRINT,
+	CLIENTOP_SPECIAL,
 };
 
 enum align {
@@ -239,9 +239,9 @@ typedef struct {
 	char *shadow_tint;
 	int shadow_tintOpacity;
 	int shadow_opacity;
-	char *print_tint;
-	int print_tintOpacity;
-	int print_opacity;
+	char *special_tint;
+	int special_tintOpacity;
+	int special_opacity;
 
 	bool panel_show;
 	bool panel_tinting;
@@ -270,7 +270,7 @@ typedef struct {
 	char *wm_class;
 
 	int pivotLockingTime;
-	bool printSelected;
+	bool selectAsSpecial;
 	enum cliop bindings_miwMouse[MAX_MOUSE_BUTTONS];
 	char *bindings_keysUp;
 	char *bindings_keysDown;
@@ -280,7 +280,7 @@ typedef struct {
 	char *bindings_keysNext;
 	char *bindings_keysCancel;
 	char *bindings_keysSelect;
-	char *bindings_keysPrint;
+	char *bindings_keysSpecial;
 	char *bindings_keysIconify;
 	char *bindings_keysShade;
 	char *bindings_keysClose;
@@ -339,9 +339,9 @@ typedef struct {
 	.shadow_tint = NULL, \
 	.shadow_tintOpacity = 0, \
 	.shadow_opacity = 160, \
-	.print_tint = NULL, \
-	.print_tintOpacity = 50, \
-	.print_opacity = 255, \
+	.special_tint = NULL, \
+	.special_tintOpacity = 50, \
+	.special_opacity = 255, \
 \
 	.panel_show = true, \
 	.panel_tinting = true, \
@@ -360,7 +360,7 @@ typedef struct {
 	.tooltip_font = NULL, \
 \
 	.pivotLockingTime = 0, \
-	.printSelected = true, \
+	.selectAsSpecial = true, \
 }
 
 /// @brief X information structure.

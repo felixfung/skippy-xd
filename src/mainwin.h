@@ -43,8 +43,8 @@ struct _mainwin_t {
 	XRenderPictFormat *format;
 	XTransform transform, desktoptransform;
 	
-	XRenderColor normalTint, highlightTint, shadowTint, printTint;
-	Pixmap normalPixmap, highlightPixmap, shadowPixmap, printPixmap;
+	XRenderColor normalTint, highlightTint, shadowTint, specialTint;
+	Pixmap normalPixmap, highlightPixmap, shadowPixmap;
 	Picture normalPicture, highlightPicture, shadowPicture;
 	
 	ClientWin *pressed, *focus;
@@ -58,7 +58,7 @@ struct _mainwin_t {
 	KeySym *keysyms_Next;
 	KeySym *keysyms_Cancel;
 	KeySym *keysyms_Select;
-	KeySym *keysyms_Print;
+	KeySym *keysyms_Special;
 	KeySym *keysyms_Iconify;
 	KeySym *keysyms_Shade;
 	KeySym *keysyms_Close;
@@ -71,7 +71,7 @@ struct _mainwin_t {
 	KeyCode *keycodes_Next;
 	KeyCode *keycodes_Cancel;
 	KeyCode *keycodes_Select;
-	KeyCode *keycodes_Print;
+	KeyCode *keycodes_Special;
 	KeyCode *keycodes_Iconify;
 	KeyCode *keycodes_Shade;
 	KeyCode *keycodes_Close;

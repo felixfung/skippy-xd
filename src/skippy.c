@@ -65,7 +65,7 @@ parse_cliop(session_t *ps, const char *str, enum cliop *dest) {
 		[	CLIENTOP_DESTROY			] = "destroy",
 		[	CLIENTOP_PREV				] = "keysPrev",
 		[	CLIENTOP_NEXT				] = "keysNext",
-		[	CLIENTOP_PRINT				] = "keysPrint",
+		[	CLIENTOP_SPECIAL			] = "keysSpecial",
 	};
 	for (int i = 0; i < sizeof(STRS_CLIENTOP) / sizeof(STRS_CLIENTOP[0]); ++i)
 		if (!strcmp(STRS_CLIENTOP[i], str)) {
@@ -1330,7 +1330,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 			char pipe_return[1024];
 			sprintf(pipe_return, "%i", selected);
 			{
-				bool printing = false;
+				bool special = false;
 				dlist *iter = mw->clientondesktop;
 				if (layout == LAYOUTMODE_PAGING)
 					iter = mw->dminis;
@@ -1339,10 +1339,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 					unsigned long client = cw->wid_client;
 					if (layout == LAYOUTMODE_PAGING)
 						client = cw->slots;
-					if (cw->printing
-					|| (ps->o.printSelected && client == selected)) {
-						if (!printing) {
-							printing = true;
+					if (cw->special
+					|| (ps->o.selectAsSpecial && client == selected)) {
+						if (!special) {
+							special = true;
 							sprintf(pipe_return, "%lu", client);
 						}
 						else {
@@ -1366,7 +1366,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 			// Cleanup
 			foreach_dlist (mw->clientondesktop) {
 				ClientWin *cw = iter->data;
-				cw->printing = false;
+				cw->special = false;
 			}
 			dlist_free(mw->clientondesktop);
 			mw->clientondesktop = 0;
@@ -2458,9 +2458,9 @@ load_config_file(session_t *ps)
 	ps->o.shadow_tint = mstrdup(config_get(config, "shadow", "tint", "#040404"));
     config_get_int_wrap(config, "shadow", "tintOpacity", &ps->o.shadow_tintOpacity, 0, 256);
     config_get_int_wrap(config, "shadow", "opacity", &ps->o.shadow_opacity, 0, 256);
-	ps->o.print_tint = mstrdup(config_get(config, "print", "tint", "#3376BB"));
-    config_get_int_wrap(config, "print", "tintOpacity", &ps->o.print_tintOpacity, 0, 256);
-    config_get_int_wrap(config, "print", "opacity", &ps->o.print_opacity, 0, 256);
+	ps->o.special_tint = mstrdup(config_get(config, "special", "tint", "#3376BB"));
+    config_get_int_wrap(config, "special", "tintOpacity", &ps->o.special_tintOpacity, 0, 256);
+    config_get_int_wrap(config, "special", "opacity", &ps->o.special_opacity, 0, 256);
 
     config_get_bool_wrap(config, "panel", "show", &ps->o.panel_show);
     config_get_bool_wrap(config, "panel", "backgroundTinting", &ps->o.panel_tinting);
@@ -2496,7 +2496,7 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "filter", "persistentFiltering", &ps->o.persistentFiltering);
 
     config_get_int_wrap(config, "bindings", "pivotLockingTime", &ps->o.pivotLockingTime, 0, 20);
-    config_get_bool_wrap(config, "bindings", "printSelected", &ps->o.printSelected);
+    config_get_bool_wrap(config, "bindings", "selectAsSpecial", &ps->o.selectAsSpecial);
 
     // load keybindings settings
     ps->o.bindings_keysUp = mstrdup(config_get(config, "bindings", "keysUp", "Up"));
@@ -2507,7 +2507,7 @@ load_config_file(session_t *ps)
     ps->o.bindings_keysNext = mstrdup(config_get(config, "bindings", "keysNext", "n"));
     ps->o.bindings_keysCancel = mstrdup(config_get(config, "bindings", "keysCancel", "Escape"));
     ps->o.bindings_keysSelect = mstrdup(config_get(config, "bindings", "keysSelect", "Return space"));
-    ps->o.bindings_keysPrint = mstrdup(config_get(config, "bindings", "keysPrint", ""));
+    ps->o.bindings_keysSpecial = mstrdup(config_get(config, "bindings", "keysSpecial", ""));
     ps->o.bindings_keysIconify = mstrdup(config_get(config, "bindings", "keysIconify", "1"));
     ps->o.bindings_keysShade = mstrdup(config_get(config, "bindings", "keysShade", "2"));
     ps->o.bindings_keysClose = mstrdup(config_get(config, "bindings", "keysClose", "3"));
@@ -2521,7 +2521,7 @@ load_config_file(session_t *ps)
     check_keysyms(ps->o.config_path, ": [bindings] keysNext =", ps->o.bindings_keysNext);
     check_keysyms(ps->o.config_path, ": [bindings] keysCancel =", ps->o.bindings_keysCancel);
     check_keysyms(ps->o.config_path, ": [bindings] keysSelect =", ps->o.bindings_keysSelect);
-    check_keysyms(ps->o.config_path, ": [bindings] keysPrint =", ps->o.bindings_keysPrint);
+    check_keysyms(ps->o.config_path, ": [bindings] keysSpecial =", ps->o.bindings_keysSpecial);
     check_keysyms(ps->o.config_path, ": [bindings] keysIconify =", ps->o.bindings_keysIconify);
     check_keysyms(ps->o.config_path, ": [bindings] keysShade =", ps->o.bindings_keysShade);
     check_keysyms(ps->o.config_path, ": [bindings] keysClose =", ps->o.bindings_keysClose);
