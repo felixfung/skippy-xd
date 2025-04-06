@@ -45,7 +45,7 @@ struct _mainwin_t {
 	
 	XRenderColor normalTint, highlightTint, shadowTint, printTint;
 	Pixmap normalPixmap, highlightPixmap, shadowPixmap, printPixmap;
-	Picture normalPicture, highlightPicture, shadowPicture, printPictur;
+	Picture normalPicture, highlightPicture, shadowPicture;
 	
 	ClientWin *pressed, *focus;
 	dlist *clientondesktop, *focuslist, *desktopwins, *dminis, *panels;
