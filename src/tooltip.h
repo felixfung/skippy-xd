@@ -28,7 +28,7 @@ struct _Tooltip {
 	Window window;
 	XftFont *font;
 	XftDraw *draw;
-	XftColor color, background, border, shadow;
+	XftColor color, background, backgroundHighlight, border, shadow;
 	XGlyphInfo extents;
 	int font_height;
 	
@@ -42,7 +42,7 @@ void tooltip_destroy(Tooltip *);
 void tooltip_map(Tooltip *tt, ClientWin *cw,
 		FcChar8 *text, int len);
 void tooltip_unmap(Tooltip *);
-void tooltip_handle(Tooltip *);
+void tooltip_handle(Tooltip *, bool);
 void tooltip_move(Tooltip *tt, ClientWin *cw);
 
 #endif /* SKIPPY_TOOLTIP_H */

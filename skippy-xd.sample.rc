@@ -135,6 +135,7 @@ offsetY = -5
 width = 0.8
 border = #0e0e0e
 background = #202020
+backgroundHighlight = #666666
 opacity = 128
 text = white
 textShadow = black

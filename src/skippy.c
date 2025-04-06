@@ -1140,7 +1140,7 @@ desktopwin_map(ClientWin *cw)
 
 	if (ps->o.tooltip_show) {
 		clientwin_tooltip(cw);
-		tooltip_handle(cw->tooltip);
+		tooltip_handle(cw->tooltip, cw->focused);
 	}
 
 	XMapWindow(ps->dpy, cw->mini.window);
@@ -2435,6 +2435,7 @@ load_config_file(session_t *ps)
 		ps->o.updatetooltip = false;
 		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "border", "#0e0e0e", &ps->o.tooltip_border);
 		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "background", "#202020", &ps->o.tooltip_background);
+		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "backgroundHighlight", "#666666", &ps->o.tooltip_backgroundHighlight);
 		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "text", "white", &ps->o.tooltip_text);
 		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "textShadow", "black", &ps->o.tooltip_textShadow);
 		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "font", "fixed-11:weight=bold", &ps->o.tooltip_font);

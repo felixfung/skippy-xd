@@ -101,9 +101,17 @@ tooltip_create(MainWin *mw) {
 		tooltip_destroy(tt);
 		return 0;
 	}
-	
+
 	tmp = ps->o.tooltip_background;
 	if(! XftColorAllocName(ps->dpy, mw->visual, mw->colormap, tmp, &tt->background))
+	{
+		printfef(false, "(): WARNING: Invalid color '%s'.\n", tmp);
+		tooltip_destroy(tt);
+		return 0;
+	}
+
+	tmp = ps->o.tooltip_backgroundHighlight;
+	if(! XftColorAllocName(ps->dpy, mw->visual, mw->colormap, tmp, &tt->backgroundHighlight))
 	{
 		printfef(false, "(): WARNING: Invalid color '%s'.\n", tmp);
 		tooltip_destroy(tt);
@@ -233,7 +241,7 @@ tooltip_unmap(Tooltip *tt)
 }
 
 void
-tooltip_handle(Tooltip *tt)
+tooltip_handle(Tooltip *tt, bool focused)
 {
 	if (!tt || !tt->text)
 		return;
@@ -242,8 +250,18 @@ tooltip_handle(Tooltip *tt)
 	XftDrawRect(tt->draw, &tt->border, 0, 1, 1, tt->height - 2);
 	XftDrawRect(tt->draw, &tt->border, 0, tt->height - 1, tt->width, 1);
 	XftDrawRect(tt->draw, &tt->border, tt->width - 1, 1, 1, tt->height - 2);
-	XftDrawRect(tt->draw, &tt->background, 1, 1, tt->width - 2, tt->height - 2);
+
+	if (focused)
+		XftDrawRect(tt->draw, &tt->backgroundHighlight, 1, 1, tt->width - 2, tt->height - 2);
+	else
+		XftDrawRect(tt->draw, &tt->background, 1, 1, tt->width - 2, tt->height - 2);
+
 	if(tt->shadow.pixel)
-		XftDrawStringUtf8(tt->draw, &tt->shadow, tt->font, 6, 3 + tt->extents.y + (tt->font_height - tt->extents.y) / 2, tt->text, tt->text_len);
-	XftDrawStringUtf8(tt->draw, &tt->color, tt->font, 4, 1 + tt->extents.y + (tt->font_height - tt->extents.y) / 2, tt->text, tt->text_len);
+		XftDrawStringUtf8(tt->draw, &tt->shadow, tt->font,
+				6, 3 + tt->extents.y + (tt->font_height - tt->extents.y) / 2,
+				tt->text, tt->text_len);
+
+	XftDrawStringUtf8(tt->draw, &tt->color, tt->font,
+			4, 1 + tt->extents.y + (tt->font_height - tt->extents.y) / 2,
+			tt->text, tt->text_len);
 }
