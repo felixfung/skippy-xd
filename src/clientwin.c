@@ -861,16 +861,19 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 		const unsigned button = ev->xbutton.button;
 		if (cw->mainwin->pressed_mouse) {
 			if (button < MAX_MOUSE_BUTTONS) {
-				if (ps->o.bindings_miwMouse[button] == CLIENTOP_DESTROY
-				 || ps->o.bindings_miwMouse[button] == CLIENTOP_CLOSE_EWMH
-				 || ps->o.bindings_miwMouse[button] == CLIENTOP_CLOSE_ICCCM)
-					return close_clientwindow(cw, ps->o.bindings_miwMouse[button]);
-				else if(ps->o.bindings_miwMouse[button] == CLIENTOP_ICONIFY
-					 || ps->o.bindings_miwMouse[button] == CLIENTOP_SHADE_EWMH) {
-					shadow_clientwindow(cw, ps->o.bindings_miwMouse[button]);
-					return 0;
+				if (mw->client_to_focus->mode != CLIDISP_DESKTOP) {
+					if (ps->o.bindings_miwMouse[button] == CLIENTOP_DESTROY
+					 || ps->o.bindings_miwMouse[button] == CLIENTOP_CLOSE_EWMH
+					 || ps->o.bindings_miwMouse[button] == CLIENTOP_CLOSE_ICCCM)
+						return close_clientwindow(cw, ps->o.bindings_miwMouse[button]);
+					else if(ps->o.bindings_miwMouse[button] == CLIENTOP_ICONIFY
+						 || ps->o.bindings_miwMouse[button] == CLIENTOP_SHADE_EWMH) {
+						shadow_clientwindow(cw, ps->o.bindings_miwMouse[button]);
+						return 0;
+					}
 				}
-				else if(ps->o.bindings_miwMouse[button] == CLIENTOP_PRINT) {
+
+				if(ps->o.bindings_miwMouse[button] == CLIENTOP_PRINT) {
 					return toggleprint_clientwindow(cw, ps->o.bindings_miwMouse[button]);
 				}
 				else {
