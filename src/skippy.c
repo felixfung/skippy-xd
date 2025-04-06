@@ -25,6 +25,9 @@
 #include <limits.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <libgen.h>
+#include <dirent.h>
+#include <regex.h>
 
 bool debuglog = false;
 
@@ -426,6 +429,47 @@ read_pipe(session_t *ps, struct pollfd *r_fd, char *piped_input) {
 	}
 
 	return read_ret;
+}
+
+static void
+flush_clients(session_t *ps) {
+	// most if not all function calls in this function is POSIX only,
+	// which is fair enough
+
+	char *fullname = strdup(ps->o.pipePath2);
+	char *dirpath = dirname(fullname);
+	printfdf(false, "(): looking for client pipes in %s", dirpath);
+
+	DIR *dirp = opendir(dirpath);
+	if (dirp == NULL) {
+		printfef(false, "Unable to read %s", dirpath);
+		return;
+	}
+
+	regex_t regex;
+	regcomp(&regex, ps->o.pipePath2, REG_EXTENDED);
+
+	struct dirent* dr;
+	while ((dr = readdir(dirp)))
+	{
+		if (dr->d_type == DT_FIFO) {
+			char pipePath[strlen(dirpath) + 1 + strlen(dr->d_name) + 1];
+			sprintf(pipePath, "%s/%s", dirpath, dr->d_name);
+			if (regexec(&regex, pipePath, 0, NULL, 0) == 0) {
+				printfdf(false, "(): flushing client pipe %s", pipePath);
+				int fd = open(pipePath, O_WRONLY | O_NONBLOCK);
+				int pipe_return = -1;
+				int bytes_written = write(fd, &pipe_return, sizeof(int));
+				if (bytes_written < sizeof(int)) {
+					printfef(true, "(): cannot flush client pipe %s", pipePath);
+				}
+				close(fd);
+			}
+		}
+	}
+	closedir(dirp);
+	regfree(&regex);
+	free(fullname);
 }
 
 static void
@@ -2617,6 +2661,8 @@ int main(int argc, char *argv[]) {
 				continue;
 			printfdf(false, "(): Finished flushing pipe \"%s\".", pipePath);
 		}
+
+		flush_clients(ps);
 
 		daemon_count_clients(mw);
 
