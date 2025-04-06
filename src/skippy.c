@@ -382,12 +382,12 @@ DaemonToClientPipeName(session_t *ps, pid_t pid) {
 	return daemon2client_pipe;
 }
 
-static void returnToClient(session_t *ps, pid_t pid, int pipe_return)
+static void returnToClient(session_t *ps, pid_t pid, char *pipe_return)
 {
 	char *daemon2clientpipe = DaemonToClientPipeName(ps, pid);
 	int fd = open(daemon2clientpipe, O_WRONLY | O_NONBLOCK);
-	int bytes_written = write(fd, &pipe_return, sizeof(int));
-	if (bytes_written < sizeof(int)) {
+	int bytes_written = write(fd, pipe_return, strlen(pipe_return));
+	if (bytes_written < strlen(pipe_return)) {
 		printfef(true, "(): daemon-to-client packet incomplete!");
 	}
 	close(fd);
@@ -1282,7 +1282,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 			// Focus the client window only after the main window get unmapped and
 			// keyboard gets ungrabbed.
 
-			int pipe_return = -1;
+			int selected = -1;
 			if (mw->client_to_focus && layout != LAYOUTMODE_PAGING) {
 				if (!mw->refocus) {
 					dlist *iter = dlist_find(ps->mainwin->clients,
@@ -1290,7 +1290,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 							(void *) mw->client_to_focus);
 					if (iter) {
 						childwin_focus(mw->client_to_focus);
-						pipe_return = mw->client_to_focus->wid_client;
+						selected = mw->client_to_focus->wid_client;
 					}
 				}
 				else {
@@ -1299,7 +1299,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 							(void *) mw->client_to_focus_on_cancel);
 					if (iter) {
 						childwin_focus(mw->client_to_focus_on_cancel);
-						pipe_return = mw->client_to_focus_on_cancel->wid_client;
+						selected = mw->client_to_focus_on_cancel->wid_client;
 					}
 				}
 			}
@@ -1309,7 +1309,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 						mw->client_to_focus->slots
 						!= wm_get_current_desktop(ps)) {
 					wm_set_desktop_ewmh(ps, mw->client_to_focus->slots);
-					pipe_return = mw->client_to_focus->slots;
+					selected = mw->client_to_focus->slots;
 				}
 				else {
 					if (mw->client_to_focus_on_cancel){
@@ -1323,14 +1323,17 @@ mainloop(session_t *ps, bool activate_on_start) {
 								% wm_get_desktops(mw->ps));
 						wm_set_desktop_ewmh(ps, wm_get_current_desktop(ps));
 					}
-					pipe_return = wm_get_current_desktop(ps);
+					selected = wm_get_current_desktop(ps);
 				}
 			}
+
+			char pipe_return[1024];
+			sprintf(pipe_return, "%i", selected);
 
 			if (trigger_client != 0)
 				returnToClient(ps, trigger_client, pipe_return);
 			else
-				printf("%d\n", pipe_return);
+				printf("%s\n", pipe_return);
 
 			mw->refocus = false;
 			mw->client_to_focus = NULL;
@@ -1708,7 +1711,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					printfdf(false, "(): Exit command received, killing daemon...");
 					unlink(ps->o.pipePath);
 
-					returnToClient(ps, pid, -1);
+					returnToClient(ps, pid, "-1");
 
 					return;
 				}
@@ -1801,7 +1804,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 				// if the client did not trigger activation, return to it immediately
 				if (mw) {
-					returnToClient(ps, pid, -1);
+					returnToClient(ps, pid, "-1");
 				}
 
 				// free receive_string_in_daemon_via_fifo() paramters
@@ -2610,9 +2613,9 @@ int main(int argc, char *argv[]) {
 			activate_via_fifo(ps, pipePath);
 
 			poll(&r_fd, 1, -1);
-			int buffer;
+			char buffer[1024];
 			int read_ret = 0;
-			read_ret = read(ps->fd_pipe2, &buffer, sizeof(int));
+			read_ret = read(ps->fd_pipe2, &buffer, 1024);
 			close(ps->fd_pipe2);
 			unlink(daemon2client_pipe);
 			free(daemon2client_pipe);
@@ -2621,7 +2624,7 @@ int main(int argc, char *argv[]) {
 				printfef(false,"(): pipe %i leak!", getpid());
 			}
 			else {
-				printf("%d\n", buffer);
+				printf("%s\n", buffer);
 			}
 
 			goto main_end;
