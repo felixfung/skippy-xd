@@ -1333,7 +1333,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 				bool printing = false;
 				foreach_dlist (mw->clientondesktop) {
 					ClientWin *cw = iter->data;
-					if (cw->printing) {
+					if (cw->printing
+					|| (ps->o.printSelected && cw->wid_client == selected)) {
 						if (!printing) {
 							printing = true;
 							sprintf(pipe_return, "%lu", cw->wid_client);
@@ -2489,6 +2490,7 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "filter", "persistentFiltering", &ps->o.persistentFiltering);
 
     config_get_int_wrap(config, "bindings", "pivotLockingTime", &ps->o.pivotLockingTime, 0, 20);
+    config_get_bool_wrap(config, "bindings", "printSelected", &ps->o.printSelected);
 
     // load keybindings settings
     ps->o.bindings_keysUp = mstrdup(config_get(config, "bindings", "keysUp", "Up"));

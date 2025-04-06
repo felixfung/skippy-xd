@@ -270,6 +270,7 @@ typedef struct {
 	char *wm_class;
 
 	int pivotLockingTime;
+	bool printSelected;
 	enum cliop bindings_miwMouse[MAX_MOUSE_BUTTONS];
 	char *bindings_keysUp;
 	char *bindings_keysDown;
@@ -359,6 +360,7 @@ typedef struct {
 	.tooltip_font = NULL, \
 \
 	.pivotLockingTime = 0, \
+	.printSelected = true, \
 }
 
 /// @brief X information structure.

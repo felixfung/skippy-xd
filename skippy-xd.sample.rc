@@ -180,6 +180,10 @@ persistentFiltering = false
 # Set to 0 to disable pivot locking
 pivotLockingTime = 0
 
+# Whether to return selected window
+# Even if it is not in the print list
+printSelected = true
+
 # key* = is a list of valid XWindows KeySym identifiers, case
 # sensitive and <space> seperated list. Run the program 'xev' to find them.
 
