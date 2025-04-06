@@ -478,7 +478,7 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 	if (cw->paneltype == WINTYPE_WINDOW)
 	{
 		XRenderColor *tint = &cw->mainwin->normalTint;
-		if (cw->focused)
+		if (cw->focused || cw->printing)
 			tint = &cw->mainwin->highlightTint;
 		else if (cw->zombie)
 			tint = &cw->mainwin->shadowTint;
@@ -779,6 +779,12 @@ close_clientwindow(ClientWin* cw, enum cliop op) {
 }
 
 int
+toggleprint_clientwindow(ClientWin* cw, enum cliop op) {
+	clientwin_action(cw, op);
+	return 0;
+}
+
+int
 clientwin_handle(ClientWin *cw, XEvent *ev) {
 	if (! cw)
 		return 1;
@@ -833,6 +839,9 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 			else if (arr_keycodes_includes(mw->keycodes_Close, evk->keycode)) {
 				return close_clientwindow(cw, CLIENTOP_CLOSE_EWMH);
 			}
+			else if (arr_keycodes_includes(mw->keycodes_Print, evk->keycode)) {
+				return toggleprint_clientwindow(cw, CLIENTOP_PRINT);
+			}
 		}
 		else
 			printfdf(false, "(): KeyRelease %u ignored.", evk->keycode);
@@ -856,6 +865,9 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 					 || ps->o.bindings_miwMouse[button] == CLIENTOP_SHADE_EWMH) {
 					shadow_clientwindow(cw, ps->o.bindings_miwMouse[button]);
 					return 0;
+				}
+				else if(ps->o.bindings_miwMouse[button] == CLIENTOP_PRINT) {
+					return toggleprint_clientwindow(cw, ps->o.bindings_miwMouse[button]);
 				}
 				else {
 					//CLIENTOP_FOCUS, CLIENTOP_PREV, CLIENTOP_NEXT,
@@ -958,6 +970,10 @@ clientwin_action(ClientWin *cw, enum cliop action) {
 			break;
 		case CLIENTOP_NEXT:
 			focus_miniw_next(ps, cw->mainwin->client_to_focus);
+			break;
+		case CLIENTOP_PRINT:
+			cw->printing = !cw->printing;
+			clientwin_repair(cw);
 			break;
 	}
 
