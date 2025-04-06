@@ -1337,6 +1337,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 			pending_damage = false;
 
 			// Cleanup
+			foreach_dlist (mw->clientondesktop) {
+				ClientWin *cw = iter->data;
+				cw->printing = false;
+			}
 			dlist_free(mw->clientondesktop);
 			mw->clientondesktop = 0;
 			dlist_free(mw->focuslist);
