@@ -1138,13 +1138,13 @@ desktopwin_map(ClientWin *cw)
 	
 	clientwin_render(cw);
 
+	XMapWindow(ps->dpy, cw->mini.window);
+	XRaiseWindow(ps->dpy, cw->mini.window);
+
 	if (ps->o.tooltip_show) {
 		clientwin_tooltip(cw);
 		tooltip_handle(cw->tooltip, cw->focused);
 	}
-
-	XMapWindow(ps->dpy, cw->mini.window);
-	XRaiseWindow(ps->dpy, cw->mini.window);
 }
 
 static bool
