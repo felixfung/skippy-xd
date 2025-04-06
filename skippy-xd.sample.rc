@@ -123,6 +123,11 @@ tint = #040404
 tintOpacity = 0
 opacity = 160
 
+[print]
+tint = #3376BB
+tintOpacity = 50
+opacity = 255
+
 [panel]
 show = true
 backgroundTinting = true

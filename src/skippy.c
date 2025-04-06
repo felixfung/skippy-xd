@@ -2451,6 +2451,9 @@ load_config_file(session_t *ps)
 	ps->o.shadow_tint = mstrdup(config_get(config, "shadow", "tint", "#040404"));
     config_get_int_wrap(config, "shadow", "tintOpacity", &ps->o.shadow_tintOpacity, 0, 256);
     config_get_int_wrap(config, "shadow", "opacity", &ps->o.shadow_opacity, 0, 256);
+	ps->o.print_tint = mstrdup(config_get(config, "print", "tint", "#3376BB"));
+    config_get_int_wrap(config, "print", "tintOpacity", &ps->o.print_tintOpacity, 0, 256);
+    config_get_int_wrap(config, "print", "opacity", &ps->o.print_opacity, 0, 256);
 
     config_get_bool_wrap(config, "panel", "show", &ps->o.panel_show);
     config_get_bool_wrap(config, "panel", "backgroundTinting", &ps->o.panel_tinting);

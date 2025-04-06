@@ -43,9 +43,9 @@ struct _mainwin_t {
 	XRenderPictFormat *format;
 	XTransform transform, desktoptransform;
 	
-	XRenderColor normalTint, highlightTint, shadowTint;
-	Pixmap normalPixmap, highlightPixmap, shadowPixmap;
-	Picture normalPicture, highlightPicture, shadowPicture;
+	XRenderColor normalTint, highlightTint, shadowTint, printTint;
+	Pixmap normalPixmap, highlightPixmap, shadowPixmap, printPixmap;
+	Picture normalPicture, highlightPicture, shadowPicture, printPictur;
 	
 	ClientWin *pressed, *focus;
 	dlist *clientondesktop, *focuslist, *desktopwins, *dminis, *panels;

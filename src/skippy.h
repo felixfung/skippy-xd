@@ -239,6 +239,9 @@ typedef struct {
 	char *shadow_tint;
 	int shadow_tintOpacity;
 	int shadow_opacity;
+	char *print_tint;
+	int print_tintOpacity;
+	int print_opacity;
 
 	bool panel_show;
 	bool panel_tinting;
@@ -335,6 +338,9 @@ typedef struct {
 	.shadow_tint = NULL, \
 	.shadow_tintOpacity = 0, \
 	.shadow_opacity = 160, \
+	.print_tint = NULL, \
+	.print_tintOpacity = 50, \
+	.print_opacity = 255, \
 \
 	.panel_show = true, \
 	.panel_tinting = true, \

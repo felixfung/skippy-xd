@@ -227,6 +227,19 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	}
 	mw->shadowTint.alpha = alphaconv(ps->o.shadow_tintOpacity);
 
+	if(! XParseColor(ps->dpy, mw->colormap, ps->o.print_tint, &exact_color))
+	{
+		printfef(true, "(): Couldn't look up color '%s', reverting to #3376BB", ps->o.print_tint);
+		mw->printTint.red = 0x33; mw->printTint.green = 0x76; mw->printTint.blue = 0xBB;
+	}
+	else
+	{
+		mw->printTint.red = exact_color.red;
+		mw->printTint.green = exact_color.green;
+		mw->printTint.blue = exact_color.blue;
+	}
+	mw->printTint.alpha = alphaconv(ps->o.print_tintOpacity);
+
 	mw->distance = ps->o.distance;
 
 	if (ps->o.updatetooltip) {
