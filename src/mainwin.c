@@ -138,6 +138,7 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keys_str_syms(ps->o.bindings_keysNext, &mw->keysyms_Next);
 	keys_str_syms(ps->o.bindings_keysCancel, &mw->keysyms_Cancel);
 	keys_str_syms(ps->o.bindings_keysSelect, &mw->keysyms_Select);
+	keys_str_syms(ps->o.bindings_keysSpecial, &mw->keysyms_Special);
 	keys_str_syms(ps->o.bindings_keysIconify, &mw->keysyms_Iconify);
 	keys_str_syms(ps->o.bindings_keysShade, &mw->keysyms_Shade);
 	keys_str_syms(ps->o.bindings_keysClose, &mw->keysyms_Close);
@@ -151,6 +152,7 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	keysyms_arr_keycodes(dpy, mw->keysyms_Next, &mw->keycodes_Next);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Cancel, &mw->keycodes_Cancel);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Select, &mw->keycodes_Select);
+	keysyms_arr_keycodes(dpy, mw->keysyms_Special, &mw->keycodes_Special);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Iconify, &mw->keycodes_Iconify);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Shade, &mw->keycodes_Shade);
 	keysyms_arr_keycodes(dpy, mw->keysyms_Close, &mw->keycodes_Close);
@@ -224,6 +226,19 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 		mw->shadowTint.blue = exact_color.blue;
 	}
 	mw->shadowTint.alpha = alphaconv(ps->o.shadow_tintOpacity);
+
+	if(! XParseColor(ps->dpy, mw->colormap, ps->o.special_tint, &exact_color))
+	{
+		printfef(true, "(): Couldn't look up color '%s', reverting to #3376BB", ps->o.special_tint);
+		mw->specialTint.red = 0x33; mw->specialTint.green = 0x76; mw->specialTint.blue = 0xBB;
+	}
+	else
+	{
+		mw->specialTint.red = exact_color.red;
+		mw->specialTint.green = exact_color.green;
+		mw->specialTint.blue = exact_color.blue;
+	}
+	mw->specialTint.alpha = alphaconv(ps->o.special_tintOpacity);
 
 	mw->distance = ps->o.distance;
 

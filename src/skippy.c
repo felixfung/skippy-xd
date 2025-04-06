@@ -65,6 +65,7 @@ parse_cliop(session_t *ps, const char *str, enum cliop *dest) {
 		[	CLIENTOP_DESTROY			] = "destroy",
 		[	CLIENTOP_PREV				] = "keysPrev",
 		[	CLIENTOP_NEXT				] = "keysNext",
+		[	CLIENTOP_SPECIAL			] = "keysSpecial",
 	};
 	for (int i = 0; i < sizeof(STRS_CLIENTOP) / sizeof(STRS_CLIENTOP[0]); ++i)
 		if (!strcmp(STRS_CLIENTOP[i], str)) {
@@ -381,12 +382,12 @@ DaemonToClientPipeName(session_t *ps, pid_t pid) {
 	return daemon2client_pipe;
 }
 
-static void returnToClient(session_t *ps, pid_t pid, int pipe_return)
+static void returnToClient(session_t *ps, pid_t pid, char *pipe_return)
 {
 	char *daemon2clientpipe = DaemonToClientPipeName(ps, pid);
 	int fd = open(daemon2clientpipe, O_WRONLY | O_NONBLOCK);
-	int bytes_written = write(fd, &pipe_return, sizeof(int));
-	if (bytes_written < sizeof(int)) {
+	int bytes_written = write(fd, pipe_return, strlen(pipe_return));
+	if (bytes_written < strlen(pipe_return)) {
 		printfef(true, "(): daemon-to-client packet incomplete!");
 	}
 	close(fd);
@@ -1281,7 +1282,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 			// Focus the client window only after the main window get unmapped and
 			// keyboard gets ungrabbed.
 
-			int pipe_return = -1;
+			int selected = -1;
 			if (mw->client_to_focus && layout != LAYOUTMODE_PAGING) {
 				if (!mw->refocus) {
 					dlist *iter = dlist_find(ps->mainwin->clients,
@@ -1289,7 +1290,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 							(void *) mw->client_to_focus);
 					if (iter) {
 						childwin_focus(mw->client_to_focus);
-						pipe_return = mw->client_to_focus->wid_client;
+						selected = mw->client_to_focus->wid_client;
 					}
 				}
 				else {
@@ -1298,7 +1299,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 							(void *) mw->client_to_focus_on_cancel);
 					if (iter) {
 						childwin_focus(mw->client_to_focus_on_cancel);
-						pipe_return = mw->client_to_focus_on_cancel->wid_client;
+						selected = mw->client_to_focus_on_cancel->wid_client;
 					}
 				}
 			}
@@ -1308,7 +1309,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 						mw->client_to_focus->slots
 						!= wm_get_current_desktop(ps)) {
 					wm_set_desktop_ewmh(ps, mw->client_to_focus->slots);
-					pipe_return = mw->client_to_focus->slots;
+					selected = mw->client_to_focus->slots;
 				}
 				else {
 					if (mw->client_to_focus_on_cancel){
@@ -1322,20 +1323,51 @@ mainloop(session_t *ps, bool activate_on_start) {
 								% wm_get_desktops(mw->ps));
 						wm_set_desktop_ewmh(ps, wm_get_current_desktop(ps));
 					}
-					pipe_return = wm_get_current_desktop(ps);
+					selected = wm_get_current_desktop(ps);
+				}
+			}
+
+			char pipe_return[1024];
+			sprintf(pipe_return, "%i", selected);
+			{
+				bool special = false;
+				dlist *iter = mw->clientondesktop;
+				if (layout == LAYOUTMODE_PAGING)
+					iter = mw->dminis;
+				for (; iter; iter = iter->next) {
+					ClientWin *cw = iter->data;
+					unsigned long client = cw->wid_client;
+					if (layout == LAYOUTMODE_PAGING)
+						client = cw->slots;
+					if (cw->special
+					|| (ps->o.selectAsSpecial && client == selected)) {
+						if (!special) {
+							special = true;
+							sprintf(pipe_return, "%lu", client);
+						}
+						else {
+							char wid[1024];
+							sprintf(wid, " %lu", client);
+							strcat(pipe_return, wid);
+						}
+					}
 				}
 			}
 
 			if (trigger_client != 0)
 				returnToClient(ps, trigger_client, pipe_return);
 			else
-				printf("%d\n", pipe_return);
+				printf("%s\n", pipe_return);
 
 			mw->refocus = false;
 			mw->client_to_focus = NULL;
 			pending_damage = false;
 
 			// Cleanup
+			foreach_dlist (mw->clientondesktop) {
+				ClientWin *cw = iter->data;
+				cw->special = false;
+			}
 			dlist_free(mw->clientondesktop);
 			mw->clientondesktop = 0;
 			dlist_free(mw->focuslist);
@@ -1703,7 +1735,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					printfdf(false, "(): Exit command received, killing daemon...");
 					unlink(ps->o.pipePath);
 
-					returnToClient(ps, pid, -1);
+					returnToClient(ps, pid, "-1");
 
 					return;
 				}
@@ -1796,7 +1828,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 				// if the client did not trigger activation, return to it immediately
 				if (mw) {
-					returnToClient(ps, pid, -1);
+					returnToClient(ps, pid, "-1");
 				}
 
 				// free receive_string_in_daemon_via_fifo() paramters
@@ -2426,6 +2458,9 @@ load_config_file(session_t *ps)
 	ps->o.shadow_tint = mstrdup(config_get(config, "shadow", "tint", "#040404"));
     config_get_int_wrap(config, "shadow", "tintOpacity", &ps->o.shadow_tintOpacity, 0, 256);
     config_get_int_wrap(config, "shadow", "opacity", &ps->o.shadow_opacity, 0, 256);
+	ps->o.special_tint = mstrdup(config_get(config, "special", "tint", "#3376BB"));
+    config_get_int_wrap(config, "special", "tintOpacity", &ps->o.special_tintOpacity, 0, 256);
+    config_get_int_wrap(config, "special", "opacity", &ps->o.special_opacity, 0, 256);
 
     config_get_bool_wrap(config, "panel", "show", &ps->o.panel_show);
     config_get_bool_wrap(config, "panel", "backgroundTinting", &ps->o.panel_tinting);
@@ -2461,6 +2496,7 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "filter", "persistentFiltering", &ps->o.persistentFiltering);
 
     config_get_int_wrap(config, "bindings", "pivotLockingTime", &ps->o.pivotLockingTime, 0, 20);
+    config_get_bool_wrap(config, "bindings", "selectAsSpecial", &ps->o.selectAsSpecial);
 
     // load keybindings settings
     ps->o.bindings_keysUp = mstrdup(config_get(config, "bindings", "keysUp", "Up"));
@@ -2471,6 +2507,7 @@ load_config_file(session_t *ps)
     ps->o.bindings_keysNext = mstrdup(config_get(config, "bindings", "keysNext", "n"));
     ps->o.bindings_keysCancel = mstrdup(config_get(config, "bindings", "keysCancel", "Escape"));
     ps->o.bindings_keysSelect = mstrdup(config_get(config, "bindings", "keysSelect", "Return space"));
+    ps->o.bindings_keysSpecial = mstrdup(config_get(config, "bindings", "keysSpecial", ""));
     ps->o.bindings_keysIconify = mstrdup(config_get(config, "bindings", "keysIconify", "1"));
     ps->o.bindings_keysShade = mstrdup(config_get(config, "bindings", "keysShade", "2"));
     ps->o.bindings_keysClose = mstrdup(config_get(config, "bindings", "keysClose", "3"));
@@ -2484,6 +2521,7 @@ load_config_file(session_t *ps)
     check_keysyms(ps->o.config_path, ": [bindings] keysNext =", ps->o.bindings_keysNext);
     check_keysyms(ps->o.config_path, ": [bindings] keysCancel =", ps->o.bindings_keysCancel);
     check_keysyms(ps->o.config_path, ": [bindings] keysSelect =", ps->o.bindings_keysSelect);
+    check_keysyms(ps->o.config_path, ": [bindings] keysSpecial =", ps->o.bindings_keysSpecial);
     check_keysyms(ps->o.config_path, ": [bindings] keysIconify =", ps->o.bindings_keysIconify);
     check_keysyms(ps->o.config_path, ": [bindings] keysShade =", ps->o.bindings_keysShade);
     check_keysyms(ps->o.config_path, ": [bindings] keysClose =", ps->o.bindings_keysClose);
@@ -2603,9 +2641,9 @@ int main(int argc, char *argv[]) {
 			activate_via_fifo(ps, pipePath);
 
 			poll(&r_fd, 1, -1);
-			int buffer;
+			char buffer[1024];
 			int read_ret = 0;
-			read_ret = read(ps->fd_pipe2, &buffer, sizeof(int));
+			read_ret = read(ps->fd_pipe2, &buffer, 1024);
 			close(ps->fd_pipe2);
 			unlink(daemon2client_pipe);
 			free(daemon2client_pipe);
@@ -2614,7 +2652,7 @@ int main(int argc, char *argv[]) {
 				printfef(false,"(): pipe %i leak!", getpid());
 			}
 			else {
-				printf("%d\n", buffer);
+				printf("%s\n", buffer);
 			}
 
 			goto main_end;
