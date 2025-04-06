@@ -513,6 +513,10 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 #endif /* CFG_XINERAMA */
 		}
 
+		if (ps->o.tooltip_show && ps->o.mode != PROGMODE_PAGING) {
+			tooltip_handle(cw->tooltip, cw->focused);
+		}
+
 		clientwin_round_corners(cw);
 	}
 
@@ -651,7 +655,7 @@ clientwin_map(ClientWin *cw) {
 	if (ps->o.tooltip_show && ps->o.mode != PROGMODE_PAGING
 			&& cw->paneltype == WINTYPE_WINDOW) {
 		clientwin_tooltip(cw);
-		tooltip_handle(cw->tooltip);
+		tooltip_handle(cw->tooltip, cw->focused);
 	}
 }
 
