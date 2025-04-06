@@ -208,7 +208,7 @@ keysClose = 3
 # "destroy": forcefully destroy window
 # "keysPrev": focus on previous window
 # "keysNext": focus on next window
-# "print": toggle window for printing
+# "keysPrint": toggle window for printing
 
 miwMouse1 = focus
 miwMouse2 = close-ewmh
