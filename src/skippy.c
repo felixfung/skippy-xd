@@ -477,7 +477,8 @@ receive_string_in_daemon_via_fifo(session_t *ps, struct pollfd *r_fd,
 	char cmdlen = 0;
 	if (ret_read < 1 || (cmdlen = buffer[10]+2+10) > ret_read) {
 		printfef(true, "(): stubbed command received");
-		exit(1);
+		*pcmdlen = 0;
+		return NULL;
 	}
 
 	*pcmdlen = ret_read;
@@ -1766,7 +1767,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 				pipestr2 += increment;
 				cmdlen -= increment;
 			}
-			free(pipestr);
+			if (pipestr)
+				free(pipestr);
 		}
 
 		if (POLLHUP & r_fd[1].revents) {
