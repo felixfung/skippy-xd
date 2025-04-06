@@ -1331,17 +1331,23 @@ mainloop(session_t *ps, bool activate_on_start) {
 			sprintf(pipe_return, "%i", selected);
 			{
 				bool printing = false;
-				foreach_dlist (mw->clientondesktop) {
+				dlist *iter = mw->clientondesktop;
+				if (layout == LAYOUTMODE_PAGING)
+					iter = mw->dminis;
+				for (; iter; iter = iter->next) {
 					ClientWin *cw = iter->data;
+					unsigned long client = cw->wid_client;
+					if (layout == LAYOUTMODE_PAGING)
+						client = cw->slots;
 					if (cw->printing
-					|| (ps->o.printSelected && cw->wid_client == selected)) {
+					|| (ps->o.printSelected && client == selected)) {
 						if (!printing) {
 							printing = true;
-							sprintf(pipe_return, "%lu", cw->wid_client);
+							sprintf(pipe_return, "%lu", client);
 						}
 						else {
 							char wid[1024];
-							sprintf(wid, " %lu", cw->wid_client);
+							sprintf(wid, " %lu", client);
 							strcat(pipe_return, wid);
 						}
 					}

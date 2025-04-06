@@ -830,19 +830,21 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 		printfdf(false, "(): else if (ev->type == KeyRelease) {");
 		printfdf(false, "(): keycode: %d:", evk->keycode);
 
-		if (cw->mainwin->pressed_key
-				&& mw->client_to_focus->mode != CLIDISP_DESKTOP) {
-			if (arr_keycodes_includes(mw->keycodes_Iconify, evk->keycode)) {
-				shadow_clientwindow(cw, CLIENTOP_ICONIFY);
+		if (cw->mainwin->pressed_key) {
+			if (mw->client_to_focus->mode != CLIDISP_DESKTOP) {
+				if (arr_keycodes_includes(mw->keycodes_Iconify, evk->keycode)) {
+					shadow_clientwindow(cw, CLIENTOP_ICONIFY);
+				}
+				else if (arr_keycodes_includes(mw->keycodes_Shade, evk->keycode)) {
+					shadow_clientwindow(cw, CLIENTOP_SHADE_EWMH);
+				}
+				else if (arr_keycodes_includes(mw->keycodes_Close, evk->keycode)) {
+					return close_clientwindow(cw, CLIENTOP_CLOSE_EWMH);
+				}
 			}
-			else if (arr_keycodes_includes(mw->keycodes_Shade, evk->keycode)) {
-				shadow_clientwindow(cw, CLIENTOP_SHADE_EWMH);
-			}
-			else if (arr_keycodes_includes(mw->keycodes_Close, evk->keycode)) {
-				return close_clientwindow(cw, CLIENTOP_CLOSE_EWMH);
-			}
-			else if (arr_keycodes_includes(mw->keycodes_Print, evk->keycode)) {
-				return toggleprint_clientwindow(cw, CLIENTOP_PRINT);
+
+			if (arr_keycodes_includes(mw->keycodes_Print, evk->keycode)) {
+				return toggleprint_clientwindow(mw->client_to_focus, CLIENTOP_PRINT);
 			}
 		}
 		else
