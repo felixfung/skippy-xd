@@ -107,7 +107,6 @@ enum cliop {
 	CLIENTOP_DESTROY,
 	CLIENTOP_PREV,
 	CLIENTOP_NEXT,
-	CLIENTOP_SPECIAL,
 };
 
 enum align {
@@ -280,7 +279,6 @@ typedef struct {
 	char *bindings_keysNext;
 	char *bindings_keysCancel;
 	char *bindings_keysSelect;
-	char *bindings_keysSpecial;
 	char *bindings_keysIconify;
 	char *bindings_keysShade;
 	char *bindings_keysClose;

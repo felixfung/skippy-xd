@@ -66,7 +66,6 @@ parse_cliop(session_t *ps, const char *str, enum cliop *dest) {
 		[	CLIENTOP_DESTROY			] = "destroy",
 		[	CLIENTOP_PREV				] = "keysPrev",
 		[	CLIENTOP_NEXT				] = "keysNext",
-		[	CLIENTOP_SPECIAL			] = "keysSpecial",
 	};
 	for (int i = 0; i < sizeof(STRS_CLIENTOP) / sizeof(STRS_CLIENTOP[0]); ++i)
 		if (!strcmp(STRS_CLIENTOP[i], str)) {
@@ -2537,7 +2536,6 @@ load_config_file(session_t *ps)
     ps->o.bindings_keysNext = mstrdup(config_get(config, "bindings", "keysNext", "n"));
     ps->o.bindings_keysCancel = mstrdup(config_get(config, "bindings", "keysCancel", "Escape"));
     ps->o.bindings_keysSelect = mstrdup(config_get(config, "bindings", "keysSelect", "Return space"));
-    ps->o.bindings_keysSpecial = mstrdup(config_get(config, "bindings", "keysSpecial", ""));
     ps->o.bindings_keysIconify = mstrdup(config_get(config, "bindings", "keysIconify", "1"));
     ps->o.bindings_keysShade = mstrdup(config_get(config, "bindings", "keysShade", "2"));
     ps->o.bindings_keysClose = mstrdup(config_get(config, "bindings", "keysClose", "3"));
@@ -2551,7 +2549,6 @@ load_config_file(session_t *ps)
     check_keysyms(ps->o.config_path, ": [bindings] keysNext =", ps->o.bindings_keysNext);
     check_keysyms(ps->o.config_path, ": [bindings] keysCancel =", ps->o.bindings_keysCancel);
     check_keysyms(ps->o.config_path, ": [bindings] keysSelect =", ps->o.bindings_keysSelect);
-    check_keysyms(ps->o.config_path, ": [bindings] keysSpecial =", ps->o.bindings_keysSpecial);
     check_keysyms(ps->o.config_path, ": [bindings] keysIconify =", ps->o.bindings_keysIconify);
     check_keysyms(ps->o.config_path, ": [bindings] keysShade =", ps->o.bindings_keysShade);
     check_keysyms(ps->o.config_path, ": [bindings] keysClose =", ps->o.bindings_keysClose);

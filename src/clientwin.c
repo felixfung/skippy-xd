@@ -783,12 +783,6 @@ close_clientwindow(ClientWin* cw, enum cliop op) {
 }
 
 int
-togglespecial_clientwindow(ClientWin* cw, enum cliop op) {
-	clientwin_action(cw, op);
-	return 0;
-}
-
-int
 select_clientwindow(ClientWin* cw, enum cliop op) {
 	session_t *ps = cw->mainwin->ps;
 	if (ps->o.multiselect) {
@@ -858,10 +852,6 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 					return close_clientwindow(cw, CLIENTOP_CLOSE_EWMH);
 				}
 			}
-
-			if (arr_keycodes_includes(mw->keycodes_Special, evk->keycode)) {
-				return togglespecial_clientwindow(mw->client_to_focus, CLIENTOP_SPECIAL);
-			}
 		}
 		else
 			printfdf(false, "(): KeyRelease %u ignored.", evk->keycode);
@@ -889,14 +879,9 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 					}
 				}
 
-				if(ps->o.bindings_miwMouse[button] == CLIENTOP_SPECIAL) {
-					return togglespecial_clientwindow(cw, ps->o.bindings_miwMouse[button]);
-				}
-				else {
-					//CLIENTOP_FOCUS, CLIENTOP_PREV, CLIENTOP_NEXT,
-					return clientwin_action(cw,
-							ps->o.bindings_miwMouse[button]);
-				}
+				//CLIENTOP_FOCUS, CLIENTOP_PREV, CLIENTOP_NEXT,
+				return clientwin_action(cw,
+						ps->o.bindings_miwMouse[button]);
 			}
 		}
 		else
@@ -992,10 +977,6 @@ clientwin_action(ClientWin *cw, enum cliop action) {
 			break;
 		case CLIENTOP_NEXT:
 			focus_miniw_next(ps, cw->mainwin->client_to_focus);
-			break;
-		case CLIENTOP_SPECIAL:
-			cw->special = !cw->special;
-			clientwin_repair(cw);
 			break;
 	}
 

@@ -58,7 +58,6 @@ struct _mainwin_t {
 	KeySym *keysyms_Next;
 	KeySym *keysyms_Cancel;
 	KeySym *keysyms_Select;
-	KeySym *keysyms_Special;
 	KeySym *keysyms_Iconify;
 	KeySym *keysyms_Shade;
 	KeySym *keysyms_Close;
@@ -71,7 +70,6 @@ struct _mainwin_t {
 	KeyCode *keycodes_Next;
 	KeyCode *keycodes_Cancel;
 	KeyCode *keycodes_Select;
-	KeyCode *keycodes_Special;
 	KeyCode *keycodes_Iconify;
 	KeyCode *keycodes_Shade;
 	KeyCode *keycodes_Close;
