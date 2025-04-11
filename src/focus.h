@@ -129,6 +129,8 @@ focus_miniw(session_t *ps, ClientWin *cw) {
  */
 static inline void
 focus_miniw_next(session_t *ps, ClientWin *cw) {
+	cw->focused = false;
+	clientwin_render(cw);
 	dlist *e = dlist_find_data(cw->mainwin->focuslist, cw);
 	if (!e) {
 		printfef(false, "() (%#010lx): Client window not found in list.", cw->src.window);
@@ -145,6 +147,8 @@ focus_miniw_next(session_t *ps, ClientWin *cw) {
  */
 static inline void
 focus_miniw_prev(session_t *ps, ClientWin *cw) {
+	cw->focused = false;
+	clientwin_render(cw);
 	dlist *cwlist = dlist_first(cw->mainwin->focuslist);
 	dlist *tgt = NULL;
 
