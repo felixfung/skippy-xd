@@ -1973,7 +1973,7 @@ show_help() {
 			"  --paging            - connects to daemon and activate paging.\n"
 			// "  --test                      - Temporary development testing. To be removed.\n"
 			"\n"
-			"  --multi-select      - select multiple windows; rather than focusing, print all selected IDs.\n"
+			"  --multi-select      - select multiple windows and return all IDs.\n"
 			"\n"
 			"  --wm-class          - displays only windows of specific class.\n"
 			"\n"
