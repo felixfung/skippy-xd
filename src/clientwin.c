@@ -787,6 +787,21 @@ togglespecial_clientwindow(ClientWin* cw, enum cliop op) {
 }
 
 int
+select_clientwindow(ClientWin* cw, enum cliop op) {
+	session_t *ps = cw->mainwin->ps;
+	if (ps->o.multiselect) {
+		cw->mainwin->client_to_focus = cw;
+		cw->special = !cw->special;
+		clientwin_render(cw);
+		return 0;
+	}
+	else {
+		cw->mainwin->client_to_focus = cw;
+		return 1;
+	}
+}
+
+int
 clientwin_handle(ClientWin *cw, XEvent *ev) {
 	if (! cw)
 		return 1;
@@ -820,8 +835,7 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 		}
 		else if (arr_keycodes_includes(cw->mainwin->keycodes_Select, evk->keycode))
 		{
-			mw->client_to_focus = cw->mainwin->client_to_focus;
-			return 1;
+			return select_clientwindow(cw, CLIENTOP_FOCUS);
 		}
 		cw->mainwin->pressed_key = true;
 	}
@@ -955,8 +969,7 @@ clientwin_action(ClientWin *cw, enum cliop action) {
 		case CLIENTOP_NO:
 			break;
 		case CLIENTOP_FOCUS:
-			mw->client_to_focus = cw;
-			return 1;
+			return select_clientwindow(cw, CLIENTOP_FOCUS);
 		case CLIENTOP_ICONIFY:
 			XIconifyWindow(ps->dpy, wid, ps->screen);
 			break;

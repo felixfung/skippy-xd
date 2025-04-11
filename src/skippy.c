@@ -1367,6 +1367,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 			else
 				printf("%s\n", pipe_return);
 
+			ps->o.multiselect = false;
 			mw->refocus = false;
 			mw->client_to_focus = NULL;
 			pending_damage = false;
@@ -1814,6 +1815,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 						}
 						if (param[i] == PIPEPRM_MULTI_SELECT) {
 							printfdf(false,"(): multi-select mode");
+							ps->o.multiselect = true;
 						}
 					}
 
