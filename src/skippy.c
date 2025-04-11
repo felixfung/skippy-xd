@@ -1638,6 +1638,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 			printfdf(false,"(): skippy-xd focus stolen... take back focus");
 			XSetInputFocus(ps->dpy, mw->window,
 					RevertToParent, CurrentTime);
+			mw->client_to_focus->focused = true;
+			clientwin_render(mw->client_to_focus);
 			focus_stolen = false;
 		}
 
