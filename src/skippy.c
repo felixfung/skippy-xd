@@ -46,6 +46,7 @@ enum pipe_param_t {
 	PIPEPRM_WM_CLASS = 2,
 	PIPEPRM_RELOAD_CONFIG_PATH = 4,
 	PIPEPRM_RELOAD_CONFIG = 8,
+	PIPEPRM_MULTI_SELECT = 16,
 };
 
 session_t *ps_g = NULL;
@@ -65,7 +66,6 @@ parse_cliop(session_t *ps, const char *str, enum cliop *dest) {
 		[	CLIENTOP_DESTROY			] = "destroy",
 		[	CLIENTOP_PREV				] = "keysPrev",
 		[	CLIENTOP_NEXT				] = "keysNext",
-		[	CLIENTOP_SPECIAL			] = "keysSpecial",
 	};
 	for (int i = 0; i < sizeof(STRS_CLIENTOP) / sizeof(STRS_CLIENTOP[0]); ++i)
 		if (!strcmp(STRS_CLIENTOP[i], str)) {
@@ -610,7 +610,7 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 		master_command |= PIPECMD_PREV;
 
 	char command[BUF_LEN*2];
-	char nparams = (ps->o.wm_class != NULL) + (ps->o.pivotkey != 0);
+	char nparams = (ps->o.wm_class != NULL) + (ps->o.pivotkey != 0) + ps->o.multiselect;
 	if (ps->o.config_reload_path || ps->o.config_reload)
 		nparams++;
 
@@ -653,6 +653,13 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 		char cfg_cmd[2];
 		sprintf(cfg_cmd, "%c", PIPEPRM_RELOAD_CONFIG);
 		strcat(command, cfg_cmd);
+	}
+
+	if (ps->o.multiselect) {
+		cmd_len += 2;
+		char pivot_cmd[2];
+		sprintf(pivot_cmd, "%c", PIPEPRM_MULTI_SELECT);
+		strcat(command, pivot_cmd);
 	}
 
 	send_string_command_to_daemon_via_fifo(pipePath, command);
@@ -1329,8 +1336,11 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 			char pipe_return[1024];
 			sprintf(pipe_return, "%i", selected);
+
+			if (ps->o.multiselect)
 			{
-				bool special = false;
+				pipe_return[0] = '\0';
+				bool firstprint = true;
 				dlist *iter = mw->clientondesktop;
 				if (layout == LAYOUTMODE_PAGING)
 					iter = mw->dminis;
@@ -1339,14 +1349,13 @@ mainloop(session_t *ps, bool activate_on_start) {
 					unsigned long client = cw->wid_client;
 					if (layout == LAYOUTMODE_PAGING)
 						client = cw->slots;
-					if (cw->special
-					|| (ps->o.selectAsSpecial && client == selected)) {
-						if (!special) {
-							special = true;
+					if (cw->multiselect) {
+						char wid[1024];
+						if (firstprint) {
 							sprintf(pipe_return, "%lu", client);
+							firstprint = false;
 						}
 						else {
-							char wid[1024];
 							sprintf(wid, " %lu", client);
 							strcat(pipe_return, wid);
 						}
@@ -1359,6 +1368,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 			else
 				printf("%s\n", pipe_return);
 
+			ps->o.multiselect = false;
 			mw->refocus = false;
 			mw->client_to_focus = NULL;
 			pending_damage = false;
@@ -1366,8 +1376,13 @@ mainloop(session_t *ps, bool activate_on_start) {
 			// Cleanup
 			foreach_dlist (mw->clientondesktop) {
 				ClientWin *cw = iter->data;
-				cw->special = false;
+				cw->multiselect = false;
 			}
+			foreach_dlist (mw->dminis) {
+				ClientWin *cw = iter->data;
+				cw->multiselect = false;
+			}
+
 			dlist_free(mw->clientondesktop);
 			mw->clientondesktop = 0;
 			dlist_free(mw->focuslist);
@@ -1804,6 +1819,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 							printfdf(false, "(): receiving new pivot key=%d",ps->o.pivotkey);
 							toggling = false;
 						}
+						if (param[i] == PIPEPRM_MULTI_SELECT) {
+							printfdf(false,"(): multi-select mode");
+							ps->o.multiselect = true;
+						}
 					}
 
 					trigger_client = pid;
@@ -1954,6 +1973,8 @@ show_help() {
 			"  --paging            - connects to daemon and activate paging.\n"
 			// "  --test                      - Temporary development testing. To be removed.\n"
 			"\n"
+			"  --multi-select      - select multiple windows and return all IDs.\n"
+			"\n"
 			"  --wm-class          - displays only windows of specific class.\n"
 			"\n"
 			"  --toggle            - activates via toggle mode.\n"
@@ -2094,6 +2115,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		OPT_ACTV_PAGING,
 		OPT_DM_START,
 		OPT_DM_STOP,
+		OPT_MULTI_SELECT,
 		OPT_WM_CLASS,
 		OPT_TOGGLE,
 		OPT_PIVOTING,
@@ -2111,6 +2133,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		{ "paging",                   no_argument,       NULL, OPT_ACTV_PAGING },
 		{ "start-daemon",             no_argument,       NULL, OPT_DM_START },
 		{ "stop-daemon",              no_argument,       NULL, OPT_DM_STOP },
+		{ "multi-select",             no_argument,       NULL, OPT_MULTI_SELECT },
 		{ "wm-class",                 required_argument, NULL, OPT_WM_CLASS },
 		{ "toggle",                   no_argument,       NULL, OPT_TOGGLE },
 		{ "pivot",                    required_argument, NULL, OPT_PIVOTING },
@@ -2139,7 +2162,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 					else
 						ps->o.config_blank = true;
 					if (ps->o.config_path &&
-							strlen(ps->o.config_path) + 3 + 1 > BUF_LEN)
+							strlen(ps->o.config_path) + 3 + 1 + 1 > BUF_LEN)
 						printfef(true, "(): config file path exceeds %d character limit",
 								BUF_LEN - 3 - 1);
 					break;
@@ -2191,6 +2214,9 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 				break;
 			case OPT_DM_STOP:
 				ps->o.mode = PROGMODE_DM_STOP;
+				break;
+			case OPT_MULTI_SELECT:
+				ps->o.multiselect = true;
 				break;
 			case OPT_WM_CLASS:
 				ps->o.wm_class = mstrdup(optarg);
@@ -2467,9 +2493,9 @@ load_config_file(session_t *ps)
 	ps->o.shadow_tint = mstrdup(config_get(config, "shadow", "tint", "#040404"));
     config_get_int_wrap(config, "shadow", "tintOpacity", &ps->o.shadow_tintOpacity, 0, 256);
     config_get_int_wrap(config, "shadow", "opacity", &ps->o.shadow_opacity, 0, 256);
-	ps->o.special_tint = mstrdup(config_get(config, "special", "tint", "#3376BB"));
-    config_get_int_wrap(config, "special", "tintOpacity", &ps->o.special_tintOpacity, 0, 256);
-    config_get_int_wrap(config, "special", "opacity", &ps->o.special_opacity, 0, 256);
+	ps->o.multiselect_tint = mstrdup(config_get(config, "multiselect", "tint", "#3376BB"));
+    config_get_int_wrap(config, "multiselect", "tintOpacity", &ps->o.multiselect_tintOpacity, 0, 256);
+    config_get_int_wrap(config, "multiselect", "opacity", &ps->o.multiselect_opacity, 0, 256);
 
     config_get_bool_wrap(config, "panel", "show", &ps->o.panel_show);
     config_get_bool_wrap(config, "panel", "backgroundTinting", &ps->o.panel_tinting);
@@ -2505,7 +2531,6 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "filter", "persistentFiltering", &ps->o.persistentFiltering);
 
     config_get_int_wrap(config, "bindings", "pivotLockingTime", &ps->o.pivotLockingTime, 0, 20);
-    config_get_bool_wrap(config, "bindings", "selectAsSpecial", &ps->o.selectAsSpecial);
 
     // load keybindings settings
     ps->o.bindings_keysUp = mstrdup(config_get(config, "bindings", "keysUp", "Up"));
@@ -2516,7 +2541,6 @@ load_config_file(session_t *ps)
     ps->o.bindings_keysNext = mstrdup(config_get(config, "bindings", "keysNext", "n"));
     ps->o.bindings_keysCancel = mstrdup(config_get(config, "bindings", "keysCancel", "Escape"));
     ps->o.bindings_keysSelect = mstrdup(config_get(config, "bindings", "keysSelect", "Return space"));
-    ps->o.bindings_keysSpecial = mstrdup(config_get(config, "bindings", "keysSpecial", ""));
     ps->o.bindings_keysIconify = mstrdup(config_get(config, "bindings", "keysIconify", "1"));
     ps->o.bindings_keysShade = mstrdup(config_get(config, "bindings", "keysShade", "2"));
     ps->o.bindings_keysClose = mstrdup(config_get(config, "bindings", "keysClose", "3"));
@@ -2530,7 +2554,6 @@ load_config_file(session_t *ps)
     check_keysyms(ps->o.config_path, ": [bindings] keysNext =", ps->o.bindings_keysNext);
     check_keysyms(ps->o.config_path, ": [bindings] keysCancel =", ps->o.bindings_keysCancel);
     check_keysyms(ps->o.config_path, ": [bindings] keysSelect =", ps->o.bindings_keysSelect);
-    check_keysyms(ps->o.config_path, ": [bindings] keysSpecial =", ps->o.bindings_keysSpecial);
     check_keysyms(ps->o.config_path, ": [bindings] keysIconify =", ps->o.bindings_keysIconify);
     check_keysyms(ps->o.config_path, ": [bindings] keysShade =", ps->o.bindings_keysShade);
     check_keysyms(ps->o.config_path, ": [bindings] keysClose =", ps->o.bindings_keysClose);
