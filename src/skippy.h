@@ -198,6 +198,7 @@ typedef struct {
 
 	char focus_initial;
 	KeyCode pivotkey;
+	bool multiselect;
 
 	bool enforceFocus;
 	char *pipePath;
@@ -294,6 +295,7 @@ typedef struct {
 	.mode = PROGMODE_NORMAL, \
 	.runAsDaemon = false, \
 	.pivotkey = 0, \
+	.multiselect = false, \
 \
 	.enforceFocus = true, \
 	.pipePath = NULL, \

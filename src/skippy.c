@@ -46,6 +46,7 @@ enum pipe_param_t {
 	PIPEPRM_WM_CLASS = 2,
 	PIPEPRM_RELOAD_CONFIG_PATH = 4,
 	PIPEPRM_RELOAD_CONFIG = 8,
+	PIPEPRM_MULTI_SELECT = 16,
 };
 
 session_t *ps_g = NULL;
@@ -610,7 +611,7 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 		master_command |= PIPECMD_PREV;
 
 	char command[BUF_LEN*2];
-	char nparams = (ps->o.wm_class != NULL) + (ps->o.pivotkey != 0);
+	char nparams = (ps->o.wm_class != NULL) + (ps->o.pivotkey != 0) + ps->o.multiselect;
 	if (ps->o.config_reload_path || ps->o.config_reload)
 		nparams++;
 
@@ -653,6 +654,13 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 		char cfg_cmd[2];
 		sprintf(cfg_cmd, "%c", PIPEPRM_RELOAD_CONFIG);
 		strcat(command, cfg_cmd);
+	}
+
+	if (ps->o.multiselect) {
+		cmd_len += 2;
+		char pivot_cmd[2];
+		sprintf(pivot_cmd, "%c", PIPEPRM_MULTI_SELECT);
+		strcat(command, pivot_cmd);
 	}
 
 	send_string_command_to_daemon_via_fifo(pipePath, command);
@@ -1804,6 +1812,9 @@ mainloop(session_t *ps, bool activate_on_start) {
 							printfdf(false, "(): receiving new pivot key=%d",ps->o.pivotkey);
 							toggling = false;
 						}
+						if (param[i] == PIPEPRM_MULTI_SELECT) {
+							printfdf(false,"(): multi-select mode");
+						}
 					}
 
 					trigger_client = pid;
@@ -1954,6 +1965,8 @@ show_help() {
 			"  --paging            - connects to daemon and activate paging.\n"
 			// "  --test                      - Temporary development testing. To be removed.\n"
 			"\n"
+			"  --multi-select      - select multiple windows; rather than focusing, print all selected IDs.\n"
+			"\n"
 			"  --wm-class          - displays only windows of specific class.\n"
 			"\n"
 			"  --toggle            - activates via toggle mode.\n"
@@ -2094,6 +2107,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		OPT_ACTV_PAGING,
 		OPT_DM_START,
 		OPT_DM_STOP,
+		OPT_MULTI_SELECT,
 		OPT_WM_CLASS,
 		OPT_TOGGLE,
 		OPT_PIVOTING,
@@ -2111,6 +2125,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		{ "paging",                   no_argument,       NULL, OPT_ACTV_PAGING },
 		{ "start-daemon",             no_argument,       NULL, OPT_DM_START },
 		{ "stop-daemon",              no_argument,       NULL, OPT_DM_STOP },
+		{ "multi-select",             no_argument,       NULL, OPT_MULTI_SELECT },
 		{ "wm-class",                 required_argument, NULL, OPT_WM_CLASS },
 		{ "toggle",                   no_argument,       NULL, OPT_TOGGLE },
 		{ "pivot",                    required_argument, NULL, OPT_PIVOTING },
@@ -2139,7 +2154,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 					else
 						ps->o.config_blank = true;
 					if (ps->o.config_path &&
-							strlen(ps->o.config_path) + 3 + 1 > BUF_LEN)
+							strlen(ps->o.config_path) + 3 + 1 + 1 > BUF_LEN)
 						printfef(true, "(): config file path exceeds %d character limit",
 								BUF_LEN - 3 - 1);
 					break;
@@ -2191,6 +2206,9 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 				break;
 			case OPT_DM_STOP:
 				ps->o.mode = PROGMODE_DM_STOP;
+				break;
+			case OPT_MULTI_SELECT:
+				ps->o.multiselect = true;
 				break;
 			case OPT_WM_CLASS:
 				ps->o.wm_class = mstrdup(optarg);
