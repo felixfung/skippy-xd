@@ -271,7 +271,6 @@ typedef struct {
 	char *wm_class;
 
 	int pivotLockingTime;
-	bool selectAsSpecial;
 	enum cliop bindings_miwMouse[MAX_MOUSE_BUTTONS];
 	char *bindings_keysUp;
 	char *bindings_keysDown;
@@ -362,7 +361,6 @@ typedef struct {
 	.tooltip_font = NULL, \
 \
 	.pivotLockingTime = 0, \
-	.selectAsSpecial = true, \
 }
 
 /// @brief X information structure.

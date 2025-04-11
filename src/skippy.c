@@ -1337,8 +1337,11 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 			char pipe_return[1024];
 			sprintf(pipe_return, "%i", selected);
+
+			if (ps->o.multiselect)
 			{
-				bool special = false;
+				pipe_return[0] = '\0';
+				bool firstprint = true;
 				dlist *iter = mw->clientondesktop;
 				if (layout == LAYOUTMODE_PAGING)
 					iter = mw->dminis;
@@ -1347,14 +1350,13 @@ mainloop(session_t *ps, bool activate_on_start) {
 					unsigned long client = cw->wid_client;
 					if (layout == LAYOUTMODE_PAGING)
 						client = cw->slots;
-					if (cw->special
-					|| (ps->o.selectAsSpecial && client == selected)) {
-						if (!special) {
-							special = true;
+					if (cw->special) {
+						char wid[1024];
+						if (firstprint) {
 							sprintf(pipe_return, "%lu", client);
+							firstprint = false;
 						}
 						else {
-							char wid[1024];
 							sprintf(wid, " %lu", client);
 							strcat(pipe_return, wid);
 						}
@@ -2525,7 +2527,6 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "filter", "persistentFiltering", &ps->o.persistentFiltering);
 
     config_get_int_wrap(config, "bindings", "pivotLockingTime", &ps->o.pivotLockingTime, 0, 20);
-    config_get_bool_wrap(config, "bindings", "selectAsSpecial", &ps->o.selectAsSpecial);
 
     // load keybindings settings
     ps->o.bindings_keysUp = mstrdup(config_get(config, "bindings", "keysUp", "Up"));
