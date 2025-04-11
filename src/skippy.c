@@ -1378,6 +1378,11 @@ mainloop(session_t *ps, bool activate_on_start) {
 				ClientWin *cw = iter->data;
 				cw->multiselect = false;
 			}
+			foreach_dlist (mw->dminis) {
+				ClientWin *cw = iter->data;
+				cw->multiselect = false;
+			}
+
 			dlist_free(mw->clientondesktop);
 			mw->clientondesktop = 0;
 			dlist_free(mw->focuslist);

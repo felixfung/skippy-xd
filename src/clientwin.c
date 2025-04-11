@@ -786,13 +786,11 @@ int
 select_clientwindow(ClientWin* cw, enum cliop op) {
 	session_t *ps = cw->mainwin->ps;
 	if (ps->o.multiselect) {
-		cw->mainwin->client_to_focus = cw;
-		cw->multiselect = !cw->multiselect;
+		cw->mainwin->client_to_focus->multiselect = !cw->mainwin->client_to_focus->multiselect;
 		clientwin_render(cw);
 		return 0;
 	}
 	else {
-		cw->mainwin->client_to_focus = cw;
 		return 1;
 	}
 }
@@ -833,7 +831,6 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 		{
 			return select_clientwindow(cw, CLIENTOP_FOCUS);
 		}
-		cw->mainwin->pressed_key = true;
 	}
 
 	else if (ev->type == KeyRelease) {
