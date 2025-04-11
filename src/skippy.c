@@ -1349,7 +1349,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					unsigned long client = cw->wid_client;
 					if (layout == LAYOUTMODE_PAGING)
 						client = cw->slots;
-					if (cw->special) {
+					if (cw->multiselect) {
 						char wid[1024];
 						if (firstprint) {
 							sprintf(pipe_return, "%lu", client);
@@ -1376,7 +1376,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 			// Cleanup
 			foreach_dlist (mw->clientondesktop) {
 				ClientWin *cw = iter->data;
-				cw->special = false;
+				cw->multiselect = false;
 			}
 			dlist_free(mw->clientondesktop);
 			mw->clientondesktop = 0;
@@ -2488,9 +2488,9 @@ load_config_file(session_t *ps)
 	ps->o.shadow_tint = mstrdup(config_get(config, "shadow", "tint", "#040404"));
     config_get_int_wrap(config, "shadow", "tintOpacity", &ps->o.shadow_tintOpacity, 0, 256);
     config_get_int_wrap(config, "shadow", "opacity", &ps->o.shadow_opacity, 0, 256);
-	ps->o.special_tint = mstrdup(config_get(config, "special", "tint", "#3376BB"));
-    config_get_int_wrap(config, "special", "tintOpacity", &ps->o.special_tintOpacity, 0, 256);
-    config_get_int_wrap(config, "special", "opacity", &ps->o.special_opacity, 0, 256);
+	ps->o.multiselect_tint = mstrdup(config_get(config, "multiselect", "tint", "#3376BB"));
+    config_get_int_wrap(config, "multiselect", "tintOpacity", &ps->o.multiselect_tintOpacity, 0, 256);
+    config_get_int_wrap(config, "multiselect", "opacity", &ps->o.multiselect_opacity, 0, 256);
 
     config_get_bool_wrap(config, "panel", "show", &ps->o.panel_show);
     config_get_bool_wrap(config, "panel", "backgroundTinting", &ps->o.panel_tinting);

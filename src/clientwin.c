@@ -478,11 +478,11 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 	if (cw->paneltype == WINTYPE_WINDOW)
 	{
 		XRenderColor *tint = &cw->mainwin->normalTint;
-		if (cw->focused || cw->special) {
+		if (cw->focused || cw->multiselect) {
 			if (!ps->o.multiselect)
 				tint = &cw->mainwin->highlightTint;
 			else
-				tint = &cw->mainwin->specialTint;
+				tint = &cw->mainwin->multiselectTint;
 		}
 		else if (cw->zombie)
 			tint = &cw->mainwin->shadowTint;
@@ -787,7 +787,7 @@ select_clientwindow(ClientWin* cw, enum cliop op) {
 	session_t *ps = cw->mainwin->ps;
 	if (ps->o.multiselect) {
 		cw->mainwin->client_to_focus = cw;
-		cw->special = !cw->special;
+		cw->multiselect = !cw->multiselect;
 		clientwin_render(cw);
 		return 0;
 	}

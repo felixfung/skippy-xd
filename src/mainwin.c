@@ -225,18 +225,18 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	}
 	mw->shadowTint.alpha = alphaconv(ps->o.shadow_tintOpacity);
 
-	if(! XParseColor(ps->dpy, mw->colormap, ps->o.special_tint, &exact_color))
+	if(! XParseColor(ps->dpy, mw->colormap, ps->o.multiselect_tint, &exact_color))
 	{
-		printfef(true, "(): Couldn't look up color '%s', reverting to #3376BB", ps->o.special_tint);
-		mw->specialTint.red = 0x33; mw->specialTint.green = 0x76; mw->specialTint.blue = 0xBB;
+		printfef(true, "(): Couldn't look up color '%s', reverting to #3376BB", ps->o.multiselect_tint);
+		mw->multiselectTint.red = 0x33; mw->multiselectTint.green = 0x76; mw->multiselectTint.blue = 0xBB;
 	}
 	else
 	{
-		mw->specialTint.red = exact_color.red;
-		mw->specialTint.green = exact_color.green;
-		mw->specialTint.blue = exact_color.blue;
+		mw->multiselectTint.red = exact_color.red;
+		mw->multiselectTint.green = exact_color.green;
+		mw->multiselectTint.blue = exact_color.blue;
 	}
-	mw->specialTint.alpha = alphaconv(ps->o.special_tintOpacity);
+	mw->multiselectTint.alpha = alphaconv(ps->o.multiselect_tintOpacity);
 
 	mw->distance = ps->o.distance;
 

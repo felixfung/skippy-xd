@@ -43,7 +43,7 @@ struct _mainwin_t {
 	XRenderPictFormat *format;
 	XTransform transform, desktoptransform;
 	
-	XRenderColor normalTint, highlightTint, shadowTint, specialTint;
+	XRenderColor normalTint, highlightTint, shadowTint, multiselectTint;
 	Pixmap normalPixmap, highlightPixmap, shadowPixmap;
 	Picture normalPicture, highlightPicture, shadowPicture;
 	
