@@ -831,6 +831,7 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 		{
 			return select_clientwindow(cw, CLIENTOP_FOCUS);
 		}
+		cw->mainwin->pressed_key = true;
 	}
 
 	else if (ev->type == KeyRelease) {
