@@ -1583,8 +1583,13 @@ mainloop(session_t *ps, bool activate_on_start) {
 					((ClientWin *)iter->data)->damaged = true;
 				}
 			}
-			else if (mw && wid == mw->window && !die)
+			else if (mw && wid == mw->window && !die) {
+				if (ev.type == FocusOut)
+					focus_stolen = true;
+				if (ev.type == FocusIn)
+					focus_stolen = false;
 				die = mainwin_handle(mw, &ev);
+			}
 			else if (mw && wid) {
 				if (ev.type == FocusOut)
 					focus_stolen = true;
@@ -1638,8 +1643,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 			printfdf(false,"(): skippy-xd focus stolen... take back focus");
 			XSetInputFocus(ps->dpy, mw->window,
 					RevertToParent, CurrentTime);
-			mw->client_to_focus->focused = true;
-			clientwin_render(mw->client_to_focus);
+			if (mw->client_to_focus) {
+				mw->client_to_focus->focused = true;
+				clientwin_render(mw->client_to_focus);
+			}
 			focus_stolen = false;
 		}
 
