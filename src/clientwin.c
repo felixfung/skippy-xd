@@ -478,12 +478,14 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 	if (cw->paneltype == WINTYPE_WINDOW)
 	{
 		XRenderColor *tint = &cw->mainwin->normalTint;
-		if (cw->focused)
-			tint = &cw->mainwin->highlightTint;
+		if (cw->focused || cw->special) {
+			if (!ps->o.multiselect)
+				tint = &cw->mainwin->highlightTint;
+			else
+				tint = &cw->mainwin->specialTint;
+		}
 		else if (cw->zombie)
 			tint = &cw->mainwin->shadowTint;
-		else if (cw->special)
-			tint = &cw->mainwin->specialTint;
 
 		if (tint->alpha) {
 #ifdef CFG_XINERAMA
