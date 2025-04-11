@@ -1586,6 +1586,11 @@ mainloop(session_t *ps, bool activate_on_start) {
 			else if (mw && wid == mw->window && !die)
 				die = mainwin_handle(mw, &ev);
 			else if (mw && wid) {
+				if (ev.type == FocusOut)
+					focus_stolen = true;
+				if (ev.type == FocusIn)
+					focus_stolen = false;
+
 				bool processing = true;
 				dlist *iter = mw->clientondesktop;
 				if (layout == LAYOUTMODE_PAGING)
@@ -1608,11 +1613,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 								 && ev.type != ReparentNotify
 								))) {
 
-							if (ev.type == FocusOut)
-								focus_stolen = true;
-							if (ev.type == FocusIn)
-								focus_stolen = false;
-
 							die = clientwin_handle(cw, &ev);
 							if (layout == LAYOUTMODE_PAGING) {
 								cw->damaged = true;
@@ -1634,7 +1634,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 		// prevent focus stealing by newly mapped window
 		// by checking for a FocusOut/FocusIn event pair
-		if (ps->o.enforceFocus && focus_stolen) {
+		if (mw && ps->o.enforceFocus && focus_stolen) {
 			printfdf(false,"(): skippy-xd focus stolen... take back focus");
 			XSetInputFocus(ps->dpy, mw->window,
 					RevertToParent, CurrentTime);
