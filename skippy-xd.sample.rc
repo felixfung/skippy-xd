@@ -123,7 +123,7 @@ tint = #040404
 tintOpacity = 0
 opacity = 160
 
-[special]
+[multiselect]
 tint = #3376BB
 tintOpacity = 50
 opacity = 255
@@ -180,9 +180,6 @@ persistentFiltering = false
 # Set to 0 to disable pivot locking
 pivotLockingTime = 0
 
-# Whether the selected window is special
-selectAsSpecial = true
-
 # key* = is a list of valid XWindows KeySym identifiers, case
 # sensitive and <space> seperated list. Run the program 'xev' to find them.
 
@@ -196,7 +193,6 @@ keysCancel = Escape
 keysNext = n
 keysPrev = p
 
-keysSpecial =
 keysIconify = 1
 keysShade = 2
 keysClose = 3
@@ -211,7 +207,6 @@ keysClose = 3
 # "destroy": forcefully destroy window
 # "keysPrev": focus on previous window
 # "keysNext": focus on next window
-# "keysSpecial": toggle window for printing
 
 miwMouse1 = focus
 miwMouse2 = close-ewmh

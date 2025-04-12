@@ -52,7 +52,7 @@ struct _clientwin_t {
 	float factor;
 
 	bool focused;
-	bool special;
+	bool multiselect;
 	bool damaged;
 
 	bool zombie;

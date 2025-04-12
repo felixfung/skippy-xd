@@ -478,12 +478,14 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 	if (cw->paneltype == WINTYPE_WINDOW)
 	{
 		XRenderColor *tint = &cw->mainwin->normalTint;
-		if (cw->focused)
-			tint = &cw->mainwin->highlightTint;
+		if (cw->focused || cw->multiselect) {
+			if (!ps->o.multiselect)
+				tint = &cw->mainwin->highlightTint;
+			else
+				tint = &cw->mainwin->multiselectTint;
+		}
 		else if (cw->zombie)
 			tint = &cw->mainwin->shadowTint;
-		else if (cw->special)
-			tint = &cw->mainwin->specialTint;
 
 		if (tint->alpha) {
 #ifdef CFG_XINERAMA
@@ -781,9 +783,16 @@ close_clientwindow(ClientWin* cw, enum cliop op) {
 }
 
 int
-togglespecial_clientwindow(ClientWin* cw, enum cliop op) {
-	clientwin_action(cw, op);
-	return 0;
+select_clientwindow(ClientWin* cw, enum cliop op) {
+	session_t *ps = cw->mainwin->ps;
+	if (ps->o.multiselect) {
+		cw->mainwin->client_to_focus->multiselect = !cw->mainwin->client_to_focus->multiselect;
+		clientwin_render(cw);
+		return 0;
+	}
+	else {
+		return 1;
+	}
 }
 
 int
@@ -820,8 +829,7 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 		}
 		else if (arr_keycodes_includes(cw->mainwin->keycodes_Select, evk->keycode))
 		{
-			mw->client_to_focus = cw->mainwin->client_to_focus;
-			return 1;
+			return select_clientwindow(cw, CLIENTOP_FOCUS);
 		}
 		cw->mainwin->pressed_key = true;
 	}
@@ -841,10 +849,6 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 				else if (arr_keycodes_includes(mw->keycodes_Close, evk->keycode)) {
 					return close_clientwindow(cw, CLIENTOP_CLOSE_EWMH);
 				}
-			}
-
-			if (arr_keycodes_includes(mw->keycodes_Special, evk->keycode)) {
-				return togglespecial_clientwindow(mw->client_to_focus, CLIENTOP_SPECIAL);
 			}
 		}
 		else
@@ -873,14 +877,9 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 					}
 				}
 
-				if(ps->o.bindings_miwMouse[button] == CLIENTOP_SPECIAL) {
-					return togglespecial_clientwindow(cw, ps->o.bindings_miwMouse[button]);
-				}
-				else {
-					//CLIENTOP_FOCUS, CLIENTOP_PREV, CLIENTOP_NEXT,
-					return clientwin_action(cw,
-							ps->o.bindings_miwMouse[button]);
-				}
+				//CLIENTOP_FOCUS, CLIENTOP_PREV, CLIENTOP_NEXT,
+				return clientwin_action(cw,
+						ps->o.bindings_miwMouse[button]);
 			}
 		}
 		else
@@ -955,8 +954,7 @@ clientwin_action(ClientWin *cw, enum cliop action) {
 		case CLIENTOP_NO:
 			break;
 		case CLIENTOP_FOCUS:
-			mw->client_to_focus = cw;
-			return 1;
+			return select_clientwindow(cw, CLIENTOP_FOCUS);
 		case CLIENTOP_ICONIFY:
 			XIconifyWindow(ps->dpy, wid, ps->screen);
 			break;
@@ -977,10 +975,6 @@ clientwin_action(ClientWin *cw, enum cliop action) {
 			break;
 		case CLIENTOP_NEXT:
 			focus_miniw_next(ps, cw->mainwin->client_to_focus);
-			break;
-		case CLIENTOP_SPECIAL:
-			cw->special = !cw->special;
-			clientwin_repair(cw);
 			break;
 	}
 
