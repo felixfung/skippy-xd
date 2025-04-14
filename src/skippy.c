@@ -42,11 +42,12 @@ enum pipe_cmd_t {
 };
 
 enum pipe_param_t {
-	PIPEPRM_PIVOTING = 1,
-	PIPEPRM_WM_CLASS = 2,
-	PIPEPRM_RELOAD_CONFIG_PATH = 4,
-	PIPEPRM_RELOAD_CONFIG = 8,
-	PIPEPRM_MULTI_SELECT = 16,
+	PIPEPRM_RELOAD_CONFIG_PATH = 1,
+	PIPEPRM_RELOAD_CONFIG = 2,
+	PIPEPRM_PIVOTING = 4,
+	PIPEPRM_WM_CLASS = 8,
+	PIPEPRM_WM_STATUS = 16,
+	PIPEPRM_MULTI_SELECT = 32,
 };
 
 session_t *ps_g = NULL;
@@ -610,7 +611,8 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 		master_command |= PIPECMD_PREV;
 
 	char command[BUF_LEN*2];
-	char nparams = (ps->o.wm_class != NULL) + (ps->o.pivotkey != 0) + ps->o.multiselect;
+	char nparams = (ps->o.wm_class != NULL) + (ps->o.pivotkey != 0)
+		+ ps->o.multiselect + (ps->o.wm_status_count > 0);
 	if (ps->o.config_reload_path || ps->o.config_reload)
 		nparams++;
 
@@ -660,6 +662,14 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 		char pivot_cmd[2];
 		sprintf(pivot_cmd, "%c", PIPEPRM_MULTI_SELECT);
 		strcat(command, pivot_cmd);
+	}
+
+	if (ps->o.wm_status) {
+		cmd_len += 1+1+ps->o.wm_status_count+1;
+		char status[1+1+ps->o.wm_status_count+1];
+		sprintf(status, "%c%c%s",
+				PIPEPRM_WM_STATUS, (char)ps->o.wm_status_count, ps->o.wm_status_str);
+		strcat(command, status);
 	}
 
 	send_string_command_to_daemon_via_fifo(pipePath, command);
@@ -1779,7 +1789,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 						piped_input, pid);
 
 				if (piped_input & PIPECMD_EXIT_DAEMON) {
-					printfdf(false, "(): Exit command received, killing daemon...");
+					printfdf(true, "(): Exit command received, killing daemon...");
 					unlink(ps->o.pipePath);
 
 					returnToClient(ps, pid, "-1");
@@ -1821,9 +1831,18 @@ mainloop(session_t *ps, bool activate_on_start) {
 					else
 						goto forget_activating;
 
-					if (!ps->o.persistentFiltering && ps->o.wm_class) {
-						free(ps->o.wm_class);
-						ps->o.wm_class = NULL;
+					if (!ps->o.persistentFiltering) {
+						if (ps->o.wm_class) {
+							free(ps->o.wm_class);
+							ps->o.wm_class = NULL;
+						}
+						if (ps->o.wm_status) {
+							ps->o.wm_status_count = 0;
+							free(ps->o.wm_status);
+							ps->o.wm_status = NULL;
+							free(ps->o.wm_status_str);
+							ps->o.wm_status_str = NULL;
+						}
 					}
 
 					animating = activate = true;
@@ -1842,9 +1861,21 @@ mainloop(session_t *ps, bool activate_on_start) {
 							printfdf(false, "(): receiving new pivot key=%d",ps->o.pivotkey);
 							toggling = false;
 						}
+
 						if (param[i] == PIPEPRM_MULTI_SELECT) {
 							printfdf(false,"(): multi-select mode");
 							ps->o.multiselect = true;
+						}
+						if (param[i] & PIPEPRM_WM_STATUS) {
+							if (ps->o.wm_status) {
+								free(ps->o.wm_status);
+								free(ps->o.wm_status_str);
+							}
+							ps->o.wm_status_str = mstrdup(str[i]);
+							ps->o.wm_status_count = strlen(ps->o.wm_status_str);
+							ps->o.wm_status = malloc(ps->o.wm_status_count * sizeof(int));
+							for (int j=0; j<ps->o.wm_status_count; j++)
+								ps->o.wm_status[i] = ps->o.wm_status_str[i];
 						}
 					}
 
@@ -1996,11 +2027,13 @@ show_help() {
 			"  --switch            - connects to daemon and activate switch.\n"
 			"  --expose            - connects to daemon and activate expose.\n"
 			"  --paging            - connects to daemon and activate paging.\n"
-			// "  --test                      - Temporary development testing. To be removed.\n"
 			"\n"
 			"  --multi-select      - select multiple windows and return all IDs.\n"
 			"\n"
 			"  --wm-class          - displays only windows of specific class.\n"
+			"  --wm-status         - displays only windows with specified status:\n"
+			"                          sticky, shaded, minimized, maximized_vert, \n"
+			"                          maximized_horz, maximized, float\n"
 			"\n"
 			"  --toggle            - activates via toggle mode.\n"
 			"  --pivot             - activates via pivot mode with specified pivot key.\n"
@@ -2142,6 +2175,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		OPT_DM_STOP,
 		OPT_MULTI_SELECT,
 		OPT_WM_CLASS,
+		OPT_WM_STATUS,
 		OPT_TOGGLE,
 		OPT_PIVOTING,
 		OPT_PREV,
@@ -2160,6 +2194,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		{ "stop-daemon",              no_argument,       NULL, OPT_DM_STOP },
 		{ "multi-select",             no_argument,       NULL, OPT_MULTI_SELECT },
 		{ "wm-class",                 required_argument, NULL, OPT_WM_CLASS },
+		{ "wm-status",                required_argument, NULL, OPT_WM_STATUS },
 		{ "toggle",                   no_argument,       NULL, OPT_TOGGLE },
 		{ "pivot",                    required_argument, NULL, OPT_PIVOTING },
 		{ "prev",                     no_argument,       NULL, OPT_PREV },
@@ -2245,6 +2280,44 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 				break;
 			case OPT_WM_CLASS:
 				ps->o.wm_class = mstrdup(optarg);
+				break;
+			case OPT_WM_STATUS:
+				int anchor = 0;
+				for (int i=0; i<strlen(optarg) + 1; i++)
+					if (optarg[i] == ',' || optarg[i] == '\0') {
+						char *status = malloc(i - anchor);
+						for (int j=anchor; j<i; j++)
+							status[j-anchor] = optarg[j];
+						status[i-anchor] = '\0';
+						anchor = i + 1;
+
+						int wm_status = wm_get_status(status);
+						if (wm_status == 0) {
+							printfef(true,
+								"(): window status %s not recognized",
+								status);
+							exit(1);
+						}
+						free(status);
+
+						int count = ps->o.wm_status_count;
+
+						int *newptr = malloc(count+1);
+						for (int j=0; j<count; j++)
+							newptr[j] = ps->o.wm_status[j];
+						newptr[count] = wm_status;
+
+						ps->o.wm_status_count++;
+						free(ps->o.wm_status);
+
+						ps->o.wm_status = newptr;
+					}
+
+				ps->o.wm_status_str = malloc(ps->o.wm_status_count+1);
+				for (int i=0; i<ps->o.wm_status_count; i++)
+					ps->o.wm_status_str[i] = ps->o.wm_status[i];
+				ps->o.wm_status_str[ps->o.wm_status_count] = '\0';
+
 				break;
 			case OPT_TOGGLE:
 				user_specified_toggle_pivot = true;
@@ -2830,6 +2903,10 @@ main_end:
 
 		if (ps->o.wm_class)
 			free(ps->o.wm_class);
+		if (ps->o.wm_status)
+			free(ps->o.wm_status);
+		if (ps->o.wm_status_str)
+			free(ps->o.wm_status_str);
 
 		if (ps->fd_pipe >= 0)
 			close(ps->fd_pipe);
