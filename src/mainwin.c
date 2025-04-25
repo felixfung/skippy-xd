@@ -540,6 +540,12 @@ mainwin_handle(MainWin *mw, XEvent *ev) {
 			else
 			{
 				printfdf(false, "(): mw->client_to_focus == NULL");				
+				XKeyEvent * const evk = &ev->xkey;
+				if (arr_keycodes_includes(mw->keycodes_Select,
+						evk->keycode)
+				||  arr_keycodes_includes(mw->keycodes_Cancel,
+						evk->keycode))
+					return 1;
 			}
 			break;
 		case ButtonPress:
