@@ -1,215 +1,208 @@
-# Copy this to ~/.config/skippy-xd/skippy-xd.rc and edit it to your liking
+# Copy this to ~/.config/skippy-xd/skippy-xd.rc and edit to your liking
 #
 # File Syntax:
-# Comments must be on their own seperate lines that start with a #
+# Comments must be on separate lines starting with a #
 #
-# colors can be anything XAllocNamedColor can handle
-# (like "black" or "#000000")
+# Colors can be any name or hex value supported by XAllocNamedColor
+# (e.g., "black" or "#000000")
 #
-# fonts are Xft font descriptions
+# Fonts use Xft syntax
 #
-# booleans are "true" or anything but "true" (-> false)
+# Booleans use "true" (anything else is considered false)
 #
-# opacity is an integer in the range of 0-255
+# Opacity is an integer from 0 to 255
 #
+# Some functions are not reliable or unsupported in Openbox, Fluxbox, etc.
 
-# For system config options, stop and then start new skippy daemon
-# To reload config options
-# All other config options can be reloaded on the fly
-# With skippy-xd --config or skippy-xd --config-reload
+# For system-level changes, restart the Skippy daemon
+# All other config changes can be reloaded live with:
+#   skippy-xd --config     or     skippy-xd --config-reload
+
 
 [system]
-
-# When focus is stolen off skippy-xd
-# E.g. a window is newly created during skippy-xd activation
-# Focus back on skippy-xd
+# Keep focus on Skippy-XD if another window tries to steal it during activation
 enforceFocus = true
 
-# File path for client-to-daemon communication
+# Path for client-to-daemon communication
 daemonPath = /tmp/skippy-xd-fifo
 
-# File path for daemon-to-client communication
+# Path for daemon-to-client communication
 clientPath = /tmp/skippy-xd-fofi
 
-# Frequency to update pixmaps
-updateFreq = 60.0
+# Pixmap update frequency in Hz (e.g., 60 = default, 120 = smoother, 30 = lighter)
+updateFreq = 120
 
-# This queries the list of windows
-# Depending on your window manager, you may want to choose between
-# XQueryTree, _NET_CLIENT_LIST, _WIN_CLIENT_LIST
-# If you see missing windows, or windows that you did not expect,
-# Or even crashes,
-# Try a different option
-clientList = _NET_CLIENT_LIST
+# Method to query the list of windows
+# Options: XQueryTree, _NET_CLIENT_LIST, _WIN_CLIENT_LIST
+# If windows are missing, unexpected, or Skippy crashes, try a different method
+clientList = XQueryTree
 
-# when compositors such as picom are not used
-# turn on pseudo-transparency
-pseudoTrans = true
+# Enable pseudo-transparency if no compositor is used (e.g., picom)
+pseudoTrans = false
+
 
 [layout]
+# Delay before showing switch previews (in milliseconds)
+switchWaitDuration = 0
 
-# Wait time before displaying switch previews
-switchWaitDuration = 100
+# Duration of expose animations (0 = disable)
+animationDuration = 500
 
-# Set = 0 to switch off animations
-# For switch, there is never animation
-animationDuration = 200
-
-# Refresh rate during animation
+# Animation refresh rate in Hz
 animationRefresh = 60
 
-# Relative minimal distance between windows
+# Minimum distance between window previews (relative)
 distance = 50
 
-# xd layout is the switch layout
-# boxy layout uses box heuristics (legacy)
-# cosmos layout uses physics based modeling
-exposeLayout = cosmos
+# Layout type: 
+# xd = default expose layout
+# boxy = legacy box layout
+# cosmos = physics-based layout
+exposeLayout = xd
 
-# Whether to show the window bigger than its original size
-allowUpscale = false
+# Whether windows can appear larger than original size
+allowUpscale = true
+
 
 [display]
+# Show windows of type _NET_WM_WINDOW_TYPE_DESKTOP (usually wallpaper)
+showDesktop = false
 
-# Shows _NET_WM_WINDOW_TYPE_DESKTOP windows
-# which are usually wallpaper/background related
-showDesktop = true
+# Background during activation:
+#   - Use image: /path/to/image.png
+#   - Use color with alpha: #00000055
+#   - Use "None" for transparent background
+background = /home/vogel/.skippy-xd/background.png
 
-# Background when skippy-xd is activated
-# To display background wallpaper:
-#   background = /home/richard/screenshots/256.png
-# For tinted background:
-#   background = #00000055
-# For transparent background:
-#   background = None
-background = #00000055
-
-# During paging mode, preserve original desktop appearance
-# From the background being applied
+# Keep original desktop background during paging
 preservePages = true
 
-# Move the mouse cursor when skippy is activated
+# Move mouse pointer when Skippy is activated
 movePointer = false
 
-# Whether to display window frames
-includeFrame = true
+# Include window frame outlines in previews
+includeFrame = false
 
-# Show window previews with rounded corners,
-# with corner radius in pixels
-cornerRadius = 0
+# Rounded window preview corners (in pixels)
+cornerRadius = 2
 
-# Whether to show icons on live preview thumbnails
+# Show window icons in previews
+# iconPlace positions: left, mid, right (horizontal + vertical)
 icon = true
-iconPlace = left left
-iconSize = 48
+iconPlace = right mid
+iconSize = 64
+
 
 [filler]
-tint = #333333
+tint = #009156
 iconPlace = mid mid
-iconSize = 48
+iconSize = 120
 
 [normal]
-tint = black
-tintOpacity = 0
+tint = 
+tintOpacity = 80
 opacity = 255
 
 [highlight]
-tint = #444444
-tintOpacity = 50
+tint = 
+tintOpacity = 20
 opacity = 255
 
 [shadow]
 tint = #040404
-tintOpacity = 0
-opacity = 160
+tintOpacity = 80
+opacity = 255
 
+# Unsupported for Openbox, Fluxbox, etc.
 [multiselect]
-tint = #3376BB
+tint = #fa9f00
 tintOpacity = 50
 opacity = 255
 
 [panel]
-show = true
-backgroundTinting = true
+show = false
+backgroundTinting = false
 reserveSpace = true
+
 
 [tooltip]
 show = true
 offsetX = 0
-offsetY = -5
+offsetY = -10
 width = 0.8
-border = #0e0e0e
+border = #808080
 background = #202020
-backgroundHighlight = #666666
-opacity = 128
-text = white
+opacity = 100
+text = #b2fcaf
 textShadow = black
-font = fixed-11:weight=bold
+font = IosevkaNF:fixed-15:weight=Medium
+
 
 [filter]
-
-# in Xinerama multi-monitor setting, whether to filter windows by Xinerama monitor
+# On multi-monitor setups (Xinerama), show only windows on current monitor
 showOnlyCurrentMonitor = false
 
-# display only windows on the current XScreen
-showOnlyCurrentScreen = true
+# Show only windows from the current XScreen
+showOnlyCurrentScreen = false 
 
-# Choose whether to show shadow windows:
-# windows that are minimized, shaded, or on other virtual desktops
+# Show minimized, shaded, or hidden windows from other desktops
 showShadow = true
 
-# Choose whether to always display sticky windows
-# Switch shows sticky windows regardless of configuration
-showSticky = true
+# Always show sticky windows (ignored by switch mode)
+showSticky = false
 
-# For switch and expose,
-# Whether to limit window select on current virtual desktop
-# Or allow window selection on all virtual desktops
-# Paging always show all desktops
-switchShowAllDesktops = false
-exposeShowAllDesktops = false
+# Restrict window selection to current virtual desktop
+# (ignored for paging mode, which shows all)
+switchShowAllDesktops = true
+exposeShowAllDesktops = true
 
-# Whether the filtering of window class
-# Will be persistent across activations
-persistentFiltering = false
+# Keep window class filters persistent between activations
+persistentFiltering = true
+
 
 [bindings]
+# Time (in seconds) after which the pivot key "locks" toggle mode
+# Set to 0 to disable
+pivotLockingTime = 1
 
-# After this time, pivot "locks" into toggle mode
-# And the pivot key no longer needs to be held
-# Set to 0 to disable pivot locking
-pivotLockingTime = 0
-
-# key* = is a list of valid XWindows KeySym identifiers, case
-# sensitive and <space> seperated list. Run the program 'xev' to find them.
-
-keysUp = Up
-keysDown = Down
-keysLeft = Left
-keysRight = Right
-
+# Key bindings (X KeySyms, space-separated — case-sensitive)
+keysUp     = Up 
+keysDown   = Down 
+keysLeft   = Left 
+keysRight  = Right 
 keysSelect = Return space
 keysCancel = Escape
-keysNext = n
-keysPrev = p
+keysNext   = n 
+keysPrev   = p 
 
-keysIconify = 1
-keysShade = 2
-keysClose = 3
+# Optional key bindings for window actions
+# keysIconify and keysShade are unsupported in Openbox, Fluxbox, etc. Disable both.
+keysIconify = 1 
+keysShade   = 2
+keysClose   = 3
 
-# mouse button bindings, options include
-# "no": do nothing
-# "focus": select window
-# "iconify": minimize window
-# "shade-ewmh": toggle window shade
-# "close-icccm": close window with ICCCM method
-# "close-ewmh": lcose window with EWMH method
-# "destroy": forcefully destroy window
-# "keysPrev": focus on previous window
-# "keysNext": focus on next window
+# Mouse button bindings — available actions:
+#   "no"           : Do nothing
+#   "focus"        : Focus/select the window
+#   "iconify"      : Minimize the window
+#                    Not reliable in Openbox, Fluxbox, etc. — may flicker or restore instantly
+#   "shade-ewmh"   : Toggle shade via EWMH
+#                    Unsupported in most lightweight WMs — avoid in Openbox, Fluxbox
+#   "close-icccm"  : Gracefully close (ICCCM-compliant)
+#   "close-ewmh"   : Request close via EWMH
+#   "destroy"      : Forcefully kill the window
+#   "keysPrev"     : Focus previous window
+#   "keysNext"     : Focus next window
+
+# Mouse button number:
+#   1 = Left click
+#   2 = Middle click
+#   3 = Right click
+#   4 = Wheel up
+#   5 = Wheel down
 
 miwMouse1 = focus
-miwMouse2 = close-ewmh
-miwMouse3 = iconify
+miwMouse2 = close-icccm
+miwMouse3 = focus
 miwMouse4 = keysNext
 miwMouse5 = keysPrev
