@@ -27,35 +27,6 @@ Check out the youtube videos:
 
 skippy-xd works on anything X. See https://github.com/felixfung/skippy-xd/wiki/Adoption#compatible-desktop-environmentswindow-managers for details.
 
-Installation and usage is simple:
-```
-git clone https://github.com/felixfung/skippy-xd.git
-cd skippy-xd
-make
-make install
-
-skippy-xd --start-daemon
-skippy-xd --switch --next
-skippy-xd --expose
-skippy-xd --paging
-```
-
-## Installation and Usage
-
-Installation and usage is simple:
-
-```bash
-git clone https://github.com/felixfung/skippy-xd.git
-cd skippy-xd
-make
-make install
-
-skippy-xd --start-daemon
-skippy-xd --switch --next
-skippy-xd --expose
-skippy-xd --paging
-```
-
 ## Installation and Usage
 
 Installation and usage is simple:
