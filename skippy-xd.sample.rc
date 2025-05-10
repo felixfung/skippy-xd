@@ -73,7 +73,7 @@ showDesktop = false
 #   - Use image: /path/to/image.png
 #   - Use color with alpha: #00000055
 #   - Use "None" for transparent background
-background = /home/vogel/.skippy-xd/background.png
+background = None
 
 # Keep original desktop background during paging
 preservePages = true
