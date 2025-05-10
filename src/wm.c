@@ -679,24 +679,24 @@ wm_validate_window(session_t *ps, Window wid) {
 	}
 
 	if (ps->o.wm_class) {
-		regex_t regex;
-		regcomp(&regex, ps->o.wm_class, REG_EXTENDED);
-		XClassHint *hints = allocchk(XAllocClassHint());
-		if (hints){
-			XGetClassHint(ps->dpy, wid, hints);
-			int regmatch = regexec(&regex, hints->res_class, 0, NULL, 0);
-			if (regmatch != 0)
-				result = false;
-			XFree(hints->res_name);
-			XFree(hints->res_class);
-			XFree(hints);
-		}
-		regfree(&regex);
-	}
+    regex_t regex;
+    regcomp(&regex, ps->o.wm_class, REG_EXTENDED);
+    XClassHint *hints = allocchk(XAllocClassHint());
+    if (hints) {
+        XGetClassHint(ps->dpy, wid, hints);
+        int regmatch_class = (hints->res_class) ? regexec(&regex, hints->res_class, 0, NULL, 0) : REG_NOMATCH;
+        int regmatch_name  = (hints->res_name)  ? regexec(&regex, hints->res_name,  0, NULL, 0) : REG_NOMATCH;
+        if (regmatch_class != 0 && regmatch_name != 0)
+            result = false;
 
-	return result;
+        XFree(hints->res_name);
+        XFree(hints->res_class);
+        XFree(hints);
+    }
+    regfree(&regex);
 }
 
+return result;
 long
 wm_get_window_desktop(session_t *ps, Window wid) {
 	long desktop = LONG_MIN;
