@@ -688,7 +688,6 @@ wm_validate_window(session_t *ps, Window wid) {
         int regmatch_name  = (hints->res_name)  ? regexec(&regex, hints->res_name,  0, NULL, 0) : REG_NOMATCH;
         if (regmatch_class != 0 && regmatch_name != 0)
             result = false;
-
         XFree(hints->res_name);
         XFree(hints->res_class);
         XFree(hints);
