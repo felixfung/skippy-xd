@@ -1,4 +1,4 @@
-# Welcome to skippy-xd!
+Welcome to skippy-xd!
 
 Skippy-xd is a lightweight, window-manager-agnostic window selector on the X server. With skippy-xd, you get live-preview on your alt-tab motions; you get the much coveted expose feature from Mac; you get a handy overview of all your virtual desktops in one glance with paging mode.
 
@@ -39,62 +39,6 @@ skippy-xd --switch --next
 skippy-xd --expose
 skippy-xd --paging
 ```
-
-I see what you mean! You can add the notes specifically under **"Installation and Usage"** or **"Notes for Lightweight Window Managers"**. Here's the exact section where to add it:
-
-### Suggested section to modify:
-
----
-
-## Installation and Usage
-
-Installation and usage is simple:
-
-```bash
-git clone https://github.com/felixfung/skippy-xd.git
-cd skippy-xd
-make
-make install
-
-skippy-xd --start-daemon
-skippy-xd --switch --next
-skippy-xd --expose
-skippy-xd --paging
-```
-
-I see what you mean! You can add the notes specifically under **"Installation and Usage"** or **"Notes for Lightweight Window Managers"**. Here's the exact section where to add it:
-
-### Suggested section to modify:
-
----
-
-## Installation and Usage
-
-Installation and usage is simple:
-
-```bash
-git clone https://github.com/felixfung/skippy-xd.git
-cd skippy-xd
-make
-make install
-
-skippy-xd --start-daemon
-skippy-xd --switch --next
-skippy-xd --expose
-skippy-xd --paging
-```
-
-For detailed documentation, check out the [Usage wiki](https://github.com/felixfung/skippy-xd/wiki/Usage) and [Advanced Tips and Customizations wiki](https://github.com/felixfung/skippy-xd/wiki/Customizations,-tips-and-special-set-ups).
-
-## Notes for Lightweight Window Managers (Openbox, Fluxbox, etc.)
-
-If you're using lightweight window managers such as **Openbox** or **Fluxbox**, be aware that certain features may not function as expected due to limitations in the window manager’s handling of window focus and interactions. Here are some tips to improve the experience:
-
-1. **Multiselect Behavior**: Multiselect may not work as intended due to the limitations of these window managers. It’s advisable to test thoroughly for compatibility.
-
-2. **Window Focus**: Some actions such as window focusing or minimizing may not trigger reliably due to how lightweight window managers handle window stacking and focus. Try adjusting the `exposeLayout` and `showShadow` settings for smoother behavior.
-
-3. **Mouse Actions**: Mouse-based actions (e.g., mouse clicks for window actions) are not always fully supported in Openbox or Fluxbox. Avoid actions like "iconify" or "shade" which are known to be unreliable in these environments.
 
 Check the wiki for documentation on basic use https://github.com/felixfung/skippy-xd/wiki/Usage and advanced tips and tricks https://github.com/felixfung/skippy-xd/wiki/Customizations,-tips-and-special-set-ups.
 
