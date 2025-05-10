@@ -40,12 +40,6 @@ skippy-xd --expose
 skippy-xd --paging
 ```
 
-I see what you mean! You can add the notes specifically under **"Installation and Usage"** or **"Notes for Lightweight Window Managers"**. Here's the exact section where to add it:
-
-### Suggested section to modify:
-
----
-
 ## Installation and Usage
 
 Installation and usage is simple:
