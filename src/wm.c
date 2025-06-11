@@ -693,7 +693,6 @@ wm_validate_window(session_t *ps, Window wid) {
 		}
 		regfree(&regex);
 	}
-
 	return result;
 }
 
