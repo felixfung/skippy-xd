@@ -1,4 +1,4 @@
-/* Skippy - Seduces Kids Into Perversion
+/* Skippy-xd
  *
  * Copyright (C) 2004 Hyriand <hyriand@thegraveyard.org>
  *
