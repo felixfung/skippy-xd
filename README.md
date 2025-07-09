@@ -40,7 +40,7 @@ skippy-xd --expose
 skippy-xd --paging
 ```
 
-Check the wiki for documentation on basic use https://github.com/felixfung/skippy-xd/wiki/Usage and advanced tips and tricks https://github.com/felixfung/skippy-xd/wiki/Customizations,-tips-and-special-set-ups.
+Check the wiki for documentation on basic use https://github.com/felixfung/skippy-xd/wiki/How-to-Use and advanced tips and tricks https://github.com/felixfung/skippy-xd/wiki/Advanced-Uses-and-Special-Set-Ups.
 
 And please! If you share our love for skippy-xd, please do:
 
