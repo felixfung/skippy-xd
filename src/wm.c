@@ -678,7 +678,7 @@ wm_validate_window(session_t *ps, Window wid) {
 		}
 	}
 
-	if (ps->o.wm_class) {
+if (ps->o.wm_class) {
     regex_t regex;
     regcomp(&regex, ps->o.wm_class, REG_EXTENDED);
     XClassHint *hints = allocchk(XAllocClassHint());
@@ -693,6 +693,8 @@ wm_validate_window(session_t *ps, Window wid) {
         XFree(hints);
     }
     regfree(&regex);
+}
+return result;
 }
 
 return result;
