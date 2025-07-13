@@ -12,6 +12,7 @@
 #
 # opacity is an integer in the range of 0-255
 #
+# Some functions are not reliable or unsupported in Openbox, Fluxbox, etc.
 
 # For system config options, stop and then start new skippy daemon
 # To reload config options
@@ -31,7 +32,7 @@ daemonPath = /tmp/skippy-xd-fifo
 # File path for daemon-to-client communication
 clientPath = /tmp/skippy-xd-fofi
 
-# Frequency to update pixmaps
+# Pixmap update frequency in Hz (e.g., 60 = default, 120 = smoother, 30 = lighter)
 updateFreq = 60.0
 
 # This queries the list of windows
@@ -99,6 +100,7 @@ includeFrame = true
 cornerRadius = 0
 
 # Whether to show icons on live preview thumbnails
+# iconPlace positions: left, mid, right (horizontal + vertical)
 icon = true
 iconPlace = left left
 iconSize = 48
@@ -123,6 +125,7 @@ tint = #040404
 tintOpacity = 0
 opacity = 160
 
+# Unsupported for Openbox, Fluxbox, etc.
 [multiselect]
 tint = #3376BB
 tintOpacity = 50
@@ -193,6 +196,7 @@ keysCancel = Escape
 keysNext = n
 keysPrev = p
 
+# keysIconify and keysShade are unsupported in Openbox, Fluxbox, etc. Disable both.
 keysIconify = 1
 keysShade = 2
 keysClose = 3
@@ -207,6 +211,13 @@ keysClose = 3
 # "destroy": forcefully destroy window
 # "keysPrev": focus on previous window
 # "keysNext": focus on next window
+
+# Mouse button number:
+#   1 = Left click
+#   2 = Middle click
+#   3 = Right click
+#   4 = Wheel up
+#   5 = Wheel down
 
 miwMouse1 = focus
 miwMouse2 = close-ewmh
