@@ -2363,6 +2363,30 @@ load_config_file(session_t *ps)
     config_get_int_wrap(config, "layout", "animationRefresh", &ps->o.animationRefresh, 1, 200);
     config_get_int_wrap(config, "layout", "distance", &ps->o.distance, 1, INT_MAX);
 	{
+		const char *s = config_get(config, "layout", "switchLayout", NULL);
+		if (s) {
+			if (strcmp(s,"boxy") == 0) {
+				ps->o.switchLayout = LAYOUT_BOXY;
+			}
+			else if (strcmp(s,"cosmos") == 0) {
+				ps->o.switchLayout = LAYOUT_COSMOS;
+			}
+			else if (strcmp(s,"xd") == 0) {
+				ps->o.switchLayout = LAYOUT_XD;
+			}
+			else {
+				printfef(true, "(): switchLayout \"%s\" not found. Valid switchLayout are:",
+						s);
+				printfef(true, "(): xd");
+				printfef(true, "(): boxy (legacy)");
+				printfef(true, "(): cosmos (default)");
+				ps->o.switchLayout = LAYOUT_XD;
+			}
+		}
+		else
+			ps->o.switchLayout = LAYOUT_XD;
+    }
+	{
 		const char *s = config_get(config, "layout", "exposeLayout", NULL);
 		if (s) {
 			if (strcmp(s,"boxy") == 0) {

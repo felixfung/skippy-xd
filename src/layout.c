@@ -28,8 +28,8 @@
 void layout_run(MainWin *mw, dlist *windows,
 		unsigned int *total_width, unsigned int *total_height,
 		enum layoutmode layout) {
-	if (layout == LAYOUTMODE_EXPOSE
-			&& mw->ps->o.exposeLayout != LAYOUT_XD) {
+	if ((mw->ps->o.mode == PROGMODE_EXPOSE && mw->ps->o.exposeLayout == LAYOUT_COSMOS)
+	|| (mw->ps->o.mode == PROGMODE_SWITCH && mw->ps->o.switchLayout == LAYOUT_COSMOS)) {
 		foreach_dlist (dlist_first(windows)) {
 			ClientWin *cw = iter->data;
 

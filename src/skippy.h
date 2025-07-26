@@ -210,6 +210,7 @@ typedef struct {
 	int animationDuration;;
 	int animationRefresh;;
 	int distance;
+	int switchLayout;
 	int exposeLayout;
 	bool allowUpscale;
 
@@ -305,6 +306,7 @@ typedef struct {
 	.animationDuration = 200, \
 	.animationRefresh = 60, \
 	.distance = 50, \
+	.switchLayout = LAYOUT_XD, \
 	.exposeLayout = LAYOUT_BOXY, \
 	.allowUpscale = false, \
 \
