@@ -2369,10 +2369,7 @@ load_config_file(session_t *ps)
 	{
 		const char *s = config_get(config, "layout", "switchLayout", NULL);
 		if (s) {
-			if (strcmp(s,"boxy") == 0) {
-				ps->o.switchLayout = LAYOUT_BOXY;
-			}
-			else if (strcmp(s,"cosmos") == 0) {
+			if (strcmp(s,"cosmos") == 0) {
 				ps->o.switchLayout = LAYOUT_COSMOS;
 			}
 			else if (strcmp(s,"xd") == 0) {
@@ -2382,7 +2379,6 @@ load_config_file(session_t *ps)
 				printfef(true, "(): switchLayout \"%s\" not found. Valid switchLayout are:",
 						s);
 				printfef(true, "(): xd");
-				printfef(true, "(): boxy (legacy)");
 				printfef(true, "(): cosmos (default)");
 				ps->o.switchLayout = LAYOUT_XD;
 			}
@@ -2393,10 +2389,7 @@ load_config_file(session_t *ps)
 	{
 		const char *s = config_get(config, "layout", "exposeLayout", NULL);
 		if (s) {
-			if (strcmp(s,"boxy") == 0) {
-				ps->o.exposeLayout = LAYOUT_BOXY;
-			}
-			else if (strcmp(s,"cosmos") == 0) {
+			if (strcmp(s,"cosmos") == 0) {
 				ps->o.exposeLayout = LAYOUT_COSMOS;
 			}
 			else if (strcmp(s,"xd") == 0) {
@@ -2406,13 +2399,12 @@ load_config_file(session_t *ps)
 				printfef(true, "(): exposeLayout \"%s\" not found. Valid exposeLayout are:",
 						s);
 				printfef(true, "(): xd");
-				printfef(true, "(): boxy (legacy)");
 				printfef(true, "(): cosmos (default)");
-				ps->o.exposeLayout = LAYOUT_BOXY;
+				ps->o.exposeLayout = LAYOUT_COSMOS;
 			}
 		}
 		else
-			ps->o.exposeLayout = LAYOUT_BOXY;
+			ps->o.exposeLayout = LAYOUT_COSMOS;
     }
     config_get_bool_wrap(config, "layout", "allowUpscale", &ps->o.allowUpscale);
 
