@@ -1435,10 +1435,14 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// animation!
 		if (mw && animating) {
 			int timeslice = time_in_millis() - first_animated;
-			if (layout != LAYOUTMODE_SWITCH
+			if ((layout == LAYOUTMODE_SWITCH && ps->o.switchLayout == LAYOUT_COSMOS
 					&& timeslice < ps->o.animationDuration
 					&& timeslice + first_animated >=
-					last_rendered + (1000.0 / ps->o.animationRefresh)) {
+					last_rendered + (1000.0 / ps->o.animationRefresh))
+				|| (layout != LAYOUTMODE_SWITCH
+					&& timeslice < ps->o.animationDuration
+					&& timeslice + first_animated >=
+					last_rendered + (1000.0 / ps->o.animationRefresh))) {
 				if (!mw->mapped)
 					mainwin_map(mw);
 
