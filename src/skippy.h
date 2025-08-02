@@ -71,7 +71,6 @@ extern bool debuglog;
 
 enum {
 	LAYOUT_XD,
-	LAYOUT_BOXY,
 	LAYOUT_COSMOS,
 };
 
@@ -210,6 +209,7 @@ typedef struct {
 	int animationDuration;;
 	int animationRefresh;;
 	int distance;
+	int switchLayout;
 	int exposeLayout;
 	bool allowUpscale;
 
@@ -305,7 +305,8 @@ typedef struct {
 	.animationDuration = 200, \
 	.animationRefresh = 60, \
 	.distance = 50, \
-	.exposeLayout = LAYOUT_BOXY, \
+	.switchLayout = LAYOUT_XD, \
+	.exposeLayout = LAYOUT_COSMOS, \
 	.allowUpscale = false, \
 \
 	.xinerama_showAll = true, \

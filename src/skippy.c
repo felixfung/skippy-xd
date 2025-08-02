@@ -1435,10 +1435,19 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// animation!
 		if (mw && animating) {
 			int timeslice = time_in_millis() - first_animated;
-			if (layout != LAYOUTMODE_SWITCH
-					&& timeslice < ps->o.animationDuration
-					&& timeslice + first_animated >=
-					last_rendered + (1000.0 / ps->o.animationRefresh)) {
+			int starttime = last_rendered + (1000.0 / ps->o.animationRefresh) - first_animated;
+			int stabletime = ps->o.animationDuration;
+			if (layout == LAYOUTMODE_SWITCH) {
+				if (ps->o.switchLayout == LAYOUT_XD) {
+					starttime = ps->o.switchWaitDuration + 1;
+					stabletime = ps->o.switchWaitDuration;
+				}
+				else if (ps->o.switchLayout == LAYOUT_COSMOS) {
+					starttime += ps->o.switchWaitDuration;
+					stabletime += ps->o.switchWaitDuration;
+				}
+			}
+			if (starttime < timeslice && timeslice < stabletime) {
 				if (!mw->mapped)
 					mainwin_map(mw);
 
@@ -1456,16 +1465,21 @@ mainloop(session_t *ps, bool activate_on_start) {
 					first_animating = false;
 				}
 
+				if (layout == LAYOUTMODE_SWITCH
+				&& ps->o.switchLayout == LAYOUT_COSMOS)
+					timeslice -= ps->o.switchWaitDuration;
+
 				anime(ps->mainwin, ps->mainwin->clients,
 					((float)timeslice)/(float)ps->o.animationDuration);
 				last_rendered = time_in_millis();
 
+				if (layout == LAYOUTMODE_SWITCH
+				&& ps->o.switchLayout == LAYOUT_COSMOS)
+					last_rendered -= ps->o.switchWaitDuration;
+
 				XFlush(ps->dpy);
 			}
-			else if ((layout == LAYOUTMODE_SWITCH
-						&& timeslice >= ps->o.switchWaitDuration) ||
-					(layout != LAYOUTMODE_SWITCH
-						&& timeslice >= ps->o.animationDuration)) {
+			else if (timeslice >= stabletime) {
 				if (!mw->mapped)
 					mainwin_map(mw);
 
@@ -2363,12 +2377,29 @@ load_config_file(session_t *ps)
     config_get_int_wrap(config, "layout", "animationRefresh", &ps->o.animationRefresh, 1, 200);
     config_get_int_wrap(config, "layout", "distance", &ps->o.distance, 1, INT_MAX);
 	{
+		const char *s = config_get(config, "layout", "switchLayout", NULL);
+		if (s) {
+			if (strcmp(s,"cosmos") == 0) {
+				ps->o.switchLayout = LAYOUT_COSMOS;
+			}
+			else if (strcmp(s,"xd") == 0) {
+				ps->o.switchLayout = LAYOUT_XD;
+			}
+			else {
+				printfef(true, "(): switchLayout \"%s\" not found. Valid switchLayout are:",
+						s);
+				printfef(true, "(): xd");
+				printfef(true, "(): cosmos (default)");
+				ps->o.switchLayout = LAYOUT_XD;
+			}
+		}
+		else
+			ps->o.switchLayout = LAYOUT_XD;
+    }
+	{
 		const char *s = config_get(config, "layout", "exposeLayout", NULL);
 		if (s) {
-			if (strcmp(s,"boxy") == 0) {
-				ps->o.exposeLayout = LAYOUT_BOXY;
-			}
-			else if (strcmp(s,"cosmos") == 0) {
+			if (strcmp(s,"cosmos") == 0) {
 				ps->o.exposeLayout = LAYOUT_COSMOS;
 			}
 			else if (strcmp(s,"xd") == 0) {
@@ -2378,13 +2409,12 @@ load_config_file(session_t *ps)
 				printfef(true, "(): exposeLayout \"%s\" not found. Valid exposeLayout are:",
 						s);
 				printfef(true, "(): xd");
-				printfef(true, "(): boxy (legacy)");
 				printfef(true, "(): cosmos (default)");
-				ps->o.exposeLayout = LAYOUT_BOXY;
+				ps->o.exposeLayout = LAYOUT_COSMOS;
 			}
 		}
 		else
-			ps->o.exposeLayout = LAYOUT_BOXY;
+			ps->o.exposeLayout = LAYOUT_COSMOS;
     }
     config_get_bool_wrap(config, "layout", "allowUpscale", &ps->o.allowUpscale);
 
