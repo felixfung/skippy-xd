@@ -1,5 +1,13 @@
 Skippy-XD changelog
 
+0.10.2 -- "Trim Tram Truffle" (3 Aug 2025) ~/felixfung
+ - Stubbed daemon commands do not cause daemon termination
+ - Daemon flushes clients in start sequence
+ - Cmd line parameter --multi-select
+ - Add config option tooltip/BackgroundHighlight
+ - Add config option layout/switchLayout
+ - Remove legacy expose layout "boxy"
+
 0.10.1 -- "Ice" (01 Apr 2025) ~/felixfung
  - Performance: fixed deterioration due to X resource leak
  - Performance: no lag when creating many windows
