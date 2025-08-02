@@ -49,7 +49,7 @@ pseudoTrans = true
 [layout]
 
 # Wait time before displaying switch previews
-switchWaitDuration = 200
+switchWaitDuration = 100
 
 # Set = 0 to switch off animations
 # For switch, there is never animation
