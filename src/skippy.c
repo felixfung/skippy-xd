@@ -1435,14 +1435,19 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// animation!
 		if (mw && animating) {
 			int timeslice = time_in_millis() - first_animated;
-			if ((layout == LAYOUTMODE_SWITCH && ps->o.switchLayout == LAYOUT_COSMOS
-					&& timeslice < ps->o.animationDuration
-					&& timeslice + first_animated >=
-					last_rendered + (1000.0 / ps->o.animationRefresh))
-				|| (layout != LAYOUTMODE_SWITCH
-					&& timeslice < ps->o.animationDuration
-					&& timeslice + first_animated >=
-					last_rendered + (1000.0 / ps->o.animationRefresh))) {
+			int starttime = last_rendered + (1000.0 / ps->o.animationRefresh) - first_animated;
+			int stabletime = ps->o.animationDuration;
+			if (layout == LAYOUTMODE_SWITCH) {
+				if (ps->o.switchLayout == LAYOUT_XD) {
+					starttime = ps->o.switchWaitDuration + 1;
+					stabletime = ps->o.switchWaitDuration;
+				}
+				else if (ps->o.switchLayout == LAYOUT_COSMOS) {
+					starttime += ps->o.switchWaitDuration;
+					stabletime += ps->o.switchWaitDuration;
+				}
+			}
+			if (starttime < timeslice && timeslice < stabletime) {
 				if (!mw->mapped)
 					mainwin_map(mw);
 
@@ -1460,16 +1465,21 @@ mainloop(session_t *ps, bool activate_on_start) {
 					first_animating = false;
 				}
 
+				if (layout == LAYOUTMODE_SWITCH
+				&& ps->o.switchLayout == LAYOUT_COSMOS)
+					timeslice -= ps->o.switchWaitDuration;
+
 				anime(ps->mainwin, ps->mainwin->clients,
 					((float)timeslice)/(float)ps->o.animationDuration);
 				last_rendered = time_in_millis();
 
+				if (layout == LAYOUTMODE_SWITCH
+				&& ps->o.switchLayout == LAYOUT_COSMOS)
+					last_rendered -= ps->o.switchWaitDuration;
+
 				XFlush(ps->dpy);
 			}
-			else if ((layout == LAYOUTMODE_SWITCH
-						&& timeslice >= ps->o.switchWaitDuration) ||
-					(layout != LAYOUTMODE_SWITCH
-						&& timeslice >= ps->o.animationDuration)) {
+			else if (timeslice >= stabletime) {
 				if (!mw->mapped)
 					mainwin_map(mw);
 
