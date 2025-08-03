@@ -1223,6 +1223,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 	bool activate = activate_on_start;
 	bool pending_damage = false;
 	long last_rendered = 0L;
+	long last_animated = 0L;
 	enum layoutmode layout = LAYOUTMODE_EXPOSE;
 	bool toggling = !ps->o.pivotkey;
 	bool animating = activate;
@@ -1268,7 +1269,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 			activate = false;
 
 			if (skippy_activate(ps->mainwin, layout)) {
-				last_rendered = time_in_millis();
+				last_animated = last_rendered = time_in_millis();
 				mw = ps->mainwin;
 				pending_damage = false;
 				first_animated = time_in_millis();
@@ -1437,7 +1438,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// animation!
 		if (mw && animating) {
 			int timeslice = time_in_millis() - first_animated;
-			int starttime = last_rendered + (1000.0 / ps->o.animationRefresh) - first_animated;
+			int starttime = last_animated + (1000.0 / ps->o.animationRefresh) - first_animated;
 			int stabletime = ps->o.animationDuration;
 			if (layout == LAYOUTMODE_SWITCH) {
 				if (ps->o.switchWaitDuration == 0) {
@@ -1476,11 +1477,11 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 				anime(ps->mainwin, ps->mainwin->clients,
 					((float)timeslice)/(float)ps->o.animationDuration);
-				last_rendered = time_in_millis();
+				last_animated = last_rendered = time_in_millis();
 
 				if (layout == LAYOUTMODE_SWITCH
 				&& ps->o.switchLayout == LAYOUT_COSMOS)
-					last_rendered -= ps->o.switchWaitDuration;
+					last_animated = last_rendered -= ps->o.switchWaitDuration;
 
 				XFlush(ps->dpy);
 			}
@@ -1520,7 +1521,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 				anime(ps->mainwin, ps->mainwin->clients, 1);
 				animating = false;
-				last_rendered = time_in_millis();
+				last_animated = last_rendered = time_in_millis();
 
 				if (layout == LAYOUTMODE_PAGING) {
 					foreach_dlist (mw->dminis) {
