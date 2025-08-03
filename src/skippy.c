@@ -1530,7 +1530,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 						ps->o.movePointer);
 			}
 
-			continue; // while animating, do not allow user actions
+			if (layout != LAYOUTMODE_SWITCH)
+				continue; // while animating, do not allow user actions
 		}
 
 		if (layout != LAYOUTMODE_SWITCH
@@ -1795,7 +1796,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				ps->o.focus_initial = -((piped_input & PIPECMD_PREV) > 0)
 					+ ((piped_input & PIPECMD_NEXT) > 0);
 
-				if (!mw || !mw->mapped)
+				if (!mw /*|| !mw->mapped*/)
 				{
 					if (piped_input & PIPECMD_SWITCH) {
 						ps->o.mode = PROGMODE_SWITCH;
@@ -1851,7 +1852,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 						mw->refocus = die = true;
 					}
 				}
-				else if (mw && mw->mapped)
+				else if (mw /*&& mw->mapped*/)
 				{
 					printfdf(false, "(): cycling window");
 					fflush(stdout);fflush(stderr);
@@ -1861,6 +1862,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 					while (ps->o.focus_initial > 0 && mw->client_to_focus) {
 						focus_miniw_next(ps, mw->client_to_focus);
+						childwin_focus(mw->client_to_focus);
 						ps->o.focus_initial--;
 					}
 
