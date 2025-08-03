@@ -1436,7 +1436,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 			int starttime = last_rendered + (1000.0 / ps->o.animationRefresh) - first_animated;
 			int stabletime = ps->o.animationDuration;
 			if (layout == LAYOUTMODE_SWITCH) {
-				if (ps->o.switchLayout == LAYOUT_XD) {
+				if (ps->o.switchWaitDuration == 0) {
+					starttime = stabletime = timeslice + 1;
+				}
+				else if (ps->o.switchLayout == LAYOUT_XD) {
 					starttime = ps->o.switchWaitDuration + 1;
 					stabletime = ps->o.switchWaitDuration;
 				}

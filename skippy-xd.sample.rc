@@ -49,6 +49,7 @@ pseudoTrans = true
 [layout]
 
 # Wait time before displaying switch previews
+# Set = 0 to veto live previews completely
 switchWaitDuration = 100
 
 # Set = 0 to switch off animations
