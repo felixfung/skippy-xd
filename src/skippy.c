@@ -1866,7 +1866,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 					while (ps->o.focus_initial > 0 && mw->client_to_focus) {
 						focus_miniw_next(ps, mw->client_to_focus);
-						childwin_focus(mw->client_to_focus);
+						if (!mw->mapped)
+							childwin_focus(mw->client_to_focus);
 						ps->o.focus_initial--;
 					}
 
