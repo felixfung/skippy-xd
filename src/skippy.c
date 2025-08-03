@@ -1283,6 +1283,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 		if (mw && die) {
 			printfdf(false,"(): selecting/canceling and returning to background");
 
+			animating = false;
+
 			// Unmap the main window and all clients, to make sure focus doesn't fall out
 			// when we start setting focus on client window
 			mainwin_unmap(mw);
