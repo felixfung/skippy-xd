@@ -827,6 +827,8 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 	if (first) {
 		mw->client_to_focus = first->data;
 		mw->client_to_focus->focused = 1;
+		if (!mw->mapped)
+			childwin_focus(mw->client_to_focus);
 	}
 }
 
@@ -1221,6 +1223,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 	bool activate = activate_on_start;
 	bool pending_damage = false;
 	long last_rendered = 0L;
+	long last_animated = 0L;
 	enum layoutmode layout = LAYOUTMODE_EXPOSE;
 	bool toggling = !ps->o.pivotkey;
 	bool animating = activate;
@@ -1266,7 +1269,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 			activate = false;
 
 			if (skippy_activate(ps->mainwin, layout)) {
-				last_rendered = time_in_millis();
+				last_animated = last_rendered = time_in_millis();
 				mw = ps->mainwin;
 				pending_damage = false;
 				first_animated = time_in_millis();
@@ -1279,6 +1282,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// Main window destruction, before poll()
 		if (mw && die) {
 			printfdf(false,"(): selecting/canceling and returning to background");
+
+			animating = false;
 
 			// Unmap the main window and all clients, to make sure focus doesn't fall out
 			// when we start setting focus on client window
@@ -1435,10 +1440,13 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// animation!
 		if (mw && animating) {
 			int timeslice = time_in_millis() - first_animated;
-			int starttime = last_rendered + (1000.0 / ps->o.animationRefresh) - first_animated;
+			int starttime = last_animated + (1000.0 / ps->o.animationRefresh) - first_animated;
 			int stabletime = ps->o.animationDuration;
 			if (layout == LAYOUTMODE_SWITCH) {
-				if (ps->o.switchLayout == LAYOUT_XD) {
+				if (ps->o.switchWaitDuration == 0) {
+					starttime = stabletime = timeslice + 1;
+				}
+				else if (ps->o.switchLayout == LAYOUT_XD) {
 					starttime = ps->o.switchWaitDuration + 1;
 					stabletime = ps->o.switchWaitDuration;
 				}
@@ -1471,11 +1479,11 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 				anime(ps->mainwin, ps->mainwin->clients,
 					((float)timeslice)/(float)ps->o.animationDuration);
-				last_rendered = time_in_millis();
+				last_animated = last_rendered = time_in_millis();
 
 				if (layout == LAYOUTMODE_SWITCH
 				&& ps->o.switchLayout == LAYOUT_COSMOS)
-					last_rendered -= ps->o.switchWaitDuration;
+					last_animated = last_rendered -= ps->o.switchWaitDuration;
 
 				XFlush(ps->dpy);
 			}
@@ -1515,7 +1523,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 				anime(ps->mainwin, ps->mainwin->clients, 1);
 				animating = false;
-				last_rendered = time_in_millis();
+				last_animated = last_rendered = time_in_millis();
 
 				if (layout == LAYOUTMODE_PAGING) {
 					foreach_dlist (mw->dminis) {
@@ -1530,7 +1538,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 						ps->o.movePointer);
 			}
 
-			continue; // while animating, do not allow user actions
+			if (layout != LAYOUTMODE_SWITCH)
+				continue; // while animating, do not allow user actions
 		}
 
 		if (layout != LAYOUTMODE_SWITCH
@@ -1751,7 +1760,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 		int timeout = ps->mainwin->poll_time;
 		int time_offset = last_rendered - time_in_millis();
 		timeout -= time_offset;
-		if (timeout < 0)
+		if (timeout < 0 || animating)
 			timeout = 0;
 		poll(r_fd, (r_fd[1].fd >= 0 ? 2: 1), timeout);
 
@@ -1795,7 +1804,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				ps->o.focus_initial = -((piped_input & PIPECMD_PREV) > 0)
 					+ ((piped_input & PIPECMD_NEXT) > 0);
 
-				if (!mw || !mw->mapped)
+				if (!mw /*|| !mw->mapped*/)
 				{
 					if (piped_input & PIPECMD_SWITCH) {
 						ps->o.mode = PROGMODE_SWITCH;
@@ -1851,7 +1860,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 						mw->refocus = die = true;
 					}
 				}
-				else if (mw && mw->mapped)
+				else if (mw /*&& mw->mapped*/)
 				{
 					printfdf(false, "(): cycling window");
 					fflush(stdout);fflush(stderr);
@@ -1861,6 +1870,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 					while (ps->o.focus_initial > 0 && mw->client_to_focus) {
 						focus_miniw_next(ps, mw->client_to_focus);
+						if (!mw->mapped)
+							childwin_focus(mw->client_to_focus);
 						ps->o.focus_initial--;
 					}
 
