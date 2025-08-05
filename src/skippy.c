@@ -837,7 +837,7 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 	if (first) {
 		mw->client_to_focus = first->data;
 		mw->client_to_focus->focused = 1;
-		if (!mw->mapped)
+		if (iter && !mw->mapped)
 			childwin_focus(mw->client_to_focus);
 	}
 }
