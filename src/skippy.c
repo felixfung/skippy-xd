@@ -827,6 +827,8 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 	if (first) {
 		mw->client_to_focus = first->data;
 		mw->client_to_focus->focused = 1;
+		if (!mw->mapped)
+			childwin_focus(mw->client_to_focus);
 	}
 }
 
@@ -1221,6 +1223,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 	bool activate = activate_on_start;
 	bool pending_damage = false;
 	long last_rendered = 0L;
+	long last_animated = 0L;
 	enum layoutmode layout = LAYOUTMODE_EXPOSE;
 	bool toggling = !ps->o.pivotkey;
 	bool animating = activate;
@@ -1266,7 +1269,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 			activate = false;
 
 			if (skippy_activate(ps->mainwin, layout)) {
-				last_rendered = time_in_millis();
+				last_animated = last_rendered = time_in_millis();
 				mw = ps->mainwin;
 				pending_damage = false;
 				first_animated = time_in_millis();
@@ -1279,6 +1282,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// Main window destruction, before poll()
 		if (mw && die) {
 			printfdf(false,"(): selecting/canceling and returning to background");
+
+			animating = false;
 
 			// Unmap the main window and all clients, to make sure focus doesn't fall out
 			// when we start setting focus on client window
@@ -1435,10 +1440,22 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// animation!
 		if (mw && animating) {
 			int timeslice = time_in_millis() - first_animated;
-			if (layout != LAYOUTMODE_SWITCH
-					&& timeslice < ps->o.animationDuration
-					&& timeslice + first_animated >=
-					last_rendered + (1000.0 / ps->o.animationRefresh)) {
+			int starttime = last_animated + (1000.0 / ps->o.animationRefresh) - first_animated;
+			int stabletime = ps->o.animationDuration;
+			if (layout == LAYOUTMODE_SWITCH) {
+				if (ps->o.switchWaitDuration == 0) {
+					starttime = stabletime = timeslice + 1;
+				}
+				else if (ps->o.switchLayout == LAYOUT_XD) {
+					starttime = ps->o.switchWaitDuration + 1;
+					stabletime = ps->o.switchWaitDuration;
+				}
+				else if (ps->o.switchLayout == LAYOUT_COSMOS) {
+					starttime += ps->o.switchWaitDuration;
+					stabletime += ps->o.switchWaitDuration;
+				}
+			}
+			if (starttime < timeslice && timeslice < stabletime) {
 				if (!mw->mapped)
 					mainwin_map(mw);
 
@@ -1456,16 +1473,21 @@ mainloop(session_t *ps, bool activate_on_start) {
 					first_animating = false;
 				}
 
+				if (layout == LAYOUTMODE_SWITCH
+				&& ps->o.switchLayout == LAYOUT_COSMOS)
+					timeslice -= ps->o.switchWaitDuration;
+
 				anime(ps->mainwin, ps->mainwin->clients,
 					((float)timeslice)/(float)ps->o.animationDuration);
-				last_rendered = time_in_millis();
+				last_animated = last_rendered = time_in_millis();
+
+				if (layout == LAYOUTMODE_SWITCH
+				&& ps->o.switchLayout == LAYOUT_COSMOS)
+					last_animated = last_rendered -= ps->o.switchWaitDuration;
 
 				XFlush(ps->dpy);
 			}
-			else if ((layout == LAYOUTMODE_SWITCH
-						&& timeslice >= ps->o.switchWaitDuration) ||
-					(layout != LAYOUTMODE_SWITCH
-						&& timeslice >= ps->o.animationDuration)) {
+			else if (timeslice >= stabletime) {
 				if (!mw->mapped)
 					mainwin_map(mw);
 
@@ -1501,7 +1523,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 				anime(ps->mainwin, ps->mainwin->clients, 1);
 				animating = false;
-				last_rendered = time_in_millis();
+				last_animated = last_rendered = time_in_millis();
 
 				if (layout == LAYOUTMODE_PAGING) {
 					foreach_dlist (mw->dminis) {
@@ -1516,7 +1538,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 						ps->o.movePointer);
 			}
 
-			continue; // while animating, do not allow user actions
+			if (layout != LAYOUTMODE_SWITCH)
+				continue; // while animating, do not allow user actions
 		}
 
 		if (layout != LAYOUTMODE_SWITCH
@@ -1737,7 +1760,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 		int timeout = ps->mainwin->poll_time;
 		int time_offset = last_rendered - time_in_millis();
 		timeout -= time_offset;
-		if (timeout < 0)
+		if (timeout < 0 || animating)
 			timeout = 0;
 		poll(r_fd, (r_fd[1].fd >= 0 ? 2: 1), timeout);
 
@@ -1781,7 +1804,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				ps->o.focus_initial = -((piped_input & PIPECMD_PREV) > 0)
 					+ ((piped_input & PIPECMD_NEXT) > 0);
 
-				if (!mw || !mw->mapped)
+				if (!mw /*|| !mw->mapped*/)
 				{
 					if (piped_input & PIPECMD_SWITCH) {
 						ps->o.mode = PROGMODE_SWITCH;
@@ -1837,7 +1860,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 						mw->refocus = die = true;
 					}
 				}
-				else if (mw && mw->mapped)
+				else if (mw /*&& mw->mapped*/)
 				{
 					printfdf(false, "(): cycling window");
 					fflush(stdout);fflush(stderr);
@@ -1847,6 +1870,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 					while (ps->o.focus_initial > 0 && mw->client_to_focus) {
 						focus_miniw_next(ps, mw->client_to_focus);
+						if (!mw->mapped)
+							childwin_focus(mw->client_to_focus);
 						ps->o.focus_initial--;
 					}
 
@@ -2363,12 +2388,29 @@ load_config_file(session_t *ps)
     config_get_int_wrap(config, "layout", "animationRefresh", &ps->o.animationRefresh, 1, 200);
     config_get_int_wrap(config, "layout", "distance", &ps->o.distance, 1, INT_MAX);
 	{
+		const char *s = config_get(config, "layout", "switchLayout", NULL);
+		if (s) {
+			if (strcmp(s,"cosmos") == 0) {
+				ps->o.switchLayout = LAYOUT_COSMOS;
+			}
+			else if (strcmp(s,"xd") == 0) {
+				ps->o.switchLayout = LAYOUT_XD;
+			}
+			else {
+				printfef(true, "(): switchLayout \"%s\" not found. Valid switchLayout are:",
+						s);
+				printfef(true, "(): xd");
+				printfef(true, "(): cosmos (default)");
+				ps->o.switchLayout = LAYOUT_XD;
+			}
+		}
+		else
+			ps->o.switchLayout = LAYOUT_XD;
+    }
+	{
 		const char *s = config_get(config, "layout", "exposeLayout", NULL);
 		if (s) {
-			if (strcmp(s,"boxy") == 0) {
-				ps->o.exposeLayout = LAYOUT_BOXY;
-			}
-			else if (strcmp(s,"cosmos") == 0) {
+			if (strcmp(s,"cosmos") == 0) {
 				ps->o.exposeLayout = LAYOUT_COSMOS;
 			}
 			else if (strcmp(s,"xd") == 0) {
@@ -2378,13 +2420,12 @@ load_config_file(session_t *ps)
 				printfef(true, "(): exposeLayout \"%s\" not found. Valid exposeLayout are:",
 						s);
 				printfef(true, "(): xd");
-				printfef(true, "(): boxy (legacy)");
 				printfef(true, "(): cosmos (default)");
-				ps->o.exposeLayout = LAYOUT_BOXY;
+				ps->o.exposeLayout = LAYOUT_COSMOS;
 			}
 		}
 		else
-			ps->o.exposeLayout = LAYOUT_BOXY;
+			ps->o.exposeLayout = LAYOUT_COSMOS;
     }
     config_get_bool_wrap(config, "layout", "allowUpscale", &ps->o.allowUpscale);
 
