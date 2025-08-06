@@ -2903,9 +2903,9 @@ main_end:
 
 		if (ps->o.wm_class)
 			free(ps->o.wm_class);
-		if (ps->o.wm_status)
+		if (ps->o.wm_status_count > 0)
 			free(ps->o.wm_status);
-		if (ps->o.wm_status_str)
+		if (ps->o.wm_status_count > 0)
 			free(ps->o.wm_status_str);
 
 		if (ps->fd_pipe >= 0)
