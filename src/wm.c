@@ -683,15 +683,25 @@ wm_identify_panel(session_t *ps, Window wid) {
 
 bool
 wm_validate_window(session_t *ps, Window wid) {
-	if (WMPSN_EWMH == ps->wmpsn) {
+	{
 		bool shortcircuit = false;
 		winprop_t prop = wid_get_prop(ps, wid, _NET_WM_WINDOW_TYPE, 1, XA_ATOM, 32);
+		long v = winprop_get_int(&prop);
+		if ((_NET_WM_WINDOW_TYPE_DESKTOP == v
+				|| _NET_WM_WINDOW_TYPE_DOCK == v
+				|| _NET_WM_WINDOW_TYPE_POPUP_MENU == v))
+			shortcircuit = true;
+		free_winprop(&prop);
+		if (shortcircuit)
+			return false;
+	}
+
+	if (WMPSN_EWMH == ps->wmpsn) {
+		bool shortcircuit = false;
+		winprop_t prop = wid_get_prop(ps, wid, _NET_WM_STATE, 8192, XA_ATOM, 32);
 		{
 			long v = winprop_get_int(&prop);
-			if (_NET_WM_WINDOW_TYPE_DESKTOP == v
-			 || _NET_WM_WINDOW_TYPE_DOCK == v
-			 || _NET_WM_WINDOW_TYPE_POPUP_MENU == v
-			 || _NET_WM_STATE_SKIP_TASKBAR == v)
+			if (_NET_WM_STATE_SKIP_TASKBAR == v)
 				shortcircuit = true;
 
 			if ((_NET_WM_STATE_HIDDEN == v || _NET_WM_STATE_SHADED == v)
