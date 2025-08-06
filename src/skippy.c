@@ -840,6 +840,9 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 		if (iter && !mw->mapped)
 			childwin_focus(mw->client_to_focus);
 	}
+
+	if (layout == LAYOUTMODE_SWITCH && ps->o.switchLayout == LAYOUT_COSMOS)
+		dlist_sort(mw->focuslist, sort_cw_by_column, 0);
 }
 
 static void
