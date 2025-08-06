@@ -268,6 +268,9 @@ typedef struct {
 	bool exposeShowAllDesktops;
 	bool persistentFiltering;
 	char *wm_class;
+	int wm_status_count;
+	int *wm_status;
+	char *wm_status_str;
 
 	int pivotLockingTime;
 	enum cliop bindings_miwMouse[MAX_MOUSE_BUTTONS];
@@ -316,6 +319,9 @@ typedef struct {
 	.switchShowAllDesktops = true, \
 	.exposeShowAllDesktops = false, \
 	.persistentFiltering = false, \
+	.wm_status_count = 0, \
+	.wm_status = NULL, \
+	.wm_status_str = "", \
 \
 	.panel_show_desktop = true, \
 	.background = NULL, \

@@ -70,7 +70,9 @@ static Atom
 	_NET_WM_VISIBLE_NAME,
 	_NET_DESKTOP_NAMES,
 	_NET_WM_NAME,
-	
+	_NET_WM_STATE_MAXIMIZED_VERT,
+	_NET_WM_STATE_MAXIMIZED_HORZ,
+
 	/* Old gnome atoms */
 	_WIN_SUPPORTING_WM_CHECK,
 	_WIN_WORKSPACE,
@@ -151,6 +153,8 @@ wm_get_atoms(session_t *ps) {
 	T_GETATOM(_NET_ACTIVE_WINDOW);
 	T_GETATOM(_NET_CLOSE_WINDOW);
 	T_GETATOM(_NET_WM_STATE_SHADED);
+	T_GETATOM(_NET_WM_STATE_MAXIMIZED_VERT);
+	T_GETATOM(_NET_WM_STATE_MAXIMIZED_HORZ);
 	T_GETATOM(_NET_WM_ICON);
 
 	T_GETATOM(KWM_WIN_ICON);
@@ -163,6 +167,52 @@ wm_get_atoms(session_t *ps) {
 	T_GETATOM(_WIN_STATE);
 	T_GETATOM(_WIN_HINTS);
 #undef T_GETATOM
+}
+
+int wm_get_status(char *status) {
+	if (strcmp(status, "sticky") == 0) {
+		return WIN_STATE_STICKY;
+	}
+	if (strcmp(status, "shaded") == 0) {
+		return WIN_STATE_SHADED;
+	}
+	if (strcmp(status, "minimized") == 0) {
+		return WIN_STATE_HIDDEN;
+	}
+	if (strcmp(status, "maximized_vert") == 0) {
+		return WIN_STATE_MAXIMIZED_VERT;
+	}
+	if (strcmp(status, "maximized_horz") == 0) {
+		return WIN_STATE_MAXIMIZED_HORIZ;
+	}
+	if (strcmp(status, "maximized") == 0) {
+		return WIN_STATE_MAXIMIZED_VERT | WIN_STATE_MAXIMIZED_HORIZ;
+	}
+	if (strcmp(status, "float") == 0) {
+		return -1;
+	}
+	return 0;
+}
+
+Atom status2atom(int status) {
+	switch (status) {
+		case WIN_STATE_STICKY:
+			return _NET_WM_STATE_STICKY;
+		case WIN_STATE_SHADED:
+			return _NET_WM_STATE_SHADED;
+		case WIN_STATE_HIDDEN:
+			return _NET_WM_STATE_HIDDEN;
+		case WIN_STATE_MAXIMIZED_VERT:
+			return _NET_WM_STATE_MAXIMIZED_VERT;
+		case WIN_STATE_MAXIMIZED_HORIZ:
+			return _NET_WM_STATE_MAXIMIZED_HORZ;
+		case WIN_STATE_MAXIMIZED_VERT | WIN_STATE_MAXIMIZED_HORIZ:
+			return _NET_WM_STATE_MAXIMIZED_VERT + _NET_WM_STATE_MAXIMIZED_HORZ;
+		case -1:
+			return -1;
+		default:
+			return 0;
+	}
 }
 
 bool
@@ -633,49 +683,101 @@ wm_identify_panel(session_t *ps, Window wid) {
 
 bool
 wm_validate_window(session_t *ps, Window wid) {
-	winprop_t prop = { };
-	bool result = true;
-
-	// Check _NET_WM_WINDOW_TYPE
-	prop = wid_get_prop(ps, wid, _NET_WM_WINDOW_TYPE, 1, XA_ATOM, 32);
-	{
-		long v = winprop_get_int(&prop);
-		if ((_NET_WM_WINDOW_TYPE_DESKTOP == v
-					|| _NET_WM_WINDOW_TYPE_DOCK == v
-					|| _NET_WM_WINDOW_TYPE_POPUP_MENU == v))
-			result = false;
-	}
-	free_winprop(&prop);
-
 	if (WMPSN_EWMH == ps->wmpsn) {
-		// Check _NET_WM_STATE
-		prop = wid_get_prop(ps, wid, _NET_WM_STATE, 8192, XA_ATOM, 32);
-		for (int i = 0; result && i < prop.nitems; i++) {
-			long v = prop.data32[i];
-			if (!ps->o.showShadow && _NET_WM_STATE_HIDDEN == v)
-				result = false;
-			else if (_NET_WM_STATE_SKIP_TASKBAR == v)
-				result = false;
-			else if (_NET_WM_STATE_SHADED == v)
-				result = false;
+		bool shortcircuit = false;
+		winprop_t prop = wid_get_prop(ps, wid, _NET_WM_WINDOW_TYPE, 1, XA_ATOM, 32);
+		{
+			long v = winprop_get_int(&prop);
+			if (_NET_WM_WINDOW_TYPE_DESKTOP == v
+			 || _NET_WM_WINDOW_TYPE_DOCK == v
+			 || _NET_WM_WINDOW_TYPE_POPUP_MENU == v
+			 || _NET_WM_STATE_SKIP_TASKBAR == v)
+				shortcircuit = true;
+
+			if ((_NET_WM_STATE_HIDDEN == v || _NET_WM_STATE_SHADED == v)
+					&& !ps->o.showShadow)
+				shortcircuit = true;
 		}
 		free_winprop(&prop);
-
+		if (shortcircuit)
+			return false;
 	}
 	else if (WMPSN_GNOME == ps->wmpsn) {
-		// Check _WIN_STATE
-		prop = wid_get_prop(ps, wid, _WIN_STATE, 1, XA_CARDINAL, 0);
-		if (!ps->o.showShadow && winprop_get_int(&prop)
+		bool shortcircuit = false;
+		winprop_t prop = wid_get_prop(ps, wid, _WIN_STATE, 1, XA_CARDINAL, 0);
+		if (winprop_get_int(&prop)
 				& (WIN_STATE_MINIMIZED | WIN_STATE_SHADED | WIN_STATE_HIDDEN))
-			result = false;
+			shortcircuit = !ps->o.showShadow;
 		free_winprop(&prop);
 
-		if (result) {
-			prop = wid_get_prop(ps, wid, _WIN_HINTS, 1, XA_CARDINAL, 0);
-			if (winprop_get_int(&prop) & WIN_HINTS_SKIP_TASKBAR)
-				result = false;
+		prop = wid_get_prop(ps, wid, _WIN_HINTS, 1, XA_CARDINAL, 0);
+		if (winprop_get_int(&prop) & WIN_HINTS_SKIP_TASKBAR)
+			shortcircuit = true;
+		free_winprop(&prop);
+		if (shortcircuit)
+			return false;
+	}
+
+	if (ps->o.wm_status_count > 0) {
+		bool statusfilter = false;
+		bool maxvert = false;
+		bool maxhorz = false;
+		bool filtering4float = false, floating = true;
+		bool filtering4max = false;
+		if (WMPSN_EWMH == ps->wmpsn) {
+			winprop_t prop = wid_get_prop(ps, wid, _NET_WM_STATE, 8192, XA_ATOM, 32);
+			for (int i = 0; i < prop.nitems; i++) {
+				long v = prop.data32[i];
+				maxvert |= v == _NET_WM_STATE_MAXIMIZED_VERT;
+				maxhorz |= v == _NET_WM_STATE_MAXIMIZED_HORZ;
+
+				for (int j=0; j<ps->o.wm_status_count && !statusfilter; j++) {
+					if (status2atom(ps->o.wm_status[j]) ==
+							(_NET_WM_STATE_MAXIMIZED_VERT + _NET_WM_STATE_MAXIMIZED_HORZ)) {
+						filtering4max = true;
+					}
+					else {
+						statusfilter = v == status2atom(ps->o.wm_status[j]);
+					}
+				}
+			}
+			if (prop.nitems == 0) {
+				floating = true;
+				for (int j=0; j<ps->o.wm_status_count && !statusfilter; j++) {
+					if (ps->o.wm_status[j] == -1)
+						filtering4float = true;
+				}
+			}
 			free_winprop(&prop);
 		}
+		else if (WMPSN_GNOME == ps->wmpsn) {
+			winprop_t prop = wid_get_prop(ps, wid, _WIN_STATE, 1, XA_CARDINAL, 0);
+			maxvert |= (winprop_get_int(&prop) & _NET_WM_STATE_MAXIMIZED_VERT);
+			maxhorz |= (winprop_get_int(&prop) & _NET_WM_STATE_MAXIMIZED_HORZ);
+
+			for (int i=0; i<ps->o.wm_status_count && !statusfilter; i++) {
+				if (status2atom(ps->o.wm_status[i]) ==
+						(WIN_STATE_MAXIMIZED_VERT | WIN_STATE_MAXIMIZED_HORIZ)) {
+					filtering4max = true;
+				}
+				else if (ps->o.wm_status[i] == -1) {
+					filtering4float = true;
+				}
+				else {
+					statusfilter = (winprop_get_int(&prop) & ps->o.wm_status[i])
+							== ps->o.wm_status[i];
+					floating = false;
+				}
+			}
+			free_winprop(&prop);
+		}
+
+		if (filtering4max)
+			statusfilter |= maxvert && maxhorz;
+		if (filtering4float)
+			statusfilter |= floating;
+		if (!statusfilter)
+			return false;
 	}
 
 	if (ps->o.wm_class) {
@@ -695,7 +797,7 @@ wm_validate_window(session_t *ps, Window wid) {
 		regfree(&regex);
 	}
 
-	return result;
+	return true;
 }
 
 long

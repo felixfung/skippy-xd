@@ -60,6 +60,8 @@ typedef struct {
 } winprop_t;
 
 void wm_get_atoms(session_t *ps);
+int wm_get_status(char *status);
+Atom status2atom(int status);
 
 bool wm_check_netwm(session_t *ps);
 bool wm_check_gnome(session_t *ps);
