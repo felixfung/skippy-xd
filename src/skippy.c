@@ -1875,7 +1875,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 							ps->o.wm_status_count = strlen(ps->o.wm_status_str);
 							ps->o.wm_status = malloc(ps->o.wm_status_count * sizeof(int));
 							for (int j=0; j<ps->o.wm_status_count; j++)
-								ps->o.wm_status[i] = ps->o.wm_status_str[i];
+								ps->o.wm_status[j] = ps->o.wm_status_str[j];
 						}
 					}
 
