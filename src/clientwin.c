@@ -457,7 +457,9 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 					cw->destination, s_x, s_y, 0, 0, s_x, s_y, s_w, s_h);
 		}
 
-		if (cw->paneltype != WINTYPE_WINDOW && ps->o.panel_tinting && ps->o.background)
+		if (ps->o.background
+				 && ((cw->paneltype == WINTYPE_PANEL && ps->o.panel_tinting)
+				 || (cw->paneltype == WINTYPE_DESKTOP && ps->o.desktopTinting)))
 			XRenderComposite(ps->dpy, PictOpOver, ps->o.background->pict, None,
 					cw->destination, s_x, s_y, 0, 0, s_x, s_y, s_w, s_h);
 

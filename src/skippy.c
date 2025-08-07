@@ -2618,6 +2618,7 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "panel", "reserveSpace", &ps->o.panel_reserveSpace);
 
     config_get_bool_wrap(config, "desktop", "show", &ps->o.panel_show_desktop);
+    config_get_bool_wrap(config, "desktop", "backgroundTinting", &ps->o.desktopTinting);
 
 	{
 		ps->o.updatetooltip = false;
