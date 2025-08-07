@@ -471,8 +471,8 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 
 				int x = dwin->x + mw->xoff - cw->src.x;
 				int y = dwin->y + mw->yoff - cw->src.y;
-				int width = dwin->x + dwin->src.width * mw->multiplier;
-				int height = dwin->y + dwin->src.height * mw->multiplier;
+				int width = dwin->src.width * mw->multiplier;
+				int height = dwin->src.height * mw->multiplier;
 
 				XRenderComposite(ps->dpy,
 						PictOpSrc, source,
