@@ -478,8 +478,6 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 						PictOpSrc, source,
 						None, cw->destination,
 						x, y, 0, 0, x, y, width, height);
-				XSetWindowBackgroundPixmap(ps->dpy, cw->mini.window, cw->pixmap);
-				XClearWindow(ps->dpy, cw->mini.window);
 			}
 		}
 
