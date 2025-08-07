@@ -1223,6 +1223,8 @@ skippy_activate(MainWin *mw, enum layoutmode layout)
 		cw->factor = 1;
 		cw->paneltype = wm_identify_panel(mw->ps, cw->wid_client);
 		clientwin_update(cw);
+		if (cw->paneltype == WINTYPE_DESKTOP)
+			clientwin_move(cw, 1, cw->src.x, cw->src.y, 1);
 		clientwin_update2(cw);
 	}
 
