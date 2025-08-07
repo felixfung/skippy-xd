@@ -72,10 +72,6 @@ allowUpscale = false
 
 [display]
 
-# Shows _NET_WM_WINDOW_TYPE_DESKTOP windows
-# which are usually wallpaper/background related
-showDesktop = true
-
 # Background when skippy-xd is activated
 # To display background wallpaper:
 #   background = /home/richard/screenshots/256.png
@@ -133,6 +129,9 @@ opacity = 255
 show = true
 backgroundTinting = true
 reserveSpace = true
+
+[desktop]
+show = true
 
 [tooltip]
 show = true

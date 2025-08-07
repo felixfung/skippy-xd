@@ -2505,7 +2505,6 @@ load_config_file(session_t *ps)
     }
     config_get_bool_wrap(config, "layout", "allowUpscale", &ps->o.allowUpscale);
 
-    config_get_bool_wrap(config, "display", "showDesktop", &ps->o.panel_show_desktop);
     {
         const char *sspec = config_get(config, "display", "background", "#00000055");
 		if (!sspec || strlen(sspec) == 0)
@@ -2617,6 +2616,8 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "panel", "show", &ps->o.panel_show);
     config_get_bool_wrap(config, "panel", "backgroundTinting", &ps->o.panel_tinting);
     config_get_bool_wrap(config, "panel", "reserveSpace", &ps->o.panel_reserveSpace);
+
+    config_get_bool_wrap(config, "desktop", "show", &ps->o.panel_show_desktop);
 
 	{
 		ps->o.updatetooltip = false;
