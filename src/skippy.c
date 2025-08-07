@@ -1531,7 +1531,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 								cw->x + mw->xoff - mw->x, cw->y + mw->yoff - mw->y,
 								cw->src.width * mw->multiplier,
 								cw->src.height * mw->multiplier);
-						XSetWindowBackgroundPixmap(ps->dpy, mw->window, mw->bg_pixmap);
 						XClearWindow(ps->dpy, mw->window);
 					}
 				}
