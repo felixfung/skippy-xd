@@ -213,7 +213,6 @@ typedef struct {
 	int exposeLayout;
 	bool allowUpscale;
 
-	bool panel_show_desktop;
 	pictspec_t bg_spec;
 	bool preservePages;
 	bool movePointer;
@@ -246,6 +245,9 @@ typedef struct {
 	bool panel_show;
 	bool panel_tinting;
 	bool panel_reserveSpace;
+
+	bool panel_show_desktop;
+	bool desktopTinting;
 
 	bool tooltip_show;
 	int tooltip_offsetX;
@@ -323,7 +325,6 @@ typedef struct {
 	.wm_status = NULL, \
 	.wm_status_str = "", \
 \
-	.panel_show_desktop = true, \
 	.background = NULL, \
 	.preservePages = true, \
 	.movePointer = false, \
@@ -352,6 +353,9 @@ typedef struct {
 	.panel_show = true, \
 	.panel_tinting = true, \
 	.panel_reserveSpace = true, \
+\
+	.panel_show_desktop = true, \
+	.desktopTinting = true, \
 \
 	.tooltip_show = true, \
 	.tooltip_offsetX = 0, \

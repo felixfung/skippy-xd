@@ -399,7 +399,8 @@ clientwin_destroy(ClientWin *cw, bool destroyed) {
 static void
 clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 {
-	session_t *ps = cw->mainwin->ps;
+	MainWin *mw = cw->mainwin;
+	session_t *ps = mw->ps;
 	Picture source = None;
 	int s_x = 0, s_y = 0, s_w = cw->mini.width, s_h = cw->mini.height;
 	if (pbound) {
@@ -439,27 +440,46 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 
 	// Drawing main picture
 	{
-		Picture mask = cw->mainwin->normalPicture;
+		Picture mask = mw->normalPicture;
 		if (cw->focused)
-			mask = cw->mainwin->highlightPicture;
+			mask = mw->highlightPicture;
 		else if (cw->zombie)
-			mask = cw->mainwin->shadowPicture;
+			mask = mw->shadowPicture;
 
 		if (!ps->o.pseudoTrans) {
 			XRenderComposite(ps->dpy, PictOpSrc, source, mask,
 					cw->destination, s_x, s_y, 0, 0, s_x, s_y, s_w, s_h);
 		}
 		else {
-			XRenderComposite(ps->dpy, PictOpSrc, cw->mainwin->background, None,
+			XRenderComposite(ps->dpy, PictOpSrc, mw->background, None,
 					cw->destination, cw->mini.x + s_x, cw->mini.y + s_y, 0, 0,
 					s_x, s_y, s_w, s_h);
 			XRenderComposite(ps->dpy, PictOpOver, source, mask,
 					cw->destination, s_x, s_y, 0, 0, s_x, s_y, s_w, s_h);
 		}
 
-		if (cw->paneltype != WINTYPE_WINDOW && ps->o.panel_tinting && ps->o.background)
+		if (ps->o.background
+				 && ((cw->paneltype == WINTYPE_PANEL && ps->o.panel_tinting)
+				 || (cw->paneltype == WINTYPE_DESKTOP && ps->o.desktopTinting)))
 			XRenderComposite(ps->dpy, PictOpOver, ps->o.background->pict, None,
 					cw->destination, s_x, s_y, 0, 0, s_x, s_y, s_w, s_h);
+
+		if (ps->o.mode == PROGMODE_PAGING && cw->paneltype == WINTYPE_DESKTOP
+				&& mw->ps->o.preservePages && ps->o.desktopTinting) {
+			foreach_dlist (mw->dminis) {
+				ClientWin *dwin = (ClientWin *) iter->data;
+
+				int x = dwin->x + mw->xoff - cw->src.x;
+				int y = dwin->y + mw->yoff - cw->src.y;
+				int width = dwin->src.width * mw->multiplier;
+				int height = dwin->src.height * mw->multiplier;
+
+				XRenderComposite(ps->dpy,
+						PictOpSrc, source,
+						None, cw->destination,
+						x, y, 0, 0, x, y, width, height);
+			}
+		}
 
 		if ((CLIDISP_ZOMBIE_ICON == cw->mode || CLIDISP_THUMBNAIL_ICON == cw->mode)
 		&& cw->paneltype == WINTYPE_WINDOW) {
@@ -477,41 +497,41 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 	// Tinting
 	if (cw->paneltype == WINTYPE_WINDOW)
 	{
-		XRenderColor *tint = &cw->mainwin->normalTint;
+		XRenderColor *tint = &mw->normalTint;
 		if (cw->focused || cw->multiselect) {
 			if (!ps->o.multiselect)
-				tint = &cw->mainwin->highlightTint;
+				tint = &mw->highlightTint;
 			else
-				tint = &cw->mainwin->multiselectTint;
+				tint = &mw->multiselectTint;
 		}
 		else if (cw->zombie)
-			tint = &cw->mainwin->shadowTint;
+			tint = &mw->shadowTint;
 
 		if (tint->alpha) {
 #ifdef CFG_XINERAMA
 			if (cw->mode == CLIDISP_DESKTOP)
 			{
-				XineramaScreenInfo *iter = cw->mainwin->xin_info;
-				for (int i = 0; i < cw->mainwin->xin_screens; ++i)
+				XineramaScreenInfo *iter = mw->xin_info;
+				for (int i = 0; i < mw->xin_screens; ++i)
 				{
-					s_x = iter->x_org * cw->mainwin->multiplier;
-					s_y = iter->y_org * cw->mainwin->multiplier;
-					s_w = iter->width * cw->mainwin->multiplier;
-					s_h = iter->height * cw->mainwin->multiplier;
+					s_x = iter->x_org * mw->multiplier;
+					s_y = iter->y_org * mw->multiplier;
+					s_w = iter->width * mw->multiplier;
+					s_h = iter->height * mw->multiplier;
 
-					XRenderFillRectangle(cw->mainwin->ps->dpy,
+					XRenderFillRectangle(mw->ps->dpy,
 							PictOpOver, cw->destination, tint,
 							s_x, s_y, s_w, s_h);
 
-					XClearArea(cw->mainwin->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
+					XClearArea(mw->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
 					iter++;
 				}
 			}
 			else {
 #endif /* CFG_XINERAMA */
-				XRenderFillRectangle(cw->mainwin->ps->dpy, PictOpOver,
+				XRenderFillRectangle(mw->ps->dpy, PictOpOver,
 						cw->destination, tint, s_x, s_y, s_w, s_h);
-				XClearArea(cw->mainwin->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
+				XClearArea(mw->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
 #ifdef CFG_XINERAMA
 			}
 #endif /* CFG_XINERAMA */
@@ -524,7 +544,7 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 		clientwin_round_corners(cw);
 	}
 
-	XClearArea(cw->mainwin->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
+	XClearArea(mw->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
 }
 
 void

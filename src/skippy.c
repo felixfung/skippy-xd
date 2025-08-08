@@ -1223,6 +1223,8 @@ skippy_activate(MainWin *mw, enum layoutmode layout)
 		cw->factor = 1;
 		cw->paneltype = wm_identify_panel(mw->ps, cw->wid_client);
 		clientwin_update(cw);
+		if (cw->paneltype == WINTYPE_DESKTOP)
+			clientwin_move(cw, 1, cw->src.x, cw->src.y, 1);
 		clientwin_update2(cw);
 	}
 
@@ -1529,7 +1531,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 								cw->x + mw->xoff - mw->x, cw->y + mw->yoff - mw->y,
 								cw->src.width * mw->multiplier,
 								cw->src.height * mw->multiplier);
-						XSetWindowBackgroundPixmap(ps->dpy, mw->window, mw->bg_pixmap);
 						XClearWindow(ps->dpy, mw->window);
 					}
 				}
@@ -2505,7 +2506,6 @@ load_config_file(session_t *ps)
     }
     config_get_bool_wrap(config, "layout", "allowUpscale", &ps->o.allowUpscale);
 
-    config_get_bool_wrap(config, "display", "showDesktop", &ps->o.panel_show_desktop);
     {
         const char *sspec = config_get(config, "display", "background", "#00000055");
 		if (!sspec || strlen(sspec) == 0)
@@ -2617,6 +2617,9 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "panel", "show", &ps->o.panel_show);
     config_get_bool_wrap(config, "panel", "backgroundTinting", &ps->o.panel_tinting);
     config_get_bool_wrap(config, "panel", "reserveSpace", &ps->o.panel_reserveSpace);
+
+    config_get_bool_wrap(config, "desktop", "show", &ps->o.panel_show_desktop);
+    config_get_bool_wrap(config, "desktop", "backgroundTinting", &ps->o.desktopTinting);
 
 	{
 		ps->o.updatetooltip = false;
