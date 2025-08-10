@@ -1171,12 +1171,9 @@ desktopwin_map(ClientWin *cw)
 }
 
 static bool
-skippy_activate(MainWin *mw, enum layoutmode layout)
+skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 {
 	session_t *ps = mw->ps;
-
-	// Do this window before main window gets mapped
-	Window focus_win = wm_get_focused(ps);
 
 	// Update the main window's geometry (and Xinerama info if applicable)
 	mainwin_update(mw);
@@ -1194,13 +1191,13 @@ skippy_activate(MainWin *mw, enum layoutmode layout)
 	}
 
 	if (layout == LAYOUTMODE_PAGING) {
-		if (!init_paging_layout(mw, layout, focus_win)) {
+		if (!init_paging_layout(mw, layout, leader)) {
 			printfef(false, "(): failed.");
 			return false;
 		}
 	}
 	else {
-		if (!init_layout(mw, layout, focus_win)) {
+		if (!init_layout(mw, layout, leader)) {
 			printfef(false, "(): failed.");
 			return false;
 		}
@@ -1246,6 +1243,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 	bool first_animating = false;
 	pid_t trigger_client = 0;
 	bool focus_stolen = false;
+	Window leader = 0;
+	bool switchdesktop = false;
 
 	switch (ps->o.mode) {
 		case PROGMODE_SWITCH:
@@ -1282,8 +1281,9 @@ mainloop(session_t *ps, bool activate_on_start) {
 		if (!mw && activate) {
 			assert(ps->mainwin);
 			activate = false;
+			leader = wm_get_focused(ps);
 
-			if (skippy_activate(ps->mainwin, layout)) {
+			if (skippy_activate(ps->mainwin, layout, leader)) {
 				last_animated = last_rendered = time_in_millis();
 				mw = ps->mainwin;
 				pending_damage = false;
@@ -1425,6 +1425,14 @@ mainloop(session_t *ps, bool activate_on_start) {
 			XSync(ps->dpy, False);
 			XSync(ps->dpy, True);
 
+			if (switchdesktop) {
+				wm_set_desktop_ewmh(ps,
+						(wm_get_current_desktop(ps) + ps->o.focus_initial)
+						% wm_get_desktops(mw->ps));
+				animating = activate = true;
+				switchdesktop = false;
+			}
+
 			mw = NULL;
 		}
 		if (!mw)
@@ -1446,10 +1454,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 			char mask = 1 << (ps->o.pivotkey % 8);
 			pivotTerminate = !(keys[slot] & mask);
 
-			if (pivotTerminate) {
+			if (pivotTerminate)
 				die = true;
-				ps->o.focus_initial = 0;
-			}
 		}
 
 		// animation!
@@ -1900,6 +1906,26 @@ mainloop(session_t *ps, bool activate_on_start) {
 					printfdf(false, "(): cycling window");
 					fflush(stdout);fflush(stderr);
 
+					if (layout != LAYOUTMODE_PAGING)
+					{
+						int focusindex = 0;
+						if (mw->client_to_focus) {
+							dlist *search = dlist_first(mw->focuslist);
+							ClientWin *searchdata = search->data;
+							while (searchdata != mw->client_to_focus) {
+								search = search->next;
+								searchdata = search->data;
+								focusindex++;
+							}
+						}
+						if (0 > focusindex + ps->o.focus_initial
+						|| focusindex + ps->o.focus_initial >= dlist_len(mw->focuslist)) {
+							die = true;
+							switchdesktop = true;
+						}
+					}
+
+					int oldfocus = ps->o.focus_initial;
 					if (ps->o.focus_initial < 0)
 						ps->o.focus_initial = dlist_len(mw->focuslist) + ps->o.focus_initial;
 
@@ -1909,6 +1935,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 							childwin_focus(mw->client_to_focus);
 						ps->o.focus_initial--;
 					}
+					ps->o.focus_initial = oldfocus;
 
 					if (mw->client_to_focus)
 						clientwin_render(mw->client_to_focus);
