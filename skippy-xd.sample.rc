@@ -67,6 +67,9 @@ distance = 50
 switchLayout = xd
 exposeLayout = cosmos
 
+switchCycleDesktops = false
+exposeCycleDesktops = false
+
 # Whether to show the window bigger than its original size
 allowUpscale = false
 

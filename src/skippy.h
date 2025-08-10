@@ -211,6 +211,8 @@ typedef struct {
 	int distance;
 	int switchLayout;
 	int exposeLayout;
+	bool switchCycleDesktops;
+	bool exposeCycleDesktops;
 	bool allowUpscale;
 
 	pictspec_t bg_spec;
@@ -312,6 +314,8 @@ typedef struct {
 	.distance = 50, \
 	.switchLayout = LAYOUT_XD, \
 	.exposeLayout = LAYOUT_COSMOS, \
+	.switchCycleDesktops = false, \
+	.exposeCycleDesktops = false, \
 	.allowUpscale = false, \
 \
 	.xinerama_showAll = true, \

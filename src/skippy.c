@@ -1906,7 +1906,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 					printfdf(false, "(): cycling window");
 					fflush(stdout);fflush(stderr);
 
-					if (layout != LAYOUTMODE_PAGING)
+					if ((layout == LAYOUTMODE_SWITCH && ps->o.switchCycleDesktops)
+					 || (layout == LAYOUTMODE_EXPOSE && ps->o.exposeCycleDesktops))
 					{
 						int focusindex = 0;
 						if (mw->client_to_focus) {
@@ -2531,6 +2532,8 @@ load_config_file(session_t *ps)
 		else
 			ps->o.exposeLayout = LAYOUT_COSMOS;
     }
+    config_get_bool_wrap(config, "layout", "switchCycleDesktops", &ps->o.switchCycleDesktops);
+    config_get_bool_wrap(config, "layout", "exposeCycleDesktops", &ps->o.exposeCycleDesktops);
     config_get_bool_wrap(config, "layout", "allowUpscale", &ps->o.allowUpscale);
 
     {
