@@ -2311,7 +2311,19 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 				ps->o.multiselect = true;
 				break;
 			case OPT_WM_CLASS:
-				ps->o.wm_class = mstrdup(optarg);
+				if (ps->o.wm_class == NULL)
+					ps->o.wm_class = mstrdup(optarg);
+				else {
+					char* newclass = malloc(
+							(strlen(ps->o.wm_class) + strlen(optarg) + 3)*sizeof(char));
+					newclass[0] = '('; newclass[1] = '\0';
+					strcat(newclass, ps->o.wm_class);
+					strcat(newclass, "|");
+					strcat(newclass, optarg);
+					strcat(newclass, ")");
+					free(ps->o.wm_class);
+					ps->o.wm_class = newclass;
+				}
 				break;
 			case OPT_WM_STATUS:
 				int anchor = 0;
