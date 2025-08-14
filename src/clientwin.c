@@ -136,7 +136,7 @@ clientwin_create(MainWin *mw, Window client) {
 			.background_pixel = 0,
 			.colormap = mw->colormap,
 			.event_mask = ButtonPressMask | ButtonReleaseMask | KeyPressMask
-				| KeyReleaseMask | PointerMotionMask | FocusChangeMask,
+				| KeyReleaseMask | PointerMotionMask | PropertyChangeMask | FocusChangeMask,
 			.override_redirect = !ps->o.pseudoTrans,
 		};
 		cw->mini.window = XCreateWindow(ps->dpy,

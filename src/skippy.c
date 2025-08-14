@@ -1625,8 +1625,9 @@ mainloop(session_t *ps, bool activate_on_start) {
 					mw->client_to_focus = NULL;
 				}
 			}
-			else if (!mw && ev.type == ConfigureNotify) {
-				printfdf(false, "(): else if (ev.type == ConfigureNotify) {");
+			else if (!mw && (ev.type == ConfigureNotify || ev.type == PropertyNotify)) {
+				printfdf(false,
+						"(): else if (ev.type == ConfigureNotify || ev.type == PropertyNotify) {");
 				dlist *iter = (wid ? dlist_find(ps->mainwin->clients, clientwin_cmp_func, (void *) wid): NULL);
 				ClientWin *cw = NULL;
 				if (iter)
