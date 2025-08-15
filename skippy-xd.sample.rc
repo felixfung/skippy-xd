@@ -3,18 +3,17 @@
 # File Syntax:
 # Comments must be on their own seperate lines that start with a #
 #
-# colors can be anything XAllocNamedColor can handle
-# (like "black" or "#000000")
+# Colors can be anything XAllocNamedColor can handle
+# (Like "black" or "#000000")
 #
-# fonts are Xft font descriptions
+# Fonts are Xft font descriptions
 #
-# booleans are "true" or anything but "true" (-> false)
+# Booleans are "true" or anything but "true" (-> false)
 #
-# opacity is an integer in the range of 0-255
+# Opacity is an integer in the range of 0-255
 #
 
-# For system config options, stop and then start new skippy daemon
-# To reload config options
+# To reload system config options, stop and then start new skippy daemon
 # All other config options can be reloaded on the fly
 # With skippy-xd --config or skippy-xd --config-reload
 
@@ -37,19 +36,18 @@ updateFreq = 60.0
 # This queries the list of windows
 # Depending on your window manager, you may want to choose between
 # XQueryTree, _NET_CLIENT_LIST, _WIN_CLIENT_LIST
-# If you see missing windows, or windows that you did not expect,
-# Or even crashes,
+# If you see missing windows, extra windows, or even crashes,
 # Try a different option
 clientList = _NET_CLIENT_LIST
 
-# when compositors such as picom are not used
-# turn on pseudo-transparency
+# When compositors such as picom are not used
+# Turn on pseudo-transparency
 pseudoTrans = true
 
 [layout]
 
-# xd layout is the switch layout
-# cosmos layout uses physics based modeling
+# xd: row-to-row layout
+# cosmos: position preserving layout
 switchLayout = xd
 exposeLayout = cosmos
 
@@ -57,6 +55,7 @@ exposeLayout = cosmos
 # Set = 0 to veto live previews completely
 switchWaitDuration = 100
 
+# Enable to cycle through all virtual desktops
 switchCycleDesktops = false
 exposeCycleDesktops = false
 
@@ -69,10 +68,9 @@ allowUpscale = false
 [display]
 
 # Set = 0 to switch off animations
-# For switch, there is never animation
 animationDuration = 200
 
-# Refresh rate during animation
+# Animation refresh rate in fps
 animationRefresh = 60
 
 # Background when skippy-xd is activated
@@ -84,59 +82,65 @@ animationRefresh = 60
 #   background = None
 background = #00000055
 
-# During paging mode, preserve original desktop appearance
-# From the background being applied
+# During paging, do not apply background to individual desktops
 preservePages = true
 
-# Move the mouse cursor when skippy is activated
+# Reposition the mouse cursor per focus updates
 movePointer = false
 
 # Whether to display window frames
 includeFrame = true
 
-# Show window previews with rounded corners,
-# with corner radius in pixels
+# Show window previews with rounded corners
 cornerRadius = 0
 
-# Whether to show icons on live preview thumbnails
+# Icons on live previews
 icon = true
 iconPlace = left left
 iconSize = 48
 
+# Windows that were never shown before
 [filler]
 tint = #333333
 iconPlace = mid mid
 iconSize = 48
 
+# Windows that are not filler, highlight, shadow, multiselect
 [normal]
 tint = black
 tintOpacity = 0
 opacity = 255
 
+# Currently highlighted window
 [highlight]
 tint = #444444
 tintOpacity = 50
 opacity = 255
 
+# Unmapped windows: minimized, shaded, not in current virtual desktop
 [shadow]
 tint = #040404
 tintOpacity = 0
 opacity = 160
 
+# Highlighted in multi-select mode
 [multiselect]
 tint = #3376BB
 tintOpacity = 50
 opacity = 255
 
+# Windows of type _NET_WM_WINDOW_TYPE_DOCK
 [panel]
 show = true
 backgroundTinting = true
 reserveSpace = true
 
+# Windows of type _NET_WM_WINDOW_TYPE_DESKTOP
 [desktop]
 show = true
 backgroundTinting = true
 
+# Label per display window
 [label]
 show = true
 option = windowClass
@@ -153,29 +157,25 @@ font = fixed-11:weight=bold
 
 [filter]
 
-# in Xinerama multi-monitor setting, whether to filter windows by Xinerama monitor
+# Filter windows by Xinerama monitor
 showOnlyCurrentMonitor = false
 
-# display only windows on the current XScreen
+# Display only windows on the current XScreen
 showOnlyCurrentScreen = true
 
 # Choose whether to show shadow windows:
-# windows that are minimized, shaded, or on other virtual desktops
+# Windows that are minimized, shaded, or on other virtual desktops
 showShadow = true
 
 # Choose whether to always display sticky windows
 # Switch shows sticky windows regardless of configuration
 showSticky = true
 
-# For switch and expose,
 # Whether to limit window select on current virtual desktop
-# Or allow window selection on all virtual desktops
-# Paging always show all desktops
 switchShowAllDesktops = false
 exposeShowAllDesktops = false
 
-# Whether the filtering of window class
-# Will be persistent across activations
+# When false, filter logic will be reset per invocation
 persistentFiltering = false
 
 [bindings]
@@ -185,8 +185,9 @@ persistentFiltering = false
 # Set to 0 to disable pivot locking
 pivotLockingTime = 0
 
-# key* = is a list of valid XWindows KeySym identifiers, case
-# sensitive and <space> seperated list. Run the program 'xev' to find them.
+# key* = is a list of valid XWindows KeySym identifiers,
+# Case sensitive and <space> seperated list.
+# Run the program 'xev' to find them.
 
 keysUp = Up
 keysDown = Down
@@ -202,7 +203,7 @@ keysIconify = 1
 keysShade = 2
 keysClose = 3
 
-# mouse button bindings, options include
+# Mouse button bindings, options include
 # "no": do nothing
 # "focus": select window
 # "iconify": minimize window
