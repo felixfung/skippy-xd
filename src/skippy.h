@@ -205,16 +205,16 @@ typedef struct {
 	int clientList;
 	bool pseudoTrans;
 
-	int switchWaitDuration;
-	int animationDuration;;
-	int animationRefresh;;
-	int distance;
 	int switchLayout;
 	int exposeLayout;
+	int switchWaitDuration;
 	bool switchCycleDesktops;
 	bool exposeCycleDesktops;
+	int distance;
 	bool allowUpscale;
 
+	int animationDuration;;
+	int animationRefresh;;
 	pictspec_t bg_spec;
 	bool preservePages;
 	bool movePointer;
@@ -309,14 +309,12 @@ typedef struct {
 	.clientList = 0, \
 	.pseudoTrans = true, \
 \
-	.switchWaitDuration = 100, \
-	.animationDuration = 200, \
-	.animationRefresh = 60, \
-	.distance = 50, \
 	.switchLayout = LAYOUT_XD, \
 	.exposeLayout = LAYOUT_COSMOS, \
+	.switchWaitDuration = 100, \
 	.switchCycleDesktops = false, \
 	.exposeCycleDesktops = false, \
+	.distance = 50, \
 	.allowUpscale = false, \
 \
 	.xinerama_showAll = true, \
@@ -330,6 +328,8 @@ typedef struct {
 	.wm_status = NULL, \
 	.wm_status_str = "", \
 \
+	.animationDuration = 200, \
+	.animationRefresh = 60, \
 	.background = NULL, \
 	.preservePages = true, \
 	.movePointer = false, \
