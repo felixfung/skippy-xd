@@ -2325,6 +2325,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 					free(ps->o.wm_class);
 					ps->o.wm_class = newclass;
 				}
+				printfdf(false, "(): --wm-class=%s", ps->o.wm_class);
 				break;
 			case OPT_WM_STATUS:
 				int anchor = 0;
