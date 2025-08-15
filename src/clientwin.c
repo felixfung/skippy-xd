@@ -721,15 +721,38 @@ clientwin_tooltip(ClientWin *cw) {
 	session_t *ps = mw->ps;
 
 	if (cw->tooltip) {
-		int win_title_len = 0;
-		FcChar8 *win_title = wm_get_window_title(ps, cw->wid_client, &win_title_len);
+		int len = 0;
+		FcChar8 *label = NULL;
 
-		if (!win_title)
-			win_title = wm_get_window_title(ps, cw->mini.window, &win_title_len);
+		if (cw->mode == CLIDISP_DESKTOP) {
+			label = wm_get_window_title(ps, cw->wid_client, &len);
 
-		if (win_title) {
-			tooltip_map(cw->tooltip, cw, win_title, win_title_len);
-			free(win_title);
+			if (!label)
+				label = wm_get_window_title(ps, cw->mini.window, &len);
+		}
+		else {
+			XClassHint *hints = allocchk(XAllocClassHint());
+			if (hints) {
+				XGetClassHint(ps->dpy, cw->wid_client, hints);
+				if (hints->res_class)
+					label = (unsigned char*)hints->res_class;
+				else if (hints->res_name)
+					label = (unsigned char*)hints->res_name;
+
+				len = strlen((char*)label);
+
+				//if (hints->res_class)
+					//XFree(hints->res_class);
+				if (hints->res_name)
+					XFree(hints->res_name);
+				if (hints)
+					XFree(hints);
+			}
+		}
+
+		if (label) {
+			tooltip_map(cw->tooltip, cw, label, len);
+			free(label);
 		}
 	}
 }
