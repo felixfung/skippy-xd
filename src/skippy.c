@@ -2501,10 +2501,6 @@ load_config_file(session_t *ps)
     config_get_double_wrap(config, "system", "updateFreq", &ps->o.updateFreq, -1000.0, 1000.0);
     config_get_bool_wrap(config, "system", "pseudoTrans", &ps->o.pseudoTrans);
 
-    config_get_int_wrap(config, "layout", "switchWaitDuration", &ps->o.switchWaitDuration, 0, 2000);
-    config_get_int_wrap(config, "layout", "animationDuration", &ps->o.animationDuration, 0, 2000);
-    config_get_int_wrap(config, "layout", "animationRefresh", &ps->o.animationRefresh, 1, 200);
-    config_get_int_wrap(config, "layout", "distance", &ps->o.distance, 1, INT_MAX);
 	{
 		const char *s = config_get(config, "layout", "switchLayout", NULL);
 		if (s) {
@@ -2547,7 +2543,12 @@ load_config_file(session_t *ps)
     }
     config_get_bool_wrap(config, "layout", "switchCycleDesktops", &ps->o.switchCycleDesktops);
     config_get_bool_wrap(config, "layout", "exposeCycleDesktops", &ps->o.exposeCycleDesktops);
+    config_get_int_wrap(config, "layout", "switchWaitDuration", &ps->o.switchWaitDuration, 0, 2000);
+    config_get_int_wrap(config, "layout", "distance", &ps->o.distance, 1, INT_MAX);
     config_get_bool_wrap(config, "layout", "allowUpscale", &ps->o.allowUpscale);
+
+    config_get_int_wrap(config, "display", "animationDuration", &ps->o.animationDuration, 0, 2000);
+    config_get_int_wrap(config, "display", "animationRefresh", &ps->o.animationRefresh, 1, 200);
 
     {
         const char *sspec = config_get(config, "display", "background", "#00000055");
