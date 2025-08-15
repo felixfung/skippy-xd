@@ -139,6 +139,7 @@ backgroundTinting = true
 
 [tooltip]
 show = true
+option = windowClass
 offsetX = 0
 offsetY = -5
 width = 0.8

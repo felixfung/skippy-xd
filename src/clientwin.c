@@ -724,7 +724,7 @@ clientwin_tooltip(ClientWin *cw) {
 		int len = 0;
 		FcChar8 *label = NULL;
 
-		if (cw->mode == CLIDISP_DESKTOP) {
+		if (ps->o.tooltip_option == 0 || cw->mode == CLIDISP_DESKTOP) {
 			label = wm_get_window_title(ps, cw->wid_client, &len);
 
 			if (!label)

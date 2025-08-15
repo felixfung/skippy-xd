@@ -2674,6 +2674,13 @@ load_config_file(session_t *ps)
 		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "font", "fixed-11:weight=bold", &ps->o.tooltip_font);
 	}
     config_get_bool_wrap(config, "tooltip", "show", &ps->o.tooltip_show);
+	{
+		const char* tooltipoption = config_get(config, "tooltip", "option", "windowClass");
+		if (strcmp(tooltipoption, "windowTitle") == 0)
+			ps->o.tooltip_option = 0;
+		else
+			ps->o.tooltip_option = 1;
+	}
     config_get_int_wrap(config, "tooltip", "offsetX", &ps->o.tooltip_offsetX, INT_MIN, INT_MAX);
     config_get_int_wrap(config, "tooltip", "offsetY", &ps->o.tooltip_offsetY, INT_MIN, INT_MAX);
     config_get_double_wrap(config, "tooltip", "width", &ps->o.tooltip_width, 0.0, 1.0);
