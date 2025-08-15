@@ -137,7 +137,7 @@ reserveSpace = true
 show = true
 backgroundTinting = true
 
-[tooltip]
+[label]
 show = true
 option = windowClass
 offsetX = 0

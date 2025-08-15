@@ -2667,27 +2667,27 @@ load_config_file(session_t *ps)
 
 	{
 		ps->o.updatetooltip = false;
-		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "border", "#0e0e0e", &ps->o.tooltip_border);
-		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "background", "#202020", &ps->o.tooltip_background);
-		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "backgroundHighlight", "#666666", &ps->o.tooltip_backgroundHighlight);
-		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "text", "white", &ps->o.tooltip_text);
-		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "textShadow", "black", &ps->o.tooltip_textShadow);
-		ps->o.updatetooltip |= update_and_flag(config, "tooltip", "font", "fixed-11:weight=bold", &ps->o.tooltip_font);
+		ps->o.updatetooltip |= update_and_flag(config, "label", "border", "#0e0e0e", &ps->o.tooltip_border);
+		ps->o.updatetooltip |= update_and_flag(config, "label", "background", "#202020", &ps->o.tooltip_background);
+		ps->o.updatetooltip |= update_and_flag(config, "label", "backgroundHighlight", "#666666", &ps->o.tooltip_backgroundHighlight);
+		ps->o.updatetooltip |= update_and_flag(config, "label", "text", "white", &ps->o.tooltip_text);
+		ps->o.updatetooltip |= update_and_flag(config, "label", "textShadow", "black", &ps->o.tooltip_textShadow);
+		ps->o.updatetooltip |= update_and_flag(config, "label", "font", "fixed-11:weight=bold", &ps->o.tooltip_font);
 	}
-    config_get_bool_wrap(config, "tooltip", "show", &ps->o.tooltip_show);
+    config_get_bool_wrap(config, "label", "show", &ps->o.tooltip_show);
 	{
-		const char* tooltipoption = config_get(config, "tooltip", "option", "windowClass");
+		const char* tooltipoption = config_get(config, "label", "option", "windowClass");
 		if (strcmp(tooltipoption, "windowTitle") == 0)
 			ps->o.tooltip_option = 0;
 		else
 			ps->o.tooltip_option = 1;
 	}
-    config_get_int_wrap(config, "tooltip", "offsetX", &ps->o.tooltip_offsetX, INT_MIN, INT_MAX);
-    config_get_int_wrap(config, "tooltip", "offsetY", &ps->o.tooltip_offsetY, INT_MIN, INT_MAX);
-    config_get_double_wrap(config, "tooltip", "width", &ps->o.tooltip_width, 0.0, 1.0);
+    config_get_int_wrap(config, "label", "offsetX", &ps->o.tooltip_offsetX, INT_MIN, INT_MAX);
+    config_get_int_wrap(config, "label", "offsetY", &ps->o.tooltip_offsetY, INT_MIN, INT_MAX);
+    config_get_double_wrap(config, "label", "width", &ps->o.tooltip_width, 0.0, 1.0);
 	{
 		int old_value = ps->o.tooltip_opacity;
-		config_get_int_wrap(config, "tooltip", "opacity", &ps->o.tooltip_opacity, 0, 256);
+		config_get_int_wrap(config, "label", "opacity", &ps->o.tooltip_opacity, 0, 256);
 		if (ps->o.tooltip_opacity != old_value)
 			ps->o.updatetooltip = true;
 	}
