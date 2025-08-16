@@ -1,5 +1,14 @@
 Skippy-XD changelog
 
+0.10.3 -- "Steampunk" (22 Aug 2025) ~/felixfung
+ - "tooltip" renamed "label"
+ - Switch can cycle through all windows without live preview
+ - layout/switchWaitDuration = 0 disables switch live preview
+ - Window filtering based on window status
+ - _NET_WM_WINDOW_TYPE_DESKTOP windows controlled by config section "desktop"
+ - Config options layout/switchCycleDesktops, layout/exposeCycleDesktops
+ - Config option label/option
+
 0.10.2 -- "Trim Tram Truffle" (3 Aug 2025) ~/felixfung
  - Stubbed daemon commands do not cause daemon termination
  - Daemon flushes clients in start sequence
