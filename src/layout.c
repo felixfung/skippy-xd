@@ -309,7 +309,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 	{
 		foreach_dlist (dlist_first(windows)) {
 			ClientWin *cw = iter->data;
-			cw->vx = cw->vy = cw->ax = cw->ay = 0;
+			cw->vx = cw->vy = 0;
 		}
 
 		int iterations = 0;
