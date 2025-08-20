@@ -452,6 +452,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 
 					float newspeed = speed - disx;
 					cw1->vx *= newspeed / speed;
+					cw1->vy *= newspeed / speed;
 					speed = newspeed;
 				}
 			}
@@ -464,8 +465,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 
 			foreach_dlist (dlist_first(windows)) {
 				ClientWin *cw1 = iter->data;
-				if (ABS(cw1->fx - cw1->fx2) > 1e-7
-				 || ABS(cw1->fy - cw1->fy2) > 1e-7)
+				if (ABS(cw1->fx - cw1->fx2) > 0.1 / *total_width
+				 || ABS(cw1->fy - cw1->fy2) > 0.1 / *total_height)
 					stable = false;
 			}
 			iterations++;
