@@ -399,8 +399,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 					float dy = y2 - y1;
 					float vx=0, vy=0;
 					inverse2(dx, dy, &vx, &vy);
-					cw1->vx += 1e-3 * m2 * vx;
-					cw1->vy += 1e-3 * m2 * vy / aratio /* * 2.0*/;
+					cw1->vx += 1e-1 * m2 * vx;
+					cw1->vy += 1e-1 * m2 * vy / aratio /* * 2.0*/;
 				}
 			}
 
@@ -465,8 +465,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 
 			foreach_dlist (dlist_first(windows)) {
 				ClientWin *cw1 = iter->data;
-				if (ABS(cw1->fx - cw1->fx2) > 0.1 / *total_width
-				 || ABS(cw1->fy - cw1->fy2) > 0.1 / *total_height)
+				if (ABS(cw1->fx - cw1->fx2) > 0.01 / *total_width
+				 || ABS(cw1->fy - cw1->fy2) > 0.01 / *total_height)
 					stable = false;
 			}
 			iterations++;
