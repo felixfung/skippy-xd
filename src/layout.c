@@ -227,7 +227,7 @@ inverse2(float dx, float dy, float *ax, float *ay) {
 		return;
 	}
 
-	float acc = 1e-2 / dist / dist;
+	float acc = 1.0 / dist / dist;
 
 	*ax = acc * dx / dist;
 	*ay = acc * dy / dist;
@@ -289,7 +289,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 					com(cw2, &x2, &y2, total_width, total_height);
 					float dx = x2 - x1;
 					float dy = y2 - y1;
-					float delta = 0.05;
+					float delta = 0.1;
 					if (ABS(dx) <= delta && ABS(dy) <= delta) {
 						colliding = true;
 						float randx = (float)rand()/(float)(RAND_MAX/delta/2) - delta;
@@ -301,8 +301,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 			}
 			iterations++;
 		}
-		printfdf(false, "(): %d iterations to resolve identical COM", iterations);
-		printfdf(false, "():");
+		printfdf(true, "(): %d iterations to resolve identical COM", iterations);
+		printfdf(true, "():");
 	}
 
 	// cosmic expansion
@@ -341,8 +341,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 						float dy = y2 - y1;
 						float vx=0, vy=0;
 						inverse2(dx, dy, &vx, &vy);
-						cw1->vx -= m2 * vx;
-						cw1->vy -= m2 * vy / aratio /* * 2.0*/;
+						cw1->vx -= 1e-1 * m2 * vx;
+						cw1->vy -= 1e-1 * m2 * vy / aratio /* * 2.0*/;
 						float speed = sqrt(cw1->vx * cw1->vx + cw1->vy * cw1->vy);
 						if (speed > 1) {
 							cw1->vx /= speed;
@@ -356,7 +356,6 @@ layout_cosmos(MainWin *mw, dlist *windows,
 				ClientWin *cw = iter->data;
 				cw->fx += cw->vx * deltat;
 				cw->fy += cw->vy * deltat;
-
 				cw->vx = 0;
 				cw->vy = 0;
 			}
@@ -377,7 +376,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 		int dis = mw->distance;
 		float disx = (float) dis / (float) *total_width;
 		float disy = (float) dis / (float) *total_height;
-		while (!stable && iterations < 1000) {
+		while (!stable && iterations < 10000) {
 			stable = true;
 
 			for (dlist *iter1 = dlist_first(windows);
@@ -400,8 +399,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 					float dy = y2 - y1;
 					float vx=0, vy=0;
 					inverse2(dx, dy, &vx, &vy);
-					cw1->vx += m2 * vx;
-					cw1->vy += m2 * vy / aratio /* * 2.0*/;
+					cw1->vx += 1e-3 * m2 * vx;
+					cw1->vy += 1e-3 * m2 * vy / aratio /* * 2.0*/;
 				}
 			}
 
@@ -425,26 +424,35 @@ layout_cosmos(MainWin *mw, dlist *windows,
 						if (cw1 == cw2 || intersectArea(cw1, cw2, total_width, total_height) == 0)
 							continue;
 
-						float overlapx = MIN(cw1->fx + (float)cw1->src.width / (float)*total_width - cw2->fx,
-											cw2->fx + (float)cw2->src.width / (float)*total_width - cw1->fx);
-						float overlapy = MIN(cw1->fy + (float)cw1->src.height / (float)*total_height - cw2->fy,
-											cw2->fy + (float)cw2->src.height / (float)*total_height - cw1->fy);
+						float left1 = cw1->fx - disx/2.0;
+						float left2 = cw2->fx - disx/2.0;
+						float right1 = cw1->fx + (float)cw1->src.width / (float)*total_width + disx/2.0;
+						float right2 = cw2->fx + (float)cw2->src.width / (float)*total_width + disx/2.0;
 
-						if (overlapy < overlapx) {
-							if (vy > 0)
-								cw1->fy = cw2->fy - (float)cw1->src.height / (float)*total_height - disy;
+						float top1 = cw1->fy - disy/2.0;
+						float top2 = cw2->fy - disy/2.0;
+						float bottom1 = cw1->fy + (float)cw1->src.height / (float)*total_height + disy/2.0;
+						float bottom2 = cw2->fy + (float)cw2->src.height / (float)*total_height + disy/2.0;
+
+						float overlapX = fmin(right1, right2) - fmax(left1, left2);
+						float overlapY = fmin(bottom1, bottom2) - fmax(top1, top2);
+
+						if (overlapY < overlapX) {
+							if (top1 < top2)
+								cw1->fy -= overlapY; // push up
 							else
-								cw1->fy = cw2->fy + (float)cw2->src.height / (float)*total_height + disy;
-						}
-						else {
-							if (vx > 0)
-								cw1->fx = cw2->fx - (float)cw1->src.width / (float)*total_width - disx;
+								cw1->fy += overlapY; // push down
+						} else {
+							if (left1 < left2)
+								cw1->fx -= overlapX; // push left
 							else
-								cw1->fx = cw2->fx + (float)cw2->src.width / (float)*total_width + disx;
+								cw1->fx += overlapX; // push right
 						}
 					}
 
-					speed -= disx;
+					float newspeed = speed - disx;
+					cw1->vx *= newspeed / speed;
+					speed = newspeed;
 				}
 			}
 
@@ -466,6 +474,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 		printfdf(true, "():");
 	}
 
+	// calculate final coordinates
 	{
 		int minx = INT_MAX, maxx = INT_MIN;
 		int miny = INT_MAX, maxy = INT_MIN;
