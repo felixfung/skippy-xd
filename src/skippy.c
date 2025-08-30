@@ -1821,6 +1821,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 				if (!mw /*|| !mw->mapped*/)
 				{
+					bool forget_activating = false;
 					if (piped_input & PIPECMD_SWITCH) {
 						ps->o.mode = PROGMODE_SWITCH;
 						layout = LAYOUTMODE_SWITCH;
@@ -1834,59 +1835,60 @@ mainloop(session_t *ps, bool activate_on_start) {
 						layout = LAYOUTMODE_PAGING;
 					}
 					else
-						goto forget_activating;
+						forget_activating = true;
 
-					if (!ps->o.persistentFiltering) {
-						if (ps->o.wm_class) {
-							free(ps->o.wm_class);
-							ps->o.wm_class = NULL;
-						}
-						if (ps->o.wm_status) {
-							ps->o.wm_status_count = 0;
-							free(ps->o.wm_status);
-							ps->o.wm_status = NULL;
-							free(ps->o.wm_status_str);
-							ps->o.wm_status_str = NULL;
-						}
-					}
-
-					animating = activate = true;
-
-					toggling = true;
-					for (int i=0; i<nparams; i++) {
-						if (param[i] & PIPEPRM_WM_CLASS) {
-							if (ps->o.wm_class)
+					if (!forget_activating) {
+						if (!ps->o.persistentFiltering) {
+							if (ps->o.wm_class) {
 								free(ps->o.wm_class);
-							ps->o.wm_class = mstrdup(str[i]);
-							printfdf(false, "(): receiving new wm_class=%s",
-									ps->o.wm_class);
-						}
-						if (param[i] & PIPEPRM_PIVOTING) {
-							ps->o.pivotkey = str[i][0];
-							printfdf(false, "(): receiving new pivot key=%d",ps->o.pivotkey);
-							toggling = false;
-						}
-
-						if (param[i] == PIPEPRM_MULTI_SELECT) {
-							printfdf(false,"(): multi-select mode");
-							ps->o.multiselect = true;
-						}
-						if (param[i] & PIPEPRM_WM_STATUS) {
-							if (ps->o.wm_status) {
-								free(ps->o.wm_status);
-								free(ps->o.wm_status_str);
+								ps->o.wm_class = NULL;
 							}
-							ps->o.wm_status_str = mstrdup(str[i]);
-							ps->o.wm_status_count = strlen(ps->o.wm_status_str);
-							ps->o.wm_status = malloc(ps->o.wm_status_count * sizeof(int));
-							for (int j=0; j<ps->o.wm_status_count; j++)
-								ps->o.wm_status[j] = ps->o.wm_status_str[j];
+							if (ps->o.wm_status) {
+								ps->o.wm_status_count = 0;
+								free(ps->o.wm_status);
+								ps->o.wm_status = NULL;
+								free(ps->o.wm_status_str);
+								ps->o.wm_status_str = NULL;
+							}
 						}
-					}
 
-					trigger_client = pid;
-					printfdf(false, "(): skippy activating: metaphor=%d", layout);
-	forget_activating:
+						animating = activate = true;
+
+						toggling = true;
+						for (int i=0; i<nparams; i++) {
+							if (param[i] & PIPEPRM_WM_CLASS) {
+								if (ps->o.wm_class)
+									free(ps->o.wm_class);
+								ps->o.wm_class = mstrdup(str[i]);
+								printfdf(false, "(): receiving new wm_class=%s",
+										ps->o.wm_class);
+							}
+							if (param[i] & PIPEPRM_PIVOTING) {
+								ps->o.pivotkey = str[i][0];
+								printfdf(false, "(): receiving new pivot key=%d",ps->o.pivotkey);
+								toggling = false;
+							}
+
+							if (param[i] == PIPEPRM_MULTI_SELECT) {
+								printfdf(false,"(): multi-select mode");
+								ps->o.multiselect = true;
+							}
+							if (param[i] & PIPEPRM_WM_STATUS) {
+								if (ps->o.wm_status) {
+									free(ps->o.wm_status);
+									free(ps->o.wm_status_str);
+								}
+								ps->o.wm_status_str = mstrdup(str[i]);
+								ps->o.wm_status_count = strlen(ps->o.wm_status_str);
+								ps->o.wm_status = malloc(ps->o.wm_status_count * sizeof(int));
+								for (int j=0; j<ps->o.wm_status_count; j++)
+									ps->o.wm_status[j] = ps->o.wm_status_str[j];
+							}
+						}
+
+						trigger_client = pid;
+						printfdf(false, "(): skippy activating: metaphor=%d", layout);
+					}
 				}
 				// parameter == 0, toggle
 				// otherwise shift window focus
@@ -2322,6 +2324,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 				printfdf(false, "(): --wm-class=%s", ps->o.wm_class);
 				break;
 			case OPT_WM_STATUS:
+			{
 				int anchor = 0;
 				for (int i=0; i<strlen(optarg) + 1; i++)
 					if (optarg[i] == ',' || optarg[i] == '\0') {
@@ -2357,6 +2360,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 				for (int i=0; i<ps->o.wm_status_count; i++)
 					ps->o.wm_status_str[i] = ps->o.wm_status[i];
 				ps->o.wm_status_str[ps->o.wm_status_count] = '\0';
+			}
 
 				break;
 			case OPT_TOGGLE:
