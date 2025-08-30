@@ -672,6 +672,11 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 		strcat(command, status);
 	}
 
+	if (cmd_len > BUF_LEN) {
+		printfef(true, "(): attempting to send %d character commands, exceeding %d limit",
+				cmd_len, BUF_LEN);
+		exit(1);
+	}
 	send_string_command_to_daemon_via_fifo(pipePath, command);
 }
 
