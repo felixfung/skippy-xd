@@ -853,8 +853,6 @@ calculatePanelBorders(MainWin *mw,
 
 	// use heuristics to find panel borders
 	// e.g. a panel on the bottom
-	bool top_panel = false, bottom_panel = false,
-		 left_panel = false, right_panel = false;
 	*x1 = 0;
 	*y1 = 0;
 	*x2 = mw->x + mw->width;
@@ -868,12 +866,10 @@ calculatePanelBorders(MainWin *mw,
 		if (cw->src.width >= cw->src.height) {
 			// assumed top panel
 			if (cw->src.y < mw->y + mw->height / 2.0) {
-				top_panel = true;
 				*y1 = MAX(*y1, cw->src.y + cw->src.height);
 			}
 			// assumed bottom panel
 			else {
-				bottom_panel = true;
 				*y2 = MIN(*y2, cw->src.y);
 			}
 		}
@@ -881,12 +877,10 @@ calculatePanelBorders(MainWin *mw,
 		else {
 			// assumed left panel
 			if (cw->src.x < mw->x + mw->width / 2.0) {
-				left_panel = true;
 				*x1 = MAX(*x1, cw->src.x + cw->src.width);
 			}
 			// assumed right panel
 			else {
-				right_panel = true;
 				*x2 = MIN(*x2, cw->src.x);
 			}
 		}

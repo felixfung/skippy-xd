@@ -10,7 +10,6 @@ simg_load_icon(session_t *ps, Window wid, int desired_size) {
 	{
 		// _NET_WM_ICON
 		int best_width = 0, best_height = 0;
-		float best_scale = 1.0f, best_area = 0.0f;
 		const unsigned char *best_data = NULL;
 		winprop_t prop = wid_get_prop_adv(ps, wid, _NET_WM_ICON, 0, ICON_PROP_MAXLEN, XA_CARDINAL, 32);
 		if (prop.nitems) {
@@ -43,11 +42,9 @@ simg_load_icon(session_t *ps, Window wid, int desired_size) {
 				float scale = MAX(1.0f,
 						MIN((float) best_height / height, (float) best_width / width));
 				float area = width * height * scale * scale;
-				if (area > best_area) {
+				if (area > 0) {
 					best_width = width;
 					best_height = height;
-					best_scale = scale;
-					best_area = area;
 					best_data = (const unsigned char *) (p + 2);
 				}
 			}
