@@ -1558,7 +1558,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 						ps->o.movePointer);
 			}
 
-			if (layout != LAYOUTMODE_SWITCH)
+			if (layout != LAYOUTMODE_SWITCH || !ps->o.switchCycleDuringWait)
 				continue; // while animating, do not allow user actions
 		}
 
@@ -1933,7 +1933,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 					while (ps->o.focus_initial > 0 && mw->client_to_focus) {
 						focus_miniw_next(ps, mw->client_to_focus);
-						if (!mw->mapped)
+						if (!mw->mapped && ps->o.switchCycleDuringWait)
 							childwin_focus(mw->client_to_focus);
 						ps->o.focus_initial--;
 					}
@@ -2545,6 +2545,7 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "layout", "switchCycleDesktops", &ps->o.switchCycleDesktops);
     config_get_bool_wrap(config, "layout", "exposeCycleDesktops", &ps->o.exposeCycleDesktops);
     config_get_int_wrap(config, "layout", "switchWaitDuration", &ps->o.switchWaitDuration, 0, 2000);
+    config_get_bool_wrap(config, "layout", "switchCycleDuringWait", &ps->o.switchCycleDuringWait);
     config_get_int_wrap(config, "layout", "distance", &ps->o.distance, 1, INT_MAX);
     config_get_bool_wrap(config, "layout", "allowUpscale", &ps->o.allowUpscale);
 

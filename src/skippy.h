@@ -208,6 +208,7 @@ typedef struct {
 	int switchLayout;
 	int exposeLayout;
 	int switchWaitDuration;
+	bool switchCycleDuringWait;
 	bool switchCycleDesktops;
 	bool exposeCycleDesktops;
 	int distance;
@@ -312,6 +313,7 @@ typedef struct {
 	.switchLayout = LAYOUT_XD, \
 	.exposeLayout = LAYOUT_COSMOS, \
 	.switchWaitDuration = 100, \
+	.switchCycleDuringWait = false, \
 	.switchCycleDesktops = false, \
 	.exposeCycleDesktops = false, \
 	.distance = 50, \
