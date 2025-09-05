@@ -201,7 +201,6 @@ typedef struct {
 	bool enforceFocus;
 	char *pipePath;
 	char *pipePath2;
-	double updateFreq;
 	int clientList;
 	bool pseudoTrans;
 
@@ -305,7 +304,6 @@ typedef struct {
 	.enforceFocus = true, \
 	.pipePath = NULL, \
 	.pipePath2 = NULL, \
-	.updateFreq = 60.0, \
 	.clientList = 0, \
 	.pseudoTrans = true, \
 \
