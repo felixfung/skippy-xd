@@ -1558,7 +1558,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 						ps->o.movePointer);
 			}
 
-			if (layout != LAYOUTMODE_SWITCH || !ps->o.switchCycleDuringWait)
+			if (layout != LAYOUTMODE_SWITCH ||
+					!(ps->o.switchCycleDuringWait || ps->o.switchWaitDuration == 0))
 				continue; // while animating, do not allow user actions
 		}
 
@@ -1933,7 +1934,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 					while (ps->o.focus_initial > 0 && mw->client_to_focus) {
 						focus_miniw_next(ps, mw->client_to_focus);
-						if (!mw->mapped && ps->o.switchCycleDuringWait)
+						if (!mw->mapped &&
+								(ps->o.switchCycleDuringWait || ps->o.switchWaitDuration == 0))
 							childwin_focus(mw->client_to_focus);
 						ps->o.focus_initial--;
 					}
