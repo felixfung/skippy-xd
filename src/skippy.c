@@ -1778,11 +1778,14 @@ mainloop(session_t *ps, bool activate_on_start) {
 		XFlush(ps->dpy);
 
 		// Poll for events
-		int timeout = ps->mainwin->poll_time;
-		int time_offset = last_rendered - time_in_millis();
-		timeout -= time_offset;
-		if (timeout < 0 || animating)
-			timeout = 0;
+		int timeout = -1;
+		if (mw && !toggling) {
+			timeout = ps->mainwin->poll_time;
+			int time_offset = last_rendered - time_in_millis();
+			timeout -= time_offset;
+			if (timeout < 0 || animating)
+				timeout = 0;
+		}
 		poll(r_fd, (r_fd[1].fd >= 0 ? 2: 1), timeout);
 
 		// Handle daemon commands
