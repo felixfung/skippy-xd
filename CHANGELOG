@@ -1,6 +1,11 @@
 Skippy-XD changelog
 
-0.10.3 -- "Steampunk" (22 Aug 2025) ~/felixfung
+0.10.3.1 -- "Full Metal Steampunk" (7 Sep 2025) ~/felixfung
+ - Config option layout/switchCycleDuringWait
+ - Remove config option system/updateFreq, background polling eliminated
+ - Window redrawing events optimized
+
+0.10.3 -- "Steampunk" (16 Aug 2025) ~/felixfung
  - "tooltip" renamed "label"
  - Switch can cycle through all windows without live preview
  - layout/switchWaitDuration = 0 disables switch live preview
