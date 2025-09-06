@@ -52,6 +52,10 @@ exposeLayout = cosmos
 # Set = 0 to veto live previews completely
 switchWaitDuration = 100
 
+# During switchWaitDuration and animation,
+# Whether switch can cycle through windows
+switchCycleDuringWait = false
+
 # Enable to cycle through all virtual desktops
 switchCycleDesktops = false
 exposeCycleDesktops = false

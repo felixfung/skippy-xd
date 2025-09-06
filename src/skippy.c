@@ -672,6 +672,11 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 		strcat(command, status);
 	}
 
+	if (cmd_len > BUF_LEN) {
+		printfef(true, "(): attempting to send %d character commands, exceeding %d limit",
+				cmd_len, BUF_LEN);
+		exit(1);
+	}
 	send_string_command_to_daemon_via_fifo(pipePath, command);
 }
 
@@ -853,8 +858,6 @@ calculatePanelBorders(MainWin *mw,
 
 	// use heuristics to find panel borders
 	// e.g. a panel on the bottom
-	bool top_panel = false, bottom_panel = false,
-		 left_panel = false, right_panel = false;
 	*x1 = 0;
 	*y1 = 0;
 	*x2 = mw->x + mw->width;
@@ -868,12 +871,10 @@ calculatePanelBorders(MainWin *mw,
 		if (cw->src.width >= cw->src.height) {
 			// assumed top panel
 			if (cw->src.y < mw->y + mw->height / 2.0) {
-				top_panel = true;
 				*y1 = MAX(*y1, cw->src.y + cw->src.height);
 			}
 			// assumed bottom panel
 			else {
-				bottom_panel = true;
 				*y2 = MIN(*y2, cw->src.y);
 			}
 		}
@@ -881,12 +882,10 @@ calculatePanelBorders(MainWin *mw,
 		else {
 			// assumed left panel
 			if (cw->src.x < mw->x + mw->width / 2.0) {
-				left_panel = true;
 				*x1 = MAX(*x1, cw->src.x + cw->src.width);
 			}
 			// assumed right panel
 			else {
-				right_panel = true;
 				*x2 = MIN(*x2, cw->src.x);
 			}
 		}
@@ -1558,7 +1557,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 						ps->o.movePointer);
 			}
 
-			if (layout != LAYOUTMODE_SWITCH)
+			if (layout != LAYOUTMODE_SWITCH ||
+					!(ps->o.switchCycleDuringWait || ps->o.switchWaitDuration == 0))
 				continue; // while animating, do not allow user actions
 		}
 
@@ -1830,6 +1830,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 				if (!mw /*|| !mw->mapped*/)
 				{
+					bool forget_activating = false;
 					if (piped_input & PIPECMD_SWITCH) {
 						ps->o.mode = PROGMODE_SWITCH;
 						layout = LAYOUTMODE_SWITCH;
@@ -1843,59 +1844,60 @@ mainloop(session_t *ps, bool activate_on_start) {
 						layout = LAYOUTMODE_PAGING;
 					}
 					else
-						goto forget_activating;
+						forget_activating = true;
 
-					if (!ps->o.persistentFiltering) {
-						if (ps->o.wm_class) {
-							free(ps->o.wm_class);
-							ps->o.wm_class = NULL;
-						}
-						if (ps->o.wm_status) {
-							ps->o.wm_status_count = 0;
-							free(ps->o.wm_status);
-							ps->o.wm_status = NULL;
-							free(ps->o.wm_status_str);
-							ps->o.wm_status_str = NULL;
-						}
-					}
-
-					animating = activate = true;
-
-					toggling = true;
-					for (int i=0; i<nparams; i++) {
-						if (param[i] & PIPEPRM_WM_CLASS) {
-							if (ps->o.wm_class)
+					if (!forget_activating) {
+						if (!ps->o.persistentFiltering) {
+							if (ps->o.wm_class) {
 								free(ps->o.wm_class);
-							ps->o.wm_class = mstrdup(str[i]);
-							printfdf(false, "(): receiving new wm_class=%s",
-									ps->o.wm_class);
-						}
-						if (param[i] & PIPEPRM_PIVOTING) {
-							ps->o.pivotkey = str[i][0];
-							printfdf(false, "(): receiving new pivot key=%d",ps->o.pivotkey);
-							toggling = false;
-						}
-
-						if (param[i] == PIPEPRM_MULTI_SELECT) {
-							printfdf(false,"(): multi-select mode");
-							ps->o.multiselect = true;
-						}
-						if (param[i] & PIPEPRM_WM_STATUS) {
-							if (ps->o.wm_status) {
-								free(ps->o.wm_status);
-								free(ps->o.wm_status_str);
+								ps->o.wm_class = NULL;
 							}
-							ps->o.wm_status_str = mstrdup(str[i]);
-							ps->o.wm_status_count = strlen(ps->o.wm_status_str);
-							ps->o.wm_status = malloc(ps->o.wm_status_count * sizeof(int));
-							for (int j=0; j<ps->o.wm_status_count; j++)
-								ps->o.wm_status[j] = ps->o.wm_status_str[j];
+							if (ps->o.wm_status) {
+								ps->o.wm_status_count = 0;
+								free(ps->o.wm_status);
+								ps->o.wm_status = NULL;
+								free(ps->o.wm_status_str);
+								ps->o.wm_status_str = NULL;
+							}
 						}
-					}
 
-					trigger_client = pid;
-					printfdf(false, "(): skippy activating: metaphor=%d", layout);
-	forget_activating:
+						animating = activate = true;
+
+						toggling = true;
+						for (int i=0; i<nparams; i++) {
+							if (param[i] & PIPEPRM_WM_CLASS) {
+								if (ps->o.wm_class)
+									free(ps->o.wm_class);
+								ps->o.wm_class = mstrdup(str[i]);
+								printfdf(false, "(): receiving new wm_class=%s",
+										ps->o.wm_class);
+							}
+							if (param[i] & PIPEPRM_PIVOTING) {
+								ps->o.pivotkey = str[i][0];
+								printfdf(false, "(): receiving new pivot key=%d",ps->o.pivotkey);
+								toggling = false;
+							}
+
+							if (param[i] == PIPEPRM_MULTI_SELECT) {
+								printfdf(false,"(): multi-select mode");
+								ps->o.multiselect = true;
+							}
+							if (param[i] & PIPEPRM_WM_STATUS) {
+								if (ps->o.wm_status) {
+									free(ps->o.wm_status);
+									free(ps->o.wm_status_str);
+								}
+								ps->o.wm_status_str = mstrdup(str[i]);
+								ps->o.wm_status_count = strlen(ps->o.wm_status_str);
+								ps->o.wm_status = malloc(ps->o.wm_status_count * sizeof(int));
+								for (int j=0; j<ps->o.wm_status_count; j++)
+									ps->o.wm_status[j] = ps->o.wm_status_str[j];
+							}
+						}
+
+						trigger_client = pid;
+						printfdf(false, "(): skippy activating: metaphor=%d", layout);
+					}
 				}
 				// parameter == 0, toggle
 				// otherwise shift window focus
@@ -1936,7 +1938,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 					while (ps->o.focus_initial > 0 && mw->client_to_focus) {
 						focus_miniw_next(ps, mw->client_to_focus);
-						if (!mw->mapped)
+						if (!mw->mapped &&
+								(ps->o.switchCycleDuringWait || ps->o.switchWaitDuration == 0))
 							childwin_focus(mw->client_to_focus);
 						ps->o.focus_initial--;
 					}
@@ -2331,6 +2334,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 				printfdf(false, "(): --wm-class=%s", ps->o.wm_class);
 				break;
 			case OPT_WM_STATUS:
+			{
 				int anchor = 0;
 				for (int i=0; i<strlen(optarg) + 1; i++)
 					if (optarg[i] == ',' || optarg[i] == '\0') {
@@ -2366,6 +2370,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 				for (int i=0; i<ps->o.wm_status_count; i++)
 					ps->o.wm_status_str[i] = ps->o.wm_status[i];
 				ps->o.wm_status_str[ps->o.wm_status_count] = '\0';
+			}
 
 				break;
 			case OPT_TOGGLE:
@@ -2547,6 +2552,7 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "layout", "switchCycleDesktops", &ps->o.switchCycleDesktops);
     config_get_bool_wrap(config, "layout", "exposeCycleDesktops", &ps->o.exposeCycleDesktops);
     config_get_int_wrap(config, "layout", "switchWaitDuration", &ps->o.switchWaitDuration, 0, 2000);
+    config_get_bool_wrap(config, "layout", "switchCycleDuringWait", &ps->o.switchCycleDuringWait);
     config_get_int_wrap(config, "layout", "distance", &ps->o.distance, 1, INT_MAX);
     config_get_bool_wrap(config, "layout", "allowUpscale", &ps->o.allowUpscale);
 
