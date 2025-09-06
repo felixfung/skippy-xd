@@ -281,7 +281,7 @@ wm_check_gnome(session_t *ps) {
 	Display *dpy = ps->dpy;
 	unsigned char *data = NULL;
 	
-	Window wm_check = None;
+	//Window wm_check = None;
 	int real_format = 0;
 	Atom real_type = None;
 	unsigned long items_read = 0, items_left = 0;
@@ -293,8 +293,8 @@ wm_check_gnome(session_t *ps) {
 				&items_read, &items_left, &data)
 			&& items_read && data && 32 == real_format);
 	
-	if (success)
-		wm_check = ((long *)data)[0];
+	//if (success)
+		//wm_check = ((long *)data)[0];
 	spxfree(&data);
 	if (!success)
 		return success;
