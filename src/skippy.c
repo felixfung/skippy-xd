@@ -1673,6 +1673,23 @@ mainloop(session_t *ps, bool activate_on_start) {
 				if (iter) {
 					((ClientWin *)iter->data)->damaged = true;
 				}
+				num_events--;
+
+				{
+					int ev_prev = ev.type;
+					XEvent ev_next = { };
+					while (num_events > 0)
+					{
+						XPeekEvent(ps->dpy, &ev_next);
+						Window wid2 = ev_window(ps, &ev_next);
+
+						if(ev_next.type != ev_prev || wid2 != wid)
+							break;
+
+						XNextEvent(ps->dpy, &ev);
+						num_events--;
+					}
+				}
 			}
 			else if (mw && wid == mw->window && !die) {
 				if (ev.type == FocusOut)
