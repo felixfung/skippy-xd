@@ -1778,10 +1778,13 @@ mainloop(session_t *ps, bool activate_on_start) {
 		XFlush(ps->dpy);
 
 		// Poll for events
-		int timeout = ps->mainwin->poll_time;
-		int time_offset = last_rendered - time_in_millis();
-		timeout -= time_offset;
-		if (timeout < 0 || animating)
+		int timeout = -1;
+		if (mw && !toggling) {
+			timeout = (1.0 / 60.0) * 1000.0 + time_in_millis() - last_rendered;
+			if (timeout < 0)
+				timeout = 0;
+		}
+		if (animating)
 			timeout = 0;
 		poll(r_fd, (r_fd[1].fd >= 0 ? 2: 1), timeout);
 
@@ -2504,7 +2507,6 @@ load_config_file(session_t *ps)
 		else if (tmp && strcmp(tmp, "_WIN_CLIENT_LIST") == 0)
 			ps->o.clientList = 2;
 	}
-    config_get_double_wrap(config, "system", "updateFreq", &ps->o.updateFreq, -1000.0, 1000.0);
     config_get_bool_wrap(config, "system", "pseudoTrans", &ps->o.pseudoTrans);
 
 	{
