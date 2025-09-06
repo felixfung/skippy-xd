@@ -1779,13 +1779,13 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 		// Poll for events
 		int timeout = -1;
-		if (animating)
-			timeout = 0;
 		if (mw && !toggling) {
 			timeout = (1.0 / 60.0) * 1000.0 + time_in_millis() - last_rendered;
 			if (timeout < 0)
 				timeout = 0;
 		}
+		if (animating)
+			timeout = 0;
 		poll(r_fd, (r_fd[1].fd >= 0 ? 2: 1), timeout);
 
 		// Handle daemon commands
