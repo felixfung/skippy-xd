@@ -198,7 +198,6 @@ typedef struct {
 	KeyCode pivotkey;
 	bool multiselect;
 
-	bool enforceFocus;
 	char *pipePath;
 	char *pipePath2;
 	int clientList;
@@ -277,6 +276,7 @@ typedef struct {
 	int *wm_status;
 	char *wm_status_str;
 
+	bool enforceFocus;
 	int pivotLockingTime;
 	enum cliop bindings_miwMouse[MAX_MOUSE_BUTTONS];
 	char *bindings_keysUp;
@@ -302,7 +302,6 @@ typedef struct {
 	.pivotkey = 0, \
 	.multiselect = false, \
 \
-	.enforceFocus = true, \
 	.pipePath = NULL, \
 	.pipePath2 = NULL, \
 	.clientList = 0, \
@@ -375,6 +374,7 @@ typedef struct {
 	.tooltip_textShadow = NULL, \
 	.tooltip_font = NULL, \
 \
+	.enforceFocus = true, \
 	.pivotLockingTime = 0, \
 }
 

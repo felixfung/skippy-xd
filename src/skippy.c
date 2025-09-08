@@ -2481,8 +2481,6 @@ load_config_file(session_t *ps)
     // less efficient, may introduce inconsistent default value, and
     // occupies a lot more memory for non-string types.
 
-	config_get_bool_wrap(config, "system", "enforceFocus", &ps->o.enforceFocus);
-
 	{
 		// two -'s, the first digit of uid/xid and null terminator
 		int pipeStrLen0 = 7;
@@ -2727,6 +2725,7 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "filter", "exposeShowAllDesktops", &ps->o.exposeShowAllDesktops);
     config_get_bool_wrap(config, "filter", "persistentFiltering", &ps->o.persistentFiltering);
 
+	config_get_bool_wrap(config, "bindings", "enforceFocus", &ps->o.enforceFocus);
     config_get_int_wrap(config, "bindings", "pivotLockingTime", &ps->o.pivotLockingTime, 0, 20);
 
     // load keybindings settings
