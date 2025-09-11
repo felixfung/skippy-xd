@@ -137,6 +137,8 @@ show = true
 backgroundTinting = true
 
 # Label per display window
+# option = windowClass to display window class
+# option = windowTitle to display window title
 [label]
 show = true
 option = windowClass
