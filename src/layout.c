@@ -233,6 +233,38 @@ inverse2(float dx, float dy, float *ax, float *ay) {
 	*ay = acc * dy / dist;
 }
 
+static void
+total_screen(dlist *windows,
+		int total_width, int total_height, float *width, float *height) {
+	bool init = true;
+	float minx = 0, maxx = 0;
+	float miny = 0, maxy = 0;
+	foreach_dlist (dlist_first(windows)) {
+		ClientWin *cw = iter->data;
+
+		if (init) {
+			minx = cw->x;
+			miny = cw->y;
+			maxx = cw->x + (float) cw->src.width / (float) total_width;
+			maxy = cw->y + (float) cw->src.height / (float) total_height;
+			init = false;
+		}
+
+		minx = fmin(minx, cw->x);
+		maxx = fmax(maxx, cw->x + (float) cw->src.width / (float) total_width);
+		miny = fmin(miny, cw->y);
+		maxy = fmax(maxy, cw->y + (float) cw->src.height / (float) total_height);
+	}
+
+	foreach_dlist (dlist_first(windows)) {
+		ClientWin *cw = iter->data;
+		cw->x -= minx;
+		cw->y -= miny;
+	}
+	*width = maxx - minx;
+	*height = maxy - miny;
+}
+
 void
 layout_cosmos(MainWin *mw, dlist *windows,
 		unsigned int *total_width, unsigned int *total_height)
@@ -314,7 +346,6 @@ layout_cosmos(MainWin *mw, dlist *windows,
 
 		int iterations = 0;
 		float deltat = 1e-1;
-		float aratio = (float)mw->width / (float)mw->height;
 		bool colliding = true;
 		while (colliding && iterations < 1000) {
 			colliding = false;
@@ -341,8 +372,23 @@ layout_cosmos(MainWin *mw, dlist *windows,
 						float dy = y2 - y1;
 						float vx=0, vy=0;
 						inverse2(dx, dy, &vx, &vy);
+
+						float aratio0 = (float)mw->width / (float)mw->height * 2;
+						float fratio = aratio0;
+						{
+							float currentwidth, currentheight;
+							total_screen(windows,
+									*total_width, *total_height, &currentwidth, &currentheight);
+							if (currentwidth * currentheight > mw->width * mw->height * 1.2) {
+								if (currentwidth / currentheight * 2 > aratio0)
+									fratio /= currentwidth / currentheight;
+								else
+									fratio /= 1.0 / (currentwidth / currentheight);
+							}
+						}
+
 						cw1->vx -= 1e-1 * m2 * vx;
-						cw1->vy -= 1e-1 * m2 * vy / aratio /* * 2.0*/;
+						cw1->vy -= 1e-1 * m2 * vy * fratio;
 						float speed = sqrt(cw1->vx * cw1->vx + cw1->vy * cw1->vy);
 						if (speed > 1) {
 							cw1->vx /= speed;
@@ -371,7 +417,6 @@ layout_cosmos(MainWin *mw, dlist *windows,
 	{
 		int iterations = 0;
 		float deltat = 1e-1;
-		float aratio = (float)mw->width / (float)mw->height;
 		bool stable = false;
 		int dis = mw->distance;
 		float disx = (float) dis / (float) *total_width;
@@ -400,7 +445,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 					float vx=0, vy=0;
 					inverse2(dx, dy, &vx, &vy);
 					cw1->vx += 1e-1 * m2 * vx;
-					cw1->vy += 1e-1 * m2 * vy / aratio /* * 2.0*/;
+					cw1->vy += 1e-1 * m2 * vy;
 				}
 			}
 
