@@ -301,8 +301,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 			}
 			iterations++;
 		}
-		printfdf(true, "(): %d iterations to resolve identical COM", iterations);
-		printfdf(true, "():");
+		printfdf(false, "(): %d iterations to resolve identical COM", iterations);
+		printfdf(false, "():");
 	}
 
 	// cosmic expansion
@@ -363,8 +363,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 
 			iterations++;
 		}
-		printfdf(true, "(): %d expansion iterations", iterations);
-		printfdf(true, "():");
+		printfdf(false, "(): %d expansion iterations", iterations);
+		printfdf(false, "():");
 	}
 
 	// gravitational collapse
@@ -471,8 +471,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 			}
 			iterations++;
 		}
-		printfdf(true, "(): %d collapse iterations", iterations);
-		printfdf(true, "():");
+		printfdf(false, "(): %d collapse iterations", iterations);
+		printfdf(false, "():");
 	}
 
 	// calculate final coordinates
