@@ -148,7 +148,7 @@ clientwin_create(MainWin *mw, Window client) {
 		goto clientwin_create_err;
 
 	{
-		static const char *PREFIX = "mini window of ";
+		static const char *PREFIX = "skippy-xd preview window ";
 		const int len = strlen(PREFIX) + 20;
 		char *str = allocchk(malloc(len));
 		snprintf(str, len, "%s%#010lx", PREFIX, cw->src.window);
@@ -724,7 +724,11 @@ clientwin_tooltip(ClientWin *cw) {
 		int len = 0;
 		FcChar8 *label = NULL;
 
-		if (ps->o.tooltip_option == 0 || cw->mode == CLIDISP_DESKTOP) {
+		if (cw->mode == CLIDISP_DESKTOP) {
+			label = wm_get_desktop_name(mw->ps, cw->slots);
+			len = strlen((char*)label);
+		}
+		else if (ps->o.tooltip_option == 0) {
 			label = wm_get_window_title(ps, cw->wid_client, &len);
 
 			if (!label)
