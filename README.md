@@ -40,6 +40,8 @@ skippy-xd --expose
 skippy-xd --paging
 ```
 
+Or better, find and try out the package on your distro.
+
 Check the wiki for documentation on basic use https://github.com/felixfung/skippy-xd/wiki/How-to-Use and advanced tips and tricks https://github.com/felixfung/skippy-xd/wiki/Advanced-Uses-and-Special-Set-Ups.
 
 And please! If you share our love for skippy-xd, please do:
