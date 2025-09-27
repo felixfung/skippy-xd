@@ -111,7 +111,7 @@ mainwin_create(session_t *ps) {
 	if (!mw->window)
 		goto mainwin_create_err;
 
-	wm_wid_set_info(ps, mw->window, "skippy-xd main window", None);
+	wm_wid_set_info(ps, mw->window, "skippy-xd fullscreen window", None);
 
 	mainwin_create_pixmap(mw);
 

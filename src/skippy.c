@@ -1061,8 +1061,14 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 
 			{
 				unsigned char *str = wm_get_desktop_name(mw->ps, desktop_idx);
-				wm_wid_set_info(cw->mainwin->ps, cw->mini.window, (char *) str, None);
+				char *str1 = "skippy-xd page ";
+				char *str2 = malloc(sizeof(char)
+						* (strlen(str1) + strlen((char*) str) + 1));
+				strcpy(str2, str1);
+				strcat(str2, (char*) str);
+				wm_wid_set_info(cw->mainwin->ps, cw->mini.window, (char *) str2, None);
 				free(str);
+				free(str2);
 			}
 
 			cw->zombie = false;
