@@ -165,9 +165,6 @@ showOnlyCurrentScreen = true
 switchShowAllDesktops = false
 exposeShowAllDesktops = false
 
-# When false, filter logic will be reset per invocation
-persistentFiltering = false
-
 [bindings]
 
 # When focus is stolen off skippy-xd

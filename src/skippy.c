@@ -1880,22 +1880,20 @@ mainloop(session_t *ps, bool activate_on_start) {
 						forget_activating = true;
 
 					if (!forget_activating) {
-						if (!ps->o.persistentFiltering) {
-							if (ps->o.wm_class) {
-								free(ps->o.wm_class);
-								ps->o.wm_class = NULL;
-							}
-							if (ps->o.wm_title) {
-								free(ps->o.wm_title);
-								ps->o.wm_title = NULL;
-							}
-							if (ps->o.wm_status) {
-								ps->o.wm_status_count = 0;
-								free(ps->o.wm_status);
-								ps->o.wm_status = NULL;
-								free(ps->o.wm_status_str);
-								ps->o.wm_status_str = NULL;
-							}
+						if (ps->o.wm_class) {
+							free(ps->o.wm_class);
+							ps->o.wm_class = NULL;
+						}
+						if (ps->o.wm_title) {
+							free(ps->o.wm_title);
+							ps->o.wm_title = NULL;
+						}
+						if (ps->o.wm_status) {
+							ps->o.wm_status_count = 0;
+							free(ps->o.wm_status);
+							ps->o.wm_status = NULL;
+							free(ps->o.wm_status_str);
+							ps->o.wm_status_str = NULL;
 						}
 
 						animating = activate = true;
@@ -2767,7 +2765,6 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "filter", "showOnlyCurrentScreen", &ps->o.filterxscreen);
     config_get_bool_wrap(config, "filter", "switchShowAllDesktops", &ps->o.switchShowAllDesktops);
     config_get_bool_wrap(config, "filter", "exposeShowAllDesktops", &ps->o.exposeShowAllDesktops);
-    config_get_bool_wrap(config, "filter", "persistentFiltering", &ps->o.persistentFiltering);
 
 	config_get_bool_wrap(config, "bindings", "enforceFocus", &ps->o.enforceFocus);
     config_get_int_wrap(config, "bindings", "pivotLockingTime", &ps->o.pivotLockingTime, 0, 20);

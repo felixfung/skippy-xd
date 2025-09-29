@@ -268,7 +268,6 @@ typedef struct {
 	bool filterxscreen;
 	bool switchShowAllDesktops;
 	bool exposeShowAllDesktops;
-	bool persistentFiltering;
 	char *wm_class;
 	char *wm_title;
 	int wm_status_count;
@@ -319,7 +318,6 @@ typedef struct {
 	.filterxscreen = true, \
 	.switchShowAllDesktops = true, \
 	.exposeShowAllDesktops = false, \
-	.persistentFiltering = false, \
 	.wm_status_count = 0, \
 	.wm_status = NULL, \
 	.wm_status_str = "", \
