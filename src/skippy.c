@@ -2568,6 +2568,10 @@ load_config_file(session_t *ps)
 	}
     config_get_bool_wrap(config, "system", "pseudoTrans", &ps->o.pseudoTrans);
 
+    config_get_bool_wrap(config, "multimonitor", "showOnlyCurrentMonitor", &ps->o.xinerama_showAll);
+	ps->o.xinerama_showAll = !ps->o.xinerama_showAll;
+    config_get_bool_wrap(config, "multimonitor", "showOnlyCurrentScreen", &ps->o.filterxscreen);
+
 	{
 		const char *s = config_get(config, "layout", "switchLayout", NULL);
 		if (s) {
@@ -2759,10 +2763,6 @@ load_config_file(session_t *ps)
 		if (ps->o.tooltip_opacity != old_value)
 			ps->o.updatetooltip = true;
 	}
-
-    config_get_bool_wrap(config, "filter", "showOnlyCurrentMonitor", &ps->o.xinerama_showAll);
-	ps->o.xinerama_showAll = !ps->o.xinerama_showAll;
-    config_get_bool_wrap(config, "filter", "showOnlyCurrentScreen", &ps->o.filterxscreen);
 
 	config_get_bool_wrap(config, "bindings", "enforceFocus", &ps->o.enforceFocus);
     config_get_int_wrap(config, "bindings", "pivotLockingTime", &ps->o.pivotLockingTime, 0, 20);

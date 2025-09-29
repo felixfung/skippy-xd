@@ -203,6 +203,14 @@ typedef struct {
 	int clientList;
 	bool pseudoTrans;
 
+	bool xinerama_showAll;
+	bool filterxscreen;
+	char *wm_class;
+	char *wm_title;
+	int wm_status_count;
+	int *wm_status;
+	char *wm_status_str;
+
 	int switchLayout;
 	int exposeLayout;
 	int switchWaitDuration;
@@ -264,14 +272,6 @@ typedef struct {
 	char *tooltip_font;
 	bool updatetooltip;
 
-	bool xinerama_showAll;
-	bool filterxscreen;
-	char *wm_class;
-	char *wm_title;
-	int wm_status_count;
-	int *wm_status;
-	char *wm_status_str;
-
 	bool enforceFocus;
 	int pivotLockingTime;
 	enum cliop bindings_miwMouse[MAX_MOUSE_BUTTONS];
@@ -303,6 +303,12 @@ typedef struct {
 	.clientList = 0, \
 	.pseudoTrans = true, \
 \
+	.xinerama_showAll = true, \
+	.filterxscreen = true, \
+	.wm_status_count = 0, \
+	.wm_status = NULL, \
+	.wm_status_str = "", \
+\
 	.switchLayout = LAYOUT_XD, \
 	.exposeLayout = LAYOUT_COSMOS, \
 	.switchWaitDuration = 100, \
@@ -311,12 +317,6 @@ typedef struct {
 	.exposeCycleDesktops = false, \
 	.distance = 50, \
 	.allowUpscale = false, \
-\
-	.xinerama_showAll = true, \
-	.filterxscreen = true, \
-	.wm_status_count = 0, \
-	.wm_status = NULL, \
-	.wm_status_str = "", \
 \
 	.animationDuration = 200, \
 	.animationRefresh = 60, \
