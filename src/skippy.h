@@ -303,7 +303,7 @@ typedef struct {
 	.clientList = 0, \
 	.pseudoTrans = true, \
 \
-	.xinerama_showAll = true, \
+	.xinerama_showAll = false, \
 	.filterxscreen = true, \
 	.wm_status_count = 0, \
 	.wm_status = NULL, \
