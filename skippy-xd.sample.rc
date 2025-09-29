@@ -161,10 +161,6 @@ showOnlyCurrentMonitor = false
 # Display only windows on the current XScreen
 showOnlyCurrentScreen = true
 
-# Choose whether to always display sticky windows
-# Switch shows sticky windows regardless of configuration
-showSticky = true
-
 # Whether to limit window select on current virtual desktop
 switchShowAllDesktops = false
 exposeShowAllDesktops = false

@@ -63,13 +63,7 @@ clientwin_filter_func(dlist *l, void *data) {
 	CARD32 w_desktop = wm_get_window_desktop(ps, cw->wid_client);
 	bool filtered_in = true;
 
-	if (w_desktop == -1) {
-		if (ps->o.mode == PROGMODE_SWITCH)
-			filtered_in = true;
-		else
-			filtered_in = ps->o.showSticky;
-	}
-	else {
+	if (w_desktop != -1) {
 		if (ps->o.mode == PROGMODE_SWITCH)
 			filtered_in = (w_desktop == current_desktop)
 				|| ps->o.switchShowAllDesktops;

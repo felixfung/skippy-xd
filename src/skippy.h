@@ -266,7 +266,6 @@ typedef struct {
 
 	bool xinerama_showAll;
 	bool filterxscreen;
-	bool showSticky;
 	bool switchShowAllDesktops;
 	bool exposeShowAllDesktops;
 	bool persistentFiltering;
@@ -318,7 +317,6 @@ typedef struct {
 \
 	.xinerama_showAll = true, \
 	.filterxscreen = true, \
-	.showSticky = true, \
 	.switchShowAllDesktops = true, \
 	.exposeShowAllDesktops = false, \
 	.persistentFiltering = false, \
