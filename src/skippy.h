@@ -266,8 +266,6 @@ typedef struct {
 
 	bool xinerama_showAll;
 	bool filterxscreen;
-	bool switchShowAllDesktops;
-	bool exposeShowAllDesktops;
 	char *wm_class;
 	char *wm_title;
 	int wm_status_count;
@@ -316,8 +314,6 @@ typedef struct {
 \
 	.xinerama_showAll = true, \
 	.filterxscreen = true, \
-	.switchShowAllDesktops = true, \
-	.exposeShowAllDesktops = false, \
 	.wm_status_count = 0, \
 	.wm_status = NULL, \
 	.wm_status_str = "", \

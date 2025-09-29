@@ -161,10 +161,6 @@ showOnlyCurrentMonitor = false
 # Display only windows on the current XScreen
 showOnlyCurrentScreen = true
 
-# Whether to limit window select on current virtual desktop
-switchShowAllDesktops = false
-exposeShowAllDesktops = false
-
 [bindings]
 
 # When focus is stolen off skippy-xd

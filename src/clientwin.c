@@ -64,14 +64,10 @@ clientwin_filter_func(dlist *l, void *data) {
 	bool filtered_in = true;
 
 	if (w_desktop != -1) {
-		if (ps->o.mode == PROGMODE_SWITCH)
-			filtered_in = (w_desktop == current_desktop)
-				|| ps->o.switchShowAllDesktops;
-		else if (ps->o.mode == PROGMODE_EXPOSE)
-			filtered_in = (w_desktop == current_desktop)
-				|| ps->o.exposeShowAllDesktops;
 		if (ps->o.mode == PROGMODE_PAGING)
 			filtered_in = true;
+		else
+			filtered_in = w_desktop == current_desktop;
 	}
 
 	if (filtered_in)
