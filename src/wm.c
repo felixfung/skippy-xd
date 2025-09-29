@@ -807,6 +807,15 @@ wm_validate_window(session_t *ps, Window wid) {
 		regfree(&regex);
 	}
 
+	if (ps->o.wm_title) {
+		regex_t regex;
+		regcomp(&regex, ps->o.wm_title, REG_EXTENDED);
+		FcChar8 *win_title = wm_get_window_title(ps, wid, NULL);
+		if (regexec(&regex, (char*) win_title, 0, NULL, 0) != 0)
+			return false;
+		regfree(&regex);
+	}
+
 	return true;
 }
 

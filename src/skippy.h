@@ -272,6 +272,7 @@ typedef struct {
 	bool exposeShowAllDesktops;
 	bool persistentFiltering;
 	char *wm_class;
+	char *wm_title;
 	int wm_status_count;
 	int *wm_status;
 	char *wm_status_str;

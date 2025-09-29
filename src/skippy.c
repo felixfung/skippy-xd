@@ -44,10 +44,11 @@ enum pipe_cmd_t {
 enum pipe_param_t {
 	PIPEPRM_RELOAD_CONFIG_PATH = 1,
 	PIPEPRM_RELOAD_CONFIG = 2,
-	PIPEPRM_PIVOTING = 4,
+	PIPEPRM_MULTI_SELECT = 4,
 	PIPEPRM_WM_CLASS = 8,
-	PIPEPRM_WM_STATUS = 16,
-	PIPEPRM_MULTI_SELECT = 32,
+	PIPEPRM_WM_TITLE = 16,
+	PIPEPRM_WM_STATUS = 32,
+	PIPEPRM_PIVOTING = 64,
 };
 
 session_t *ps_g = NULL;
@@ -611,7 +612,8 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 		master_command |= PIPECMD_PREV;
 
 	char command[BUF_LEN*2];
-	char nparams = (ps->o.wm_class != NULL) + (ps->o.pivotkey != 0)
+	char nparams = (ps->o.wm_class != NULL) + (ps->o.wm_title != NULL)
+		+ (ps->o.pivotkey != 0)
 		+ ps->o.multiselect + (ps->o.wm_status_count > 0);
 	if (ps->o.config_reload_path || ps->o.config_reload)
 		nparams++;
@@ -637,6 +639,14 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 		char wm_cmd[1+1+strlen(ps->o.wm_class)+1];
 		sprintf(wm_cmd, "%c%c%s",
 				PIPEPRM_WM_CLASS, (char)strlen(ps->o.wm_class), ps->o.wm_class);
+		strcat(command, wm_cmd);
+	}
+
+	if (ps->o.wm_title) {
+		cmd_len += 1+1+strlen(ps->o.wm_title)+1;
+		char wm_cmd[1+1+strlen(ps->o.wm_title)+1];
+		sprintf(wm_cmd, "%c%c%s",
+				PIPEPRM_WM_TITLE, (char)strlen(ps->o.wm_title), ps->o.wm_title);
 		strcat(command, wm_cmd);
 	}
 
@@ -1875,6 +1885,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 								free(ps->o.wm_class);
 								ps->o.wm_class = NULL;
 							}
+							if (ps->o.wm_title) {
+								free(ps->o.wm_title);
+								ps->o.wm_title = NULL;
+							}
 							if (ps->o.wm_status) {
 								ps->o.wm_status_count = 0;
 								free(ps->o.wm_status);
@@ -1894,6 +1908,13 @@ mainloop(session_t *ps, bool activate_on_start) {
 								ps->o.wm_class = mstrdup(str[i]);
 								printfdf(false, "(): receiving new wm_class=%s",
 										ps->o.wm_class);
+							}
+							if (param[i] & PIPEPRM_WM_TITLE) {
+								if (ps->o.wm_title)
+									free(ps->o.wm_title);
+								ps->o.wm_title = mstrdup(str[i]);
+								printfdf(false, "(): receiving new wm_title=%s",
+										ps->o.wm_title);
 							}
 							if (param[i] & PIPEPRM_PIVOTING) {
 								ps->o.pivotkey = str[i][0];
@@ -2093,6 +2114,7 @@ show_help() {
 			"  --multi-select      - select multiple windows and return all IDs.\n"
 			"\n"
 			"  --wm-class          - display only windows of specific class.\n"
+			"  --wm-title          - display only windows of specific title.\n"
 			"  --wm-status         - display only windows with specified status:\n"
 			"                          sticky, shaded, minimized, float,\n"
 			"                          maximized_vert, maximized_horz, maximized\n"
@@ -2237,6 +2259,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		OPT_DM_STOP,
 		OPT_MULTI_SELECT,
 		OPT_WM_CLASS,
+		OPT_WM_TITLE,
 		OPT_WM_STATUS,
 		OPT_TOGGLE,
 		OPT_PIVOTING,
@@ -2256,6 +2279,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		{ "stop-daemon",              no_argument,       NULL, OPT_DM_STOP },
 		{ "multi-select",             no_argument,       NULL, OPT_MULTI_SELECT },
 		{ "wm-class",                 required_argument, NULL, OPT_WM_CLASS },
+		{ "wm-title",                 required_argument, NULL, OPT_WM_TITLE },
 		{ "wm-status",                required_argument, NULL, OPT_WM_STATUS },
 		{ "toggle",                   no_argument,       NULL, OPT_TOGGLE },
 		{ "pivot",                    required_argument, NULL, OPT_PIVOTING },
@@ -2355,6 +2379,22 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 					ps->o.wm_class = newclass;
 				}
 				printfdf(false, "(): --wm-class=%s", ps->o.wm_class);
+				break;
+			case OPT_WM_TITLE:
+				if (ps->o.wm_title == NULL)
+					ps->o.wm_title = mstrdup(optarg);
+				else {
+					char* newtitle = malloc(
+							(strlen(ps->o.wm_title) + strlen(optarg) + 3)*sizeof(char));
+					newtitle[0] = '('; newtitle[1] = '\0';
+					strcat(newtitle, ps->o.wm_title);
+					strcat(newtitle, "|");
+					strcat(newtitle, optarg);
+					strcat(newtitle, ")");
+					free(ps->o.wm_title);
+					ps->o.wm_title = newtitle;
+				}
+				printfdf(false, "(): --wm-title=%s", ps->o.wm_title);
 				break;
 			case OPT_WM_STATUS:
 			{
@@ -2991,6 +3031,8 @@ main_end:
 
 		if (ps->o.wm_class)
 			free(ps->o.wm_class);
+		if (ps->o.wm_title)
+			free(ps->o.wm_title);
 		if (ps->o.wm_status_count > 0)
 			free(ps->o.wm_status);
 		if (ps->o.wm_status_count > 0)
