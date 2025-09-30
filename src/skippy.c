@@ -2471,6 +2471,8 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 						char *buffer = malloc(i - anchor);
 						memcpy(buffer, optarg+anchor, i - anchor);
 						char desktop = '0' + atoi(buffer);
+						if (atoi(buffer) < 0)
+							continue;
 
 						anchor = i + 1;
 						free(buffer);
