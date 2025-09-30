@@ -210,6 +210,7 @@ typedef struct {
 	int wm_status_count;
 	int *wm_status;
 	char *wm_status_str;
+	char *desktops;
 
 	int switchLayout;
 	int exposeLayout;
