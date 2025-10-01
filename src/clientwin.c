@@ -869,15 +869,6 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 			focus_miniw_prev(ps, cw->mainwin->client_to_focus);
 		else if (arr_keycodes_includes(cw->mainwin->keycodes_Next, evk->keycode))
 			focus_miniw_next(ps, cw->mainwin->client_to_focus);
-		else if (arr_keycodes_includes(cw->mainwin->keycodes_Cancel, evk->keycode))
-		{
-			mw->refocus = true;
-			return 1;
-		}
-		else if (arr_keycodes_includes(cw->mainwin->keycodes_Select, evk->keycode))
-		{
-			return select_clientwindow(cw, CLIENTOP_FOCUS);
-		}
 		cw->mainwin->pressed_key = true;
 	}
 
@@ -886,6 +877,16 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 		printfdf(false, "(): keycode: %d:", evk->keycode);
 
 		if (cw->mainwin->pressed_key) {
+			if (arr_keycodes_includes(cw->mainwin->keycodes_Cancel, evk->keycode))
+			{
+				mw->refocus = true;
+				return 1;
+			}
+			else if (arr_keycodes_includes(cw->mainwin->keycodes_Select, evk->keycode))
+			{
+				return select_clientwindow(cw, CLIENTOP_FOCUS);
+			}
+
 			if (mw->client_to_focus->mode != CLIDISP_DESKTOP) {
 				if (arr_keycodes_includes(mw->keycodes_Iconify, evk->keycode)) {
 					shadow_clientwindow(cw, CLIENTOP_ICONIFY);
