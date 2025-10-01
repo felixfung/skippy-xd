@@ -407,7 +407,7 @@ mainwin_map(MainWin *mw) {
 
 	wm_set_fullscreen(ps, mw->window, mw->x, mw->y, mw->width, mw->height);
 	mw->pressed = NULL;
-	mw->pressed_mouse = false;
+	mw->pressed_key = mw->pressed_mouse = false;
 	XMapWindow(ps->dpy, mw->window);
 	XRaiseWindow(ps->dpy, mw->window);
 
