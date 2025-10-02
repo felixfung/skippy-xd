@@ -55,9 +55,10 @@ clientwin_filter_func(dlist *l, void *data) {
 #ifdef CFG_XINERAMA
 	clientwin_movecoord(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
 
-	if (mw->xin_active && !INTERSECTS(cw->src.x, cw->src.y, cw->src.width,
-				cw->src.height, mw->xin_active->x_org, mw->xin_active->y_org,
-				mw->xin_active->width, mw->xin_active->height))
+	if (mw->xin_active && !INTERSECTS(
+			cw->src.x, cw->src.y, cw->src.width, cw->src.height,
+			mw->xin_active->x_org, mw->xin_active->y_org,
+			mw->xin_active->width, mw->xin_active->height))
 		return false;
 #endif
 
