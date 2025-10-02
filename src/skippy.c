@@ -2758,8 +2758,7 @@ load_config_file(session_t *ps)
 			ps->o.updatetooltip = true;
 	}
 
-    config_get_bool_wrap(config, "filter", "showOnlyCurrentMonitor", &ps->o.xinerama_showAll);
-	ps->o.xinerama_showAll = !ps->o.xinerama_showAll;
+    config_get_bool_wrap(config, "filter", "showOnlyCurrentMonitor", &ps->o.showOnlyCurrentMonitor);
     config_get_bool_wrap(config, "filter", "showOnlyCurrentScreen", &ps->o.filterxscreen);
     config_get_bool_wrap(config, "filter", "showShadow", &ps->o.showShadow);
     config_get_bool_wrap(config, "filter", "showSticky", &ps->o.showSticky);

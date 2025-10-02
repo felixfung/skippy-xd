@@ -264,7 +264,7 @@ typedef struct {
 	char *tooltip_font;
 	bool updatetooltip;
 
-	bool xinerama_showAll;
+	bool showOnlyCurrentMonitor;
 	bool filterxscreen;
 	bool showShadow;
 	bool showSticky;
@@ -317,7 +317,7 @@ typedef struct {
 	.distance = 50, \
 	.allowUpscale = false, \
 \
-	.xinerama_showAll = true, \
+	.showOnlyCurrentMonitor = false, \
 	.filterxscreen = true, \
 	.showShadow = true, \
 	.showSticky = true, \
