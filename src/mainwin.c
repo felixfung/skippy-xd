@@ -396,7 +396,10 @@ mainwin_update(MainWin *mw)
 	mw->width = iter->width;
 	mw->height = iter->height;
 	XMoveResizeWindow(ps->dpy, mw->window, iter->x_org, iter->y_org, mw->width, mw->height);
+
 	mw->xin_active = iter;
+	if (ps->o.xinerama_showAll)
+		mw->xin_active = 0;
 #endif /* CFG_XINERAMA */
 	mainwin_update_background(mw);
 }

@@ -1192,10 +1192,6 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 
 	// Update the main window's geometry (and Xinerama info if applicable)
 	mainwin_update(mw);
-#ifdef CFG_XINERAMA
-	if (ps->o.xinerama_showAll)
-		mw->xin_active = 0;
-#endif /* CFG_XINERAMA */
 
 	mw->client_to_focus = NULL;
 
