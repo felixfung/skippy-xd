@@ -27,6 +27,8 @@ struct _mainwin_t {
 	int depth;
 	dlist *clients;
 	
+	/// @brief Whether the KeyRelease events should already be acceptable.
+	bool pressed_key;
 	/// @brief Whether the ButtonRelease events should already be acceptable.
 	bool pressed_mouse;
 	int poll_time;
