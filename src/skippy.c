@@ -1203,10 +1203,6 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 
 	// Update the main window's geometry (and Xinerama info if applicable)
 	mainwin_update(mw);
-#ifdef CFG_XINERAMA
-	if (ps->o.xinerama_showAll)
-		mw->xin_active = 0;
-#endif /* CFG_XINERAMA */
 
 	mw->client_to_focus = NULL;
 
@@ -1823,7 +1819,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 		// Poll for events
 		int timeout = -1;
-		if (mw && !toggling) {
+		if (mw && (!toggling || mw->pressed_key || mw->pressed_mouse)) {
 			timeout = (1.0 / 60.0) * 1000.0 + time_in_millis() - last_rendered;
 			if (timeout < 0)
 				timeout = 0;

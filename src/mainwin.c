@@ -396,7 +396,10 @@ mainwin_update(MainWin *mw)
 	mw->width = iter->width;
 	mw->height = iter->height;
 	XMoveResizeWindow(ps->dpy, mw->window, iter->x_org, iter->y_org, mw->width, mw->height);
+
 	mw->xin_active = iter;
+	if (!ps->o.showOnlyCurrentMonitor)
+		mw->xin_active = 0;
 #endif /* CFG_XINERAMA */
 	mainwin_update_background(mw);
 }
@@ -407,7 +410,7 @@ mainwin_map(MainWin *mw) {
 
 	wm_set_fullscreen(ps, mw->window, mw->x, mw->y, mw->width, mw->height);
 	mw->pressed = NULL;
-	mw->pressed_mouse = false;
+	mw->pressed_key = mw->pressed_mouse = false;
 	XMapWindow(ps->dpy, mw->window);
 	XRaiseWindow(ps->dpy, mw->window);
 

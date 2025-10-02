@@ -53,9 +53,12 @@ clientwin_filter_func(dlist *l, void *data) {
 	session_t *ps = mw->ps;
 
 #ifdef CFG_XINERAMA
-	if (mw->xin_active && !INTERSECTS(cw->src.x, cw->src.y, cw->src.width,
-				cw->src.height, mw->xin_active->x_org, mw->xin_active->y_org,
-				mw->xin_active->width, mw->xin_active->height))
+	clientwin_movecoord(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
+
+	if (mw->xin_active && !INTERSECTS(
+			cw->src.x, cw->src.y, cw->src.width, cw->src.height,
+			mw->xin_active->x_org, mw->xin_active->y_org,
+			mw->xin_active->width, mw->xin_active->height))
 		return false;
 #endif
 
@@ -633,7 +636,7 @@ void clientwin_prepmove(ClientWin *cw)
 }
 
 void
-clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
+clientwin_movecoord(ClientWin *cw, float f, int x, int y, float timeslice)
 {
 	cw->factor = f;
 	{
@@ -646,8 +649,15 @@ clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 		cw->mini.width = cw->src.width * f;
 		cw->mini.height = cw->src.height * f;
 	}
+}
 
-	XMoveResizeWindow(cw->mainwin->ps->dpy, cw->mini.window, cw->mini.x, cw->mini.y, cw->mini.width, cw->mini.height);
+void
+clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
+{
+	clientwin_movecoord(cw, f, x, y, timeslice);
+
+	XMoveResizeWindow(cw->mainwin->ps->dpy, cw->mini.window,
+			cw->mini.x, cw->mini.y, cw->mini.width, cw->mini.height);
 
 	clientwin_round_corners(cw);
 }
@@ -871,34 +881,39 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 			focus_miniw_prev(ps, cw->mainwin->client_to_focus);
 		else if (arr_keycodes_includes(cw->mainwin->keycodes_Next, evk->keycode))
 			focus_miniw_next(ps, cw->mainwin->client_to_focus);
+		cw->mainwin->pressed_key = true;
 	}
 
 	else if (ev->type == KeyRelease) {
 		printfdf(false, "(): else if (ev->type == KeyRelease) {");
 		printfdf(false, "(): keycode: %d:", evk->keycode);
 
-		if (mw->client_to_focus->mode != CLIDISP_DESKTOP) {
-			if (arr_keycodes_includes(mw->keycodes_Iconify, evk->keycode)) {
-				shadow_clientwindow(cw, CLIENTOP_ICONIFY);
+		if (cw->mainwin->pressed_key) {
+			if (arr_keycodes_includes(cw->mainwin->keycodes_Cancel, evk->keycode))
+			{
+				mw->refocus = true;
+				return 1;
 			}
-			else if (arr_keycodes_includes(mw->keycodes_Shade, evk->keycode)) {
-				shadow_clientwindow(cw, CLIENTOP_SHADE_EWMH);
+			else if (arr_keycodes_includes(cw->mainwin->keycodes_Select, evk->keycode))
+			{
+				return select_clientwindow(cw, CLIENTOP_FOCUS);
 			}
-			else if (arr_keycodes_includes(mw->keycodes_Close, evk->keycode)) {
-				return close_clientwindow(cw, CLIENTOP_CLOSE_EWMH);
-			}
-		}
 
-		if (arr_keycodes_includes(cw->mainwin->keycodes_Cancel, evk->keycode))
-		{
-			mw->refocus = true;
-			return 1;
+			if (mw->client_to_focus->mode != CLIDISP_DESKTOP) {
+				if (arr_keycodes_includes(mw->keycodes_Iconify, evk->keycode)) {
+					shadow_clientwindow(cw, CLIENTOP_ICONIFY);
+				}
+				else if (arr_keycodes_includes(mw->keycodes_Shade, evk->keycode)) {
+					shadow_clientwindow(cw, CLIENTOP_SHADE_EWMH);
+				}
+				else if (arr_keycodes_includes(mw->keycodes_Close, evk->keycode)) {
+					return close_clientwindow(cw, CLIENTOP_CLOSE_EWMH);
+				}
+			}
 		}
-		else if (arr_keycodes_includes(cw->mainwin->keycodes_Select, evk->keycode))
-		{
-			return select_clientwindow(cw, CLIENTOP_FOCUS);
-		}
-	}
+		else
+			printfdf(false, "(): KeyRelease %u ignored.", evk->keycode);
+    }
 
 	else if (ev->type == ButtonPress) {
 		cw->mainwin->pressed_mouse = true;
