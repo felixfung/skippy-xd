@@ -703,10 +703,6 @@ wm_validate_window(session_t *ps, Window wid) {
 			long v = winprop_get_int(&prop);
 			if (_NET_WM_STATE_SKIP_TASKBAR == v)
 				shortcircuit = true;
-
-			if ((_NET_WM_STATE_HIDDEN == v || _NET_WM_STATE_SHADED == v)
-					&& !ps->o.showShadow)
-				shortcircuit = true;
 		}
 		free_winprop(&prop);
 		if (shortcircuit)
@@ -715,9 +711,6 @@ wm_validate_window(session_t *ps, Window wid) {
 	else if (WMPSN_GNOME == ps->wmpsn) {
 		bool shortcircuit = false;
 		winprop_t prop = wid_get_prop(ps, wid, _WIN_STATE, 1, XA_CARDINAL, 0);
-		if (winprop_get_int(&prop)
-				& (WIN_STATE_MINIMIZED | WIN_STATE_SHADED | WIN_STATE_HIDDEN))
-			shortcircuit = !ps->o.showShadow;
 		free_winprop(&prop);
 
 		prop = wid_get_prop(ps, wid, _WIN_HINTS, 1, XA_CARDINAL, 0);

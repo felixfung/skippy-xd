@@ -66,21 +66,23 @@ clientwin_filter_func(dlist *l, void *data) {
 	CARD32 w_desktop = wm_get_window_desktop(ps, cw->wid_client);
 	bool filtered_in = true;
 
-	if (w_desktop == -1) {
-		if (ps->o.mode == PROGMODE_SWITCH)
-			filtered_in = true;
-		else
-			filtered_in = ps->o.showSticky;
+	if (ps->o.desktops == NULL) {
+		if (w_desktop != -1) {
+			if (ps->o.mode == PROGMODE_PAGING)
+				filtered_in = true;
+			else
+				filtered_in = w_desktop == current_desktop;
+		}
 	}
 	else {
-		if (ps->o.mode == PROGMODE_SWITCH)
-			filtered_in = (w_desktop == current_desktop)
-				|| ps->o.switchShowAllDesktops;
-		else if (ps->o.mode == PROGMODE_EXPOSE)
-			filtered_in = (w_desktop == current_desktop)
-				|| ps->o.exposeShowAllDesktops;
-		if (ps->o.mode == PROGMODE_PAGING)
-			filtered_in = true;
+		bool filter_matched = false;
+		for (int i=0; i<strlen(ps->o.desktops)
+				&& !filter_matched; i++)
+			filter_matched = '0' + w_desktop == ps->o.desktops[i];
+		filtered_in = filter_matched;
+
+		if (w_desktop == -1)
+			filtered_in = true; // always show sticky windows
 	}
 
 	if (filtered_in)

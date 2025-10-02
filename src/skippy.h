@@ -203,6 +203,15 @@ typedef struct {
 	int clientList;
 	bool pseudoTrans;
 
+	bool xinerama_showAll;
+	bool filterxscreen;
+	char *wm_class;
+	char *wm_title;
+	int wm_status_count;
+	int *wm_status;
+	char *wm_status_str;
+	char *desktops;
+
 	int switchLayout;
 	int exposeLayout;
 	int switchWaitDuration;
@@ -307,6 +316,12 @@ typedef struct {
 	.pipePath2 = NULL, \
 	.clientList = 0, \
 	.pseudoTrans = true, \
+\
+	.xinerama_showAll = false, \
+	.filterxscreen = true, \
+	.wm_status_count = 0, \
+	.wm_status = NULL, \
+	.wm_status_str = "", \
 \
 	.switchLayout = LAYOUT_XD, \
 	.exposeLayout = LAYOUT_COSMOS, \

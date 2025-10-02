@@ -48,7 +48,8 @@ enum pipe_param_t {
 	PIPEPRM_WM_CLASS = 8,
 	PIPEPRM_WM_TITLE = 16,
 	PIPEPRM_WM_STATUS = 32,
-	PIPEPRM_PIVOTING = 64,
+	PIPEPRM_DESKTOPS = 64,
+	PIPEPRM_PIVOTING = 128,
 };
 
 session_t *ps_g = NULL;
@@ -612,9 +613,11 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 		master_command |= PIPECMD_PREV;
 
 	char command[BUF_LEN*2];
-	char nparams = (ps->o.wm_class != NULL) + (ps->o.wm_title != NULL)
-		+ (ps->o.pivotkey != 0)
-		+ ps->o.multiselect + (ps->o.wm_status_count > 0);
+	char nparams = ps->o.multiselect
+		+ (ps->o.wm_class != NULL) + (ps->o.wm_title != NULL)
+		+ (ps->o.wm_status_count > 0)
+		+ (ps->o.desktops != NULL)
+		+ (ps->o.pivotkey != 0);
 	if (ps->o.config_reload_path || ps->o.config_reload)
 		nparams++;
 
@@ -626,29 +629,6 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 	}
 	else
 		sprintf(command, "%c", master_command);
-
-	if (ps->o.pivotkey) {
-		char pivot_cmd[4];
-		sprintf(pivot_cmd, "%c%c%c", PIPEPRM_PIVOTING, 1, ps->o.pivotkey);
-		strcat(command, pivot_cmd);
-		cmd_len += 4;
-	}
-
-	if (ps->o.wm_class) {
-		cmd_len += 1+1+strlen(ps->o.wm_class)+1;
-		char wm_cmd[1+1+strlen(ps->o.wm_class)+1];
-		sprintf(wm_cmd, "%c%c%s",
-				PIPEPRM_WM_CLASS, (char)strlen(ps->o.wm_class), ps->o.wm_class);
-		strcat(command, wm_cmd);
-	}
-
-	if (ps->o.wm_title) {
-		cmd_len += 1+1+strlen(ps->o.wm_title)+1;
-		char wm_cmd[1+1+strlen(ps->o.wm_title)+1];
-		sprintf(wm_cmd, "%c%c%s",
-				PIPEPRM_WM_TITLE, (char)strlen(ps->o.wm_title), ps->o.wm_title);
-		strcat(command, wm_cmd);
-	}
 
 	if (ps->o.config_reload_path) {
 		printfef(true, "(): loading new config file path \"%s\"", ps->o.config_path);
@@ -674,12 +654,43 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 		strcat(command, pivot_cmd);
 	}
 
+	if (ps->o.wm_class) {
+		cmd_len += 1+1+strlen(ps->o.wm_class)+1;
+		char wm_cmd[1+1+strlen(ps->o.wm_class)+1];
+		sprintf(wm_cmd, "%c%c%s",
+				PIPEPRM_WM_CLASS, (char)strlen(ps->o.wm_class), ps->o.wm_class);
+		strcat(command, wm_cmd);
+	}
+
+	if (ps->o.wm_title) {
+		cmd_len += 1+1+strlen(ps->o.wm_title)+1;
+		char wm_cmd[1+1+strlen(ps->o.wm_title)+1];
+		sprintf(wm_cmd, "%c%c%s",
+				PIPEPRM_WM_TITLE, (char)strlen(ps->o.wm_title), ps->o.wm_title);
+		strcat(command, wm_cmd);
+	}
+
 	if (ps->o.wm_status) {
 		cmd_len += 1+1+ps->o.wm_status_count+1;
 		char status[1+1+ps->o.wm_status_count+1];
 		sprintf(status, "%c%c%s",
 				PIPEPRM_WM_STATUS, (char)ps->o.wm_status_count, ps->o.wm_status_str);
 		strcat(command, status);
+	}
+
+	if (ps->o.desktops) {
+		cmd_len += 1+1+strlen(ps->o.desktops)+1;
+		char wm_cmd[1+1+strlen(ps->o.desktops)+1];
+		sprintf(wm_cmd, "%c%c%s",
+				PIPEPRM_DESKTOPS, (char)strlen(ps->o.desktops), ps->o.desktops);
+		strcat(command, wm_cmd);
+	}
+
+	if (ps->o.pivotkey) {
+		char pivot_cmd[4];
+		sprintf(pivot_cmd, "%c%c%c", PIPEPRM_PIVOTING, 1, ps->o.pivotkey);
+		strcat(command, pivot_cmd);
+		cmd_len += 4;
 	}
 
 	if (cmd_len > BUF_LEN) {
@@ -1876,28 +1887,35 @@ mainloop(session_t *ps, bool activate_on_start) {
 						forget_activating = true;
 
 					if (!forget_activating) {
-						if (!ps->o.persistentFiltering) {
-							if (ps->o.wm_class) {
-								free(ps->o.wm_class);
-								ps->o.wm_class = NULL;
-							}
-							if (ps->o.wm_title) {
-								free(ps->o.wm_title);
-								ps->o.wm_title = NULL;
-							}
-							if (ps->o.wm_status) {
-								ps->o.wm_status_count = 0;
-								free(ps->o.wm_status);
-								ps->o.wm_status = NULL;
-								free(ps->o.wm_status_str);
-								ps->o.wm_status_str = NULL;
-							}
+						if (ps->o.wm_class) {
+							free(ps->o.wm_class);
+							ps->o.wm_class = NULL;
+						}
+						if (ps->o.wm_title) {
+							free(ps->o.wm_title);
+							ps->o.wm_title = NULL;
+						}
+						if (ps->o.wm_status) {
+							ps->o.wm_status_count = 0;
+							free(ps->o.wm_status);
+							ps->o.wm_status = NULL;
+							free(ps->o.wm_status_str);
+							ps->o.wm_status_str = NULL;
+						}
+						if (ps->o.desktops) {
+							free(ps->o.desktops);
+							ps->o.desktops = NULL;
 						}
 
 						animating = activate = true;
 
 						toggling = true;
 						for (int i=0; i<nparams; i++) {
+							if (param[i] == PIPEPRM_MULTI_SELECT) {
+								printfdf(false,"(): multi-select mode");
+								ps->o.multiselect = true;
+							}
+
 							if (param[i] & PIPEPRM_WM_CLASS) {
 								if (ps->o.wm_class)
 									free(ps->o.wm_class);
@@ -1905,6 +1923,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 								printfdf(false, "(): receiving new wm_class=%s",
 										ps->o.wm_class);
 							}
+
 							if (param[i] & PIPEPRM_WM_TITLE) {
 								if (ps->o.wm_title)
 									free(ps->o.wm_title);
@@ -1912,16 +1931,13 @@ mainloop(session_t *ps, bool activate_on_start) {
 								printfdf(false, "(): receiving new wm_title=%s",
 										ps->o.wm_title);
 							}
+
 							if (param[i] & PIPEPRM_PIVOTING) {
 								ps->o.pivotkey = str[i][0];
 								printfdf(false, "(): receiving new pivot key=%d",ps->o.pivotkey);
 								toggling = false;
 							}
 
-							if (param[i] == PIPEPRM_MULTI_SELECT) {
-								printfdf(false,"(): multi-select mode");
-								ps->o.multiselect = true;
-							}
 							if (param[i] & PIPEPRM_WM_STATUS) {
 								if (ps->o.wm_status) {
 									free(ps->o.wm_status);
@@ -1932,6 +1948,14 @@ mainloop(session_t *ps, bool activate_on_start) {
 								ps->o.wm_status = malloc(ps->o.wm_status_count * sizeof(int));
 								for (int j=0; j<ps->o.wm_status_count; j++)
 									ps->o.wm_status[j] = ps->o.wm_status_str[j];
+							}
+
+							if (param[i] & PIPEPRM_DESKTOPS) {
+								if (ps->o.desktops)
+									free(ps->o.desktops);
+								ps->o.desktops = mstrdup(str[i]);
+								printfdf(false, "(): receiving new desktops=%s",
+										ps->o.desktops);
 							}
 						}
 
@@ -2114,6 +2138,7 @@ show_help() {
 			"  --wm-status         - display only windows with specified status:\n"
 			"                          sticky, shaded, minimized, float,\n"
 			"                          maximized_vert, maximized_horz, maximized\n"
+			"  --desktop           - display only windows on specific virtual desktops.\n"
 			"\n"
 			"  --toggle            - activate via toggle mode.\n"
 			"  --pivot             - activate via pivot mode with specified pivot key.\n"
@@ -2257,6 +2282,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		OPT_WM_CLASS,
 		OPT_WM_TITLE,
 		OPT_WM_STATUS,
+		OPT_DESKTOP,
 		OPT_TOGGLE,
 		OPT_PIVOTING,
 		OPT_PREV,
@@ -2277,6 +2303,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 		{ "wm-class",                 required_argument, NULL, OPT_WM_CLASS },
 		{ "wm-title",                 required_argument, NULL, OPT_WM_TITLE },
 		{ "wm-status",                required_argument, NULL, OPT_WM_STATUS },
+		{ "desktop",                  required_argument, NULL, OPT_DESKTOP },
 		{ "toggle",                   no_argument,       NULL, OPT_TOGGLE },
 		{ "pivot",                    required_argument, NULL, OPT_PIVOTING },
 		{ "prev",                     no_argument,       NULL, OPT_PREV },
@@ -2432,6 +2459,34 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 			}
 
 				break;
+			case OPT_DESKTOP:
+			{
+				int anchor = 0;
+				for (int i=0; i<strlen(optarg) + 1; i++)
+					if (optarg[i] == ',' || optarg[i] == '\0') {
+						char *buffer = malloc(i - anchor);
+						memcpy(buffer, optarg+anchor, i - anchor);
+						char desktop = '0' + atoi(buffer);
+						if (atoi(buffer) < 0)
+							continue;
+
+						anchor = i + 1;
+						free(buffer);
+						int count = 0;
+						if (ps->o.desktops)
+							count = strlen(ps->o.desktops);
+						char *newptr = malloc(count+1+1);
+						for (int j=0; j<count; j++)
+							newptr[j] = ps->o.desktops[j];
+						newptr[count] = desktop;
+						newptr[count+1] = '\0';
+
+						if (ps->o.desktops)
+							free(ps->o.desktops);
+						ps->o.desktops = newptr;
+					}
+			}
+				break;
 			case OPT_TOGGLE:
 				user_specified_toggle_pivot = true;
 				ps->o.pivotkey = 0;
@@ -2565,6 +2620,10 @@ load_config_file(session_t *ps)
 			ps->o.clientList = 2;
 	}
     config_get_bool_wrap(config, "system", "pseudoTrans", &ps->o.pseudoTrans);
+
+    config_get_bool_wrap(config, "multimonitor", "showOnlyCurrentMonitor", &ps->o.xinerama_showAll);
+	ps->o.xinerama_showAll = !ps->o.xinerama_showAll;
+    config_get_bool_wrap(config, "multimonitor", "showOnlyCurrentScreen", &ps->o.filterxscreen);
 
 	{
 		const char *s = config_get(config, "layout", "switchLayout", NULL);
@@ -2757,14 +2816,6 @@ load_config_file(session_t *ps)
 		if (ps->o.tooltip_opacity != old_value)
 			ps->o.updatetooltip = true;
 	}
-
-    config_get_bool_wrap(config, "filter", "showOnlyCurrentMonitor", &ps->o.showOnlyCurrentMonitor);
-    config_get_bool_wrap(config, "filter", "showOnlyCurrentScreen", &ps->o.filterxscreen);
-    config_get_bool_wrap(config, "filter", "showShadow", &ps->o.showShadow);
-    config_get_bool_wrap(config, "filter", "showSticky", &ps->o.showSticky);
-    config_get_bool_wrap(config, "filter", "switchShowAllDesktops", &ps->o.switchShowAllDesktops);
-    config_get_bool_wrap(config, "filter", "exposeShowAllDesktops", &ps->o.exposeShowAllDesktops);
-    config_get_bool_wrap(config, "filter", "persistentFiltering", &ps->o.persistentFiltering);
 
 	config_get_bool_wrap(config, "bindings", "enforceFocus", &ps->o.enforceFocus);
     config_get_int_wrap(config, "bindings", "pivotLockingTime", &ps->o.pivotLockingTime, 0, 20);
@@ -3032,6 +3083,8 @@ main_end:
 			free(ps->o.wm_status);
 		if (ps->o.wm_status_count > 0)
 			free(ps->o.wm_status_str);
+		if (ps->o.desktops)
+			free(ps->o.desktops);
 
 		if (ps->fd_pipe >= 0)
 			close(ps->fd_pipe);

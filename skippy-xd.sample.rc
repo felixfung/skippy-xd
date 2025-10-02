@@ -36,6 +36,14 @@ clientList = _NET_CLIENT_LIST
 # Turn on pseudo-transparency
 pseudoTrans = true
 
+[multimonitor]
+
+# Filter windows by Xinerama monitor
+showOnlyCurrentMonitor = false
+
+# Display only windows on the current XScreen
+showOnlyCurrentScreen = true
+
 [layout]
 
 # xd: row-to-row layout
@@ -152,29 +160,6 @@ opacity = 128
 text = white
 textShadow = black
 font = fixed-11:weight=bold
-
-[filter]
-
-# Filter windows by Xinerama monitor
-showOnlyCurrentMonitor = false
-
-# Display only windows on the current XScreen
-showOnlyCurrentScreen = true
-
-# Choose whether to show shadow windows:
-# Windows that are minimized, shaded, or on other virtual desktops
-showShadow = true
-
-# Choose whether to always display sticky windows
-# Switch shows sticky windows regardless of configuration
-showSticky = true
-
-# Whether to limit window select on current virtual desktop
-switchShowAllDesktops = false
-exposeShowAllDesktops = false
-
-# When false, filter logic will be reset per invocation
-persistentFiltering = false
 
 [bindings]
 
