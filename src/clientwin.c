@@ -53,6 +53,8 @@ clientwin_filter_func(dlist *l, void *data) {
 	session_t *ps = mw->ps;
 
 #ifdef CFG_XINERAMA
+	clientwin_movecoord(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
+
 	if (mw->xin_active && !INTERSECTS(cw->src.x, cw->src.y, cw->src.width,
 				cw->src.height, mw->xin_active->x_org, mw->xin_active->y_org,
 				mw->xin_active->width, mw->xin_active->height))
@@ -631,7 +633,7 @@ void clientwin_prepmove(ClientWin *cw)
 }
 
 void
-clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
+clientwin_movecoord(ClientWin *cw, float f, int x, int y, float timeslice)
 {
 	cw->factor = f;
 	{
@@ -644,8 +646,15 @@ clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 		cw->mini.width = cw->src.width * f;
 		cw->mini.height = cw->src.height * f;
 	}
+}
 
-	XMoveResizeWindow(cw->mainwin->ps->dpy, cw->mini.window, cw->mini.x, cw->mini.y, cw->mini.width, cw->mini.height);
+void
+clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
+{
+	clientwin_movecoord(cw, f, x, y, timeslice);
+
+	XMoveResizeWindow(cw->mainwin->ps->dpy, cw->mini.window,
+			cw->mini.x, cw->mini.y, cw->mini.width, cw->mini.height);
 
 	clientwin_round_corners(cw);
 }
