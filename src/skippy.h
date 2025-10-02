@@ -203,7 +203,7 @@ typedef struct {
 	int clientList;
 	bool pseudoTrans;
 
-	bool xinerama_showAll;
+	bool showOnlyCurrentMonitor;
 	bool filterxscreen;
 	char *wm_class;
 	char *wm_title;
@@ -273,19 +273,6 @@ typedef struct {
 	char *tooltip_font;
 	bool updatetooltip;
 
-	bool showOnlyCurrentMonitor;
-	bool filterxscreen;
-	bool showShadow;
-	bool showSticky;
-	bool switchShowAllDesktops;
-	bool exposeShowAllDesktops;
-	bool persistentFiltering;
-	char *wm_class;
-	char *wm_title;
-	int wm_status_count;
-	int *wm_status;
-	char *wm_status_str;
-
 	bool enforceFocus;
 	int pivotLockingTime;
 	enum cliop bindings_miwMouse[MAX_MOUSE_BUTTONS];
@@ -317,7 +304,7 @@ typedef struct {
 	.clientList = 0, \
 	.pseudoTrans = true, \
 \
-	.xinerama_showAll = false, \
+	.showOnlyCurrentMonitor = false, \
 	.filterxscreen = true, \
 	.wm_status_count = 0, \
 	.wm_status = NULL, \
@@ -331,17 +318,6 @@ typedef struct {
 	.exposeCycleDesktops = false, \
 	.distance = 50, \
 	.allowUpscale = false, \
-\
-	.showOnlyCurrentMonitor = false, \
-	.filterxscreen = true, \
-	.showShadow = true, \
-	.showSticky = true, \
-	.switchShowAllDesktops = true, \
-	.exposeShowAllDesktops = false, \
-	.persistentFiltering = false, \
-	.wm_status_count = 0, \
-	.wm_status = NULL, \
-	.wm_status_str = "", \
 \
 	.animationDuration = 200, \
 	.animationRefresh = 60, \
