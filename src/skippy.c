@@ -1199,8 +1199,6 @@ desktopwin_map(ClientWin *cw)
 static bool
 skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 {
-	session_t *ps = mw->ps;
-
 	// Update the main window's geometry (and Xinerama info if applicable)
 	mainwin_update(mw);
 
@@ -2621,8 +2619,7 @@ load_config_file(session_t *ps)
 	}
     config_get_bool_wrap(config, "system", "pseudoTrans", &ps->o.pseudoTrans);
 
-    config_get_bool_wrap(config, "multimonitor", "showOnlyCurrentMonitor", &ps->o.xinerama_showAll);
-	ps->o.xinerama_showAll = !ps->o.xinerama_showAll;
+    config_get_bool_wrap(config, "multimonitor", "showOnlyCurrentMonitor", &ps->o.showOnlyCurrentMonitor);
     config_get_bool_wrap(config, "multimonitor", "showOnlyCurrentScreen", &ps->o.filterxscreen);
 
 	{
