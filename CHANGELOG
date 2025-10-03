@@ -1,5 +1,15 @@
 Skippy-XD changelog
 
+0.10.4 -- "Standpipe" (5 Oct 2025) ~/felixfung
+ - Select/cancel on key release rather than key press
+ - Cosmos off centre positions fixed
+ - Cosmos collision resolution bug corrected
+ - Window filtering with --wm-title
+ - Window filtering with --desktop
+ - Remove "filter" config section
+ - Introduce "multimonitor" config section
+ - Fix bug on showOnlyCurrentMonitor
+
 0.10.3.1 -- "Full Metal Steampunk" (7 Sep 2025) ~/felixfung
  - Config option layout/switchCycleDuringWait
  - Remove config option system/updateFreq, background polling eliminated
