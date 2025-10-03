@@ -36,7 +36,7 @@ struct _clientwin_t {
 
 	client_disp_mode_t mode;
 	Window wid_client;
-	SkippyWindow src;
+	SkippyWindow src, src0;
 	bool redirected;
 	Pixmap cpixmap;
 	pictw_t *pict_filled;
@@ -96,7 +96,6 @@ int clientwin_sort_func(dlist *, dlist *, void *);
 ClientWin *clientwin_create(MainWin *, Window);
 void clientwin_destroy(ClientWin *, bool destroyed);
 void clientwin_prepmove(ClientWin *);
-void clientwin_movecoord(ClientWin *, float, int, int, float);
 void clientwin_move(ClientWin *, float, int, int, float);
 void clientwin_map(ClientWin *);
 void clientwin_unmap(ClientWin *);
