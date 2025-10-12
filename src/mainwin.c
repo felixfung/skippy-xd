@@ -374,21 +374,21 @@ mainwin_update(MainWin *mw)
 	XQueryPointer(ps->dpy, ps->root, &dummy_w, &dummy_w, &root_x, &root_y, &dummy_i, &dummy_i, &dummy_u);
 	printfdf(false, "(): XINERAMA +%i+%i\n", root_x, root_y);
 	
-	printfdf(false, "(): XINERAMA --> figuring out which screen we're on... ");
+	printfdf(true, "(): XINERAMA --> figuring out which screen we're on... ");
 	iter = mw->xin_info;
 	for(i = 0; i < mw->xin_screens; ++i)
 	{
 		if(root_x >= iter->x_org && root_x < iter->x_org + iter->width &&
 		   root_y >= iter->y_org && root_y < iter->y_org + iter->height)
 		{
-			printfdf(false, "(): XINERAMA screen %i %ix%i+%i+%i\n", iter->screen_number, iter->width, iter->height, iter->x_org, iter->y_org);
+			printfdf(true, "(): XINERAMA screen %i %ix%i+%i+%i\n", iter->screen_number, iter->width, iter->height, iter->x_org, iter->y_org);
 			break;
 		}
 		iter++;
 	}
 	if(i == mw->xin_screens)
 	{
-		printfdf(false, "(): XINERAMA unknown\n");
+		printfdf(true, "(): XINERAMA unknown\n");
 		return;
 	}
 	mw->x = iter->x_org;
