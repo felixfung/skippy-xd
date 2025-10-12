@@ -53,8 +53,15 @@ clientwin_filter_func(dlist *l, void *data) {
 	session_t *ps = mw->ps;
 
 #ifdef CFG_XINERAMA
+	if (mw->xin_active)
+		printfdf(true, "(): %dx%d src0 (%d,%d) -> src (%d,%d) in (%d,%d)x%d,%d",
+				cw->src0.width, cw->src0.height,
+				cw->src0.x, cw->src0.y,
+				cw->src.x, cw->src.y,
+				mw->xin_active->x_org, mw->xin_active->y_org,
+				mw->xin_active->width, mw->xin_active->height);
 	if (mw->xin_active && !INTERSECTS(
-			cw->src0.x, cw->src0.y, cw->src0.width, cw->src0.height,
+			cw->src.x, cw->src.y, cw->src.width, cw->src.height,
 			mw->xin_active->x_org, mw->xin_active->y_org,
 			mw->xin_active->width, mw->xin_active->height))
 		return false;
