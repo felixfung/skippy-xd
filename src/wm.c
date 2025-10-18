@@ -701,7 +701,8 @@ wm_validate_window(session_t *ps, Window wid) {
 		winprop_t prop = wid_get_prop(ps, wid, _NET_WM_STATE, 8192, XA_ATOM, 32);
 		{
 			long v = winprop_get_int(&prop);
-			if (_NET_WM_STATE_SKIP_TASKBAR == v)
+			if (_NET_WM_STATE_SKIP_TASKBAR == v
+			 || _NET_WM_STATE_SKIP_PAGER == v)
 				shortcircuit = true;
 		}
 		free_winprop(&prop);
@@ -714,7 +715,9 @@ wm_validate_window(session_t *ps, Window wid) {
 		free_winprop(&prop);
 
 		prop = wid_get_prop(ps, wid, _WIN_HINTS, 1, XA_CARDINAL, 0);
-		if (winprop_get_int(&prop) & WIN_HINTS_SKIP_TASKBAR)
+		if ((winprop_get_int(&prop) & WIN_HINTS_SKIP_FOCUS)
+		 || (winprop_get_int(&prop) & WIN_HINTS_SKIP_WINLIST)
+		 || (winprop_get_int(&prop) & WIN_HINTS_SKIP_TASKBAR))
 			shortcircuit = true;
 		free_winprop(&prop);
 		if (shortcircuit)
