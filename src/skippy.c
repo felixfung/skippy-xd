@@ -863,7 +863,8 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 	if (first) {
 		mw->client_to_focus = first->data;
 		mw->client_to_focus->focused = 1;
-		if (iter && !mw->mapped)
+		if (iter && !mw->mapped &&
+				(ps->o.switchCycleDuringWait || ps->o.switchWaitDuration == 0))
 			childwin_focus(mw->client_to_focus);
 	}
 
