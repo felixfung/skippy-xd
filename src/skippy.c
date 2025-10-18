@@ -2458,32 +2458,17 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 
 				break;
 			case OPT_DESKTOP:
-			{
-				int anchor = 0;
-				for (int i=0; i<strlen(optarg) + 1; i++)
-					if (optarg[i] == ',' || optarg[i] == '\0') {
-						char *buffer = malloc(i - anchor);
-						memcpy(buffer, optarg+anchor, i - anchor);
-						char desktop = '0' + atoi(buffer);
-						if (atoi(buffer) < 0)
-							continue;
-
-						anchor = i + 1;
-						free(buffer);
-						int count = 0;
-						if (ps->o.desktops)
-							count = strlen(ps->o.desktops);
-						char *newptr = malloc(count+1+1);
-						for (int j=0; j<count; j++)
-							newptr[j] = ps->o.desktops[j];
-						newptr[count] = desktop;
-						newptr[count+1] = '\0';
-
-						if (ps->o.desktops)
-							free(ps->o.desktops);
-						ps->o.desktops = newptr;
+				for (int i=0; i<strlen(optarg); i++)
+					if (optarg[i] != '-' && optarg[i] != ','
+							&& !('0'<=optarg[i] && optarg[i]<='9')) {
+						printfef(true,
+							"(): --desktop argument accepts only numerals and comma");
+						exit(1);
 					}
-			}
+
+				if (ps->o.desktops)
+					free(ps->o.desktops);
+				ps->o.desktops = strdup(optarg);
 				break;
 			case OPT_TOGGLE:
 				user_specified_toggle_pivot = true;

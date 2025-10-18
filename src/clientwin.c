@@ -74,13 +74,25 @@ clientwin_filter_func(dlist *l, void *data) {
 	}
 	else {
 		bool filter_matched = false;
-		for (int i=0; i<strlen(ps->o.desktops)
-				&& !filter_matched; i++)
-			filter_matched = '0' + w_desktop == ps->o.desktops[i];
-		filtered_in = filter_matched;
-
 		if (w_desktop == -1)
 			filtered_in = true; // always show sticky windows
+
+		int anchor = 0;
+		for (int i=0; i<strlen(ps->o.desktops) + 1 && !filter_matched; i++)
+			if (ps->o.desktops[i] == ',' || ps->o.desktops[i] == '\0') {
+				char *buffer = malloc(i - anchor);
+				memcpy(buffer, ps->o.desktops+anchor, i - anchor);
+				int desktop = atoi(buffer);
+
+				if (desktop == -1)
+					filter_matched = true;
+				else
+					filter_matched = w_desktop == desktop;
+
+				anchor = i + 1;
+				free(buffer);
+			}
+		filtered_in = filter_matched;
 	}
 
 	if (filtered_in)
