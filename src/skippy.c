@@ -1688,7 +1688,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				}
 			}
 			else if (mw && (ps->xinfo.damage_ev_base + XDamageNotify == ev.type)) {
-				printfdf(false, "(): else if (ev.type == XDamageNotify) {");
+				//printfdf(false, "(): else if (ev.type == XDamageNotify) {");
 				pending_damage = true;
 				dlist *iter = dlist_find(ps->mainwin->clients,
 						clientwin_cmp_func, (void *) wid);
