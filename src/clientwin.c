@@ -155,7 +155,9 @@ clientwin_create(MainWin *mw, Window client) {
 			.override_redirect = !ps->o.pseudoTrans,
 		};
 		cw->mini.window = XCreateWindow(ps->dpy,
-				(ps->o.pseudoTrans ? mw->window : ps->root), 0, 0, 1, 1, 0,
+				(ps->o.pseudoTrans ? mw->window : ps->root),
+				(ps->o.pseudoTrans ? mw->x : 0), (ps->o.pseudoTrans ? mw->y : 0),
+				1, 1, 0,
 				mw->depth, InputOutput, mw->visual,
 				CWColormap | CWBackPixel | CWBorderPixel | CWEventMask | CWOverrideRedirect, &sattr);
 	}

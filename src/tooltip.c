@@ -216,11 +216,6 @@ tooltip_move(Tooltip *tt, ClientWin *cw) {
 	int x = ps->o.tooltip_offsetX,
 		y = ps->o.tooltip_offsetY;
 
-	if (ps->o.pseudoTrans) {
-		x += cw->mainwin->x;
-		y += cw->mainwin->y;
-	}
-
     x += cw->mini.x + cw->mini.width/2 - tt->width / 2;
     y += cw->mini.y + cw->mini.height;
 
