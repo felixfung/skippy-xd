@@ -80,11 +80,13 @@ tooltip_create(MainWin *mw) {
 			.colormap = mw->colormap,
 		};
 		
-		tt->window = XCreateWindow(ps->dpy, ps->root,
-		                           0, 0, 1, 1, 0,
-		                           mw->depth, InputOutput, mw->visual,
-		                           CWBorderPixel|CWBackPixel|CWOverrideRedirect|CWEventMask|CWColormap,
-		                           &attr);
+		tt->window = XCreateWindow(ps->dpy,
+				ps->o.pseudoTrans ? mw->window : ps->root,
+				ps->o.pseudoTrans ? mw->x : 0, ps->o.pseudoTrans ? mw->y : 0,
+				1, 1, 0,
+				mw->depth, InputOutput, mw->visual,
+				CWBorderPixel|CWBackPixel|CWOverrideRedirect|CWEventMask|CWColormap,
+				&attr);
 	}
 
 	if (!tt->window) {
@@ -215,11 +217,6 @@ tooltip_move(Tooltip *tt, ClientWin *cw) {
 	session_t *ps = tt->mainwin->ps;
 	int x = ps->o.tooltip_offsetX,
 		y = ps->o.tooltip_offsetY;
-
-	if (ps->o.pseudoTrans) {
-		x += cw->mainwin->x;
-		y += cw->mainwin->y;
-	}
 
     x += cw->mini.x + cw->mini.width/2 - tt->width / 2;
     y += cw->mini.y + cw->mini.height;

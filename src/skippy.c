@@ -1100,12 +1100,6 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 			cw->src.width = desktop_width;
 			cw->src.height = desktop_height;
 
-			if (!mw->ps->o.pseudoTrans)
-			{
-				cw->x += cw->mainwin->x;
-				cw->y += cw->mainwin->y;
-			}
-
 			if (!cw->redirected) {
 				XCompositeRedirectWindow(mw->ps->dpy, cw->src.window,
 						CompositeRedirectAutomatic);
@@ -1229,11 +1223,6 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 		cw->x *= mw->multiplier;
 		cw->y *= mw->multiplier;
 		cw->paneltype = WINTYPE_WINDOW;
-		if (!mw->ps->o.pseudoTrans)
-		{
-			cw->x += cw->mainwin->x;
-			cw->y += cw->mainwin->y;
-		}
 	}
 
 	foreach_dlist(mw->panels) {
@@ -1292,6 +1281,13 @@ mainloop(session_t *ps, bool activate_on_start) {
 			.events = POLLIN,
 		},
 	};
+
+	daemon_count_clients(ps->mainwin);
+
+	foreach_dlist(ps->mainwin->clients) {
+		clientwin_update((ClientWin *) iter->data);
+		clientwin_update2((ClientWin *) iter->data);
+	}
 
 	while (true) {
 		// Clear revents in pollfd
@@ -3007,13 +3003,6 @@ int main(int argc, char *argv[]) {
 		}
 
 		flush_clients(ps);
-
-		daemon_count_clients(mw);
-
-		foreach_dlist(mw->clients) {
-			clientwin_update((ClientWin *) iter->data);
-			clientwin_update2((ClientWin *) iter->data);
-		}
 
 		mainloop(ps, false);
 	}

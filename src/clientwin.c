@@ -155,7 +155,9 @@ clientwin_create(MainWin *mw, Window client) {
 			.override_redirect = !ps->o.pseudoTrans,
 		};
 		cw->mini.window = XCreateWindow(ps->dpy,
-				(ps->o.pseudoTrans ? mw->window : ps->root), 0, 0, 1, 1, 0,
+				ps->o.pseudoTrans ? mw->window : ps->root,
+				ps->o.pseudoTrans ? mw->x : 0, ps->o.pseudoTrans ? mw->y : 0,
+				1, 1, 0,
 				mw->depth, InputOutput, mw->visual,
 				CWColormap | CWBackPixel | CWBorderPixel | CWEventMask | CWOverrideRedirect, &sattr);
 	}
@@ -656,9 +658,20 @@ clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 	{
 		// animate window by changing these in time linearly:
 		// here, cw->mini has destination coordinates, cw->src has original coordinates
+		MainWin *mw = cw->mainwin;
+		session_t *ps = mw->ps;
+		int mwx = 0, mwy = 0, srcx = cw->src.x, srcy = cw->src.y;
+		if (!ps->o.pseudoTrans) {
+			mwx = mw->x;
+			mwy = mw->y;
+		}
+		else {
+			srcx = cw->src.x - mw->x;
+			srcy = cw->src.y - mw->y;
+		}
 
-		cw->mini.x = cw->src.x + (cw->x - cw->src.x + x) * timeslice;
-		cw->mini.y = cw->src.y + (cw->y - cw->src.y + y) * timeslice;
+		cw->mini.x = srcx + (cw->x + mwx - srcx + x) * timeslice;
+		cw->mini.y = srcy + (cw->y + mwy - srcy + y) * timeslice;
 
 		cw->mini.width = cw->src.width * f;
 		cw->mini.height = cw->src.height * f;
