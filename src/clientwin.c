@@ -658,9 +658,16 @@ clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 	{
 		// animate window by changing these in time linearly:
 		// here, cw->mini has destination coordinates, cw->src has original coordinates
+		MainWin *mw = cw->mainwin;
+		session_t *ps = mw->ps;
+		int mwx = 0, mwy = 0;
+		if (!ps->o.pseudoTrans) {
+			mwx = mw->x;
+			mwy = mw->y;
+		}
 
-		cw->mini.x = cw->src.x + (cw->x - cw->src.x + x) * timeslice;
-		cw->mini.y = cw->src.y + (cw->y - cw->src.y + y) * timeslice;
+		cw->mini.x = cw->src.x + (cw->x + mwx - cw->src.x + x) * timeslice;
+		cw->mini.y = cw->src.y + (cw->y + mwy - cw->src.y + y) * timeslice;
 
 		cw->mini.width = cw->src.width * f;
 		cw->mini.height = cw->src.height * f;
