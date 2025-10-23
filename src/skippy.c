@@ -1282,6 +1282,13 @@ mainloop(session_t *ps, bool activate_on_start) {
 		},
 	};
 
+	daemon_count_clients(ps->mainwin);
+
+	foreach_dlist(ps->mainwin->clients) {
+		clientwin_update((ClientWin *) iter->data);
+		clientwin_update2((ClientWin *) iter->data);
+	}
+
 	while (true) {
 		// Clear revents in pollfd
 		for (int i = 0; i < CARR_LEN(r_fd); ++i)
@@ -2996,13 +3003,6 @@ int main(int argc, char *argv[]) {
 		}
 
 		flush_clients(ps);
-
-		daemon_count_clients(mw);
-
-		foreach_dlist(mw->clients) {
-			clientwin_update((ClientWin *) iter->data);
-			clientwin_update2((ClientWin *) iter->data);
-		}
 
 		mainloop(ps, false);
 	}
