@@ -1,5 +1,13 @@
 Skippy-XD changelog
 
+0.10.5 -- "Mukbang Obsession" (9 Nov 2025) ~/felixfung
+ - Fix bug on switch z-order scrambling
+ - Fix multi-monitor window displays (coordinate offsets)
+ - Virtual desktop filtering allows desktop >= 10
+ - Virtual desktop filtering -1 shows windows on all desktops
+ - SKIP_PAGER, SKIP_FOCUS, SKIP_WINLIST windows no longer displayed
+ - Fix bug on multi-desktop next graphics artifact
+
 0.10.4 -- "Standpipe" (5 Oct 2025) ~/felixfung
  - Select/cancel on key release rather than key press
  - Cosmos off centre positions fixed
