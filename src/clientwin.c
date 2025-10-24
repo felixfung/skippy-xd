@@ -490,8 +490,8 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 			foreach_dlist (mw->dminis) {
 				ClientWin *dwin = (ClientWin *) iter->data;
 
-				int x = dwin->x + mw->xoff - cw->src.x;
-				int y = dwin->y + mw->yoff - cw->src.y;
+				int x = dwin->x + mw->xoff - cw->src.x + mw->x;
+				int y = dwin->y + mw->yoff - cw->src.y + mw->y;
 				int width = dwin->src.width * mw->multiplier;
 				int height = dwin->src.height * mw->multiplier;
 
