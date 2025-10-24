@@ -1549,9 +1549,9 @@ mainloop(session_t *ps, bool activate_on_start) {
 						XRenderComposite(mw->ps->dpy,
 								PictOpSrc, mw->ps->o.from,
 								None, mw->background,
-								cw->x + mw->xoff, cw->y + mw->yoff,
+								cw->x + mw->xoff + mw->x, cw->y + mw->yoff + mw->y,
 								0, 0,
-								cw->x + mw->xoff - mw->x, cw->y + mw->yoff - mw->y,
+								cw->x + mw->xoff, cw->y + mw->yoff,
 								cw->src.width * mw->multiplier,
 								cw->src.height * mw->multiplier);
 						XClearWindow(ps->dpy, mw->window);
