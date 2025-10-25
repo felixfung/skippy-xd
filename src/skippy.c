@@ -880,8 +880,8 @@ calculatePanelBorders(MainWin *mw,
 
 	// use heuristics to find panel borders
 	// e.g. a panel on the bottom
-	*x1 = 0;
-	*y1 = 0;
+	*x1 = mw->x;
+	*y1 = mw->y;
 	*x2 = mw->x + mw->width;
 	*y2 = mw->y + mw->height;
 
@@ -889,28 +889,21 @@ calculatePanelBorders(MainWin *mw,
 		ClientWin *cw = iter->data;
 		if (cw->paneltype != WINTYPE_PANEL)
 			continue;
-		// assumed horizontal panel
-		if (cw->src.width >= cw->src.height) {
-			// assumed top panel
-			if (cw->src.y < mw->y + mw->height / 2.0) {
-				*y1 = MAX(*y1, cw->src.y + cw->src.height);
-			}
-			// assumed bottom panel
-			else {
-				*y2 = MIN(*y2, cw->src.y);
-			}
-		}
-		// assumed vertical panel
-		else {
-			// assumed left panel
-			if (cw->src.x < mw->x + mw->width / 2.0) {
-				*x1 = MAX(*x1, cw->src.x + cw->src.width);
-			}
-			// assumed right panel
-			else {
-				*x2 = MIN(*x2, cw->src.x);
-			}
-		}
+
+		int win_x1 = cw->src.x + cw->src.width;
+		int win_x2 = cw->src.x;
+		int win_y1 = cw->src.y + cw->src.height;
+		int win_y2 = cw->src.y;
+
+		if (win_x1 < mw->x + mw->width / 2)
+			*x1 = MAX(*x1, win_x1);
+		if (win_y1 < mw->y + mw->height / 2)
+			*y1 = MAX(*y1, win_y1);
+
+		if (win_x2 >= mw->x + mw->width / 2)
+			*x2 = MIN(*x2, win_x2);
+		if (win_y1 >= mw->y + mw->height / 2)
+			*y2 = MIN(*y2, win_y2);
 	}
 
 	*x2 = mw->x + mw->width - *x2;
