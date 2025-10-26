@@ -902,7 +902,7 @@ calculatePanelBorders(MainWin *mw,
 
 		if (win_x2 >= mw->x + mw->width / 2)
 			*x2 = MIN(*x2, win_x2);
-		if (win_y1 >= mw->y + mw->height / 2)
+		if (win_y2 >= mw->y + mw->height / 2)
 			*y2 = MIN(*y2, win_y2);
 	}
 
