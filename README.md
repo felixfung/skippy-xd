@@ -18,6 +18,7 @@ If you are looking for a slick and minimalistic window selector that turns every
 
 Check out the youtube videos:
 
+[![Skippy-xd window selector!](https://img.youtube.com/vi/8zKAgt5mhek/mqdefault.jpg)](https://youtu.be/8zKAgt5mhek)
 [![Skippy-xd window selector!](https://img.youtube.com/vi/6zEvYXWIQyg/mqdefault.jpg)](https://youtu.be/6zEvYXWIQyg)
 [![Skippy-xd invocation methods!!](https://img.youtube.com/vi/sFvG9rcGanA/mqdefault.jpg)](https://youtu.be/sFvG9rcGanA)
 [![Skippy-xd config file!](https://img.youtube.com/vi/Ct2pEx551TQ/mqdefault.jpg)](https://youtu.be/Ct2pEx551TQ)
