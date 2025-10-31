@@ -1572,7 +1572,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				XFlush(ps->dpy);
 
 				focus_miniw_adv(ps, mw->client_to_focus,
-						ps->o.movePointer);
+						ps->o.moveMouse);
 			}
 
 			if (layout != LAYOUTMODE_SWITCH ||
@@ -2673,7 +2673,7 @@ load_config_file(session_t *ps)
 		ps->o.bg_spec = spec;
 	}
 	config_get_bool_wrap(config, "display", "preservePages", &ps->o.preservePages);
-    config_get_bool_wrap(config, "display", "movePointer", &ps->o.movePointer);
+    config_get_bool_wrap(config, "bindings", "moveMouse", &ps->o.moveMouse);
     config_get_bool_wrap(config, "display", "includeFrame", &ps->o.includeFrame);
 	config_get_int_wrap(config, "display", "cornerRadius", &ps->o.cornerRadius, 0, INT_MAX);
     {
