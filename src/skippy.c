@@ -880,8 +880,8 @@ calculatePanelBorders(MainWin *mw,
 
 	// use heuristics to find panel borders
 	// e.g. a panel on the bottom
-	*x1 = 0;
-	*y1 = 0;
+	*x1 = mw->x;
+	*y1 = mw->y;
 	*x2 = mw->x + mw->width;
 	*y2 = mw->y + mw->height;
 
