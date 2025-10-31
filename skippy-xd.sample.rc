@@ -89,9 +89,6 @@ background = #00000055
 # During paging, do not apply background to individual desktops
 preservePages = true
 
-# Reposition the mouse cursor per focus updates
-movePointer = false
-
 # Whether to display window frames
 includeFrame = true
 
@@ -172,6 +169,9 @@ enforceFocus = true
 # And the pivot key no longer needs to be held
 # Set to 0 to disable pivot locking
 pivotLockingTime = 0
+
+# Reposition the mouse to the centre of the window
+moveMouse = false
 
 # key* = is a list of valid XWindows KeySym identifiers,
 # Case sensitive and <space> seperated list.

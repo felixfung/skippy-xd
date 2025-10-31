@@ -225,7 +225,7 @@ typedef struct {
 	int animationRefresh;;
 	pictspec_t bg_spec;
 	bool preservePages;
-	bool movePointer;
+	bool moveMouse;
 	bool includeFrame;
 	int cornerRadius;
 	client_disp_mode_t *clientDisplayModes;
@@ -323,7 +323,7 @@ typedef struct {
 	.animationRefresh = 60, \
 	.background = NULL, \
 	.preservePages = true, \
-	.movePointer = false, \
+	.moveMouse = false, \
 	.includeFrame = false, \
 	.cornerRadius = 0, \
 	.clientDisplayModes = NULL, \
