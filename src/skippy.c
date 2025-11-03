@@ -796,9 +796,32 @@ daemon_count_clients(MainWin *mw)
 {
 	update_clients(mw);
 
+	session_t *ps = mw->ps;
 	foreach_dlist (mw->clients) {
 		ClientWin *cw = (ClientWin *) iter->data;
-		clientwin_update(cw);
+		XWindowAttributes wattr = { };
+		XGetWindowAttributes(ps->dpy, cw->src.window, &wattr);
+
+		{
+			Window tmpwin = None;
+			XTranslateCoordinates(ps->dpy, cw->src.window, wattr.root,
+					-wattr.border_width, -wattr.border_width,
+					&cw->src.x, &cw->src.y, &tmpwin);
+
+			if (wattr.width == 0 && wattr.height == 0) {
+				XGetWindowAttributes(ps->dpy, cw->wid_client, &wattr);
+				XTranslateCoordinates(ps->dpy, cw->wid_client, wattr.root,
+						-wattr.border_width, -wattr.border_width,
+						&cw->src.x, &cw->src.y, &tmpwin);
+			}
+		}
+
+		cw->src.width = wattr.width;
+		cw->src.height = wattr.height;
+		cw->src0.x = cw->src.x;
+		cw->src0.y = cw->src.y;
+		cw->src0.width = cw->src.width;
+		cw->src0.height = cw->src.height;
 	}
 
 	// update mw->clientondesktop
