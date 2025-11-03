@@ -796,6 +796,11 @@ daemon_count_clients(MainWin *mw)
 {
 	update_clients(mw);
 
+	foreach_dlist (mw->clients) {
+		ClientWin *cw = (ClientWin *) iter->data;
+		clientwin_update(cw);
+	}
+
 	// update mw->clientondesktop
 	long desktop = wm_get_current_desktop(mw->ps);
 
