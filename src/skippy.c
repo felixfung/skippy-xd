@@ -2133,7 +2133,6 @@ show_help() {
           "  --wm-status         - display only windows with specified status:\n"
           "                          sticky, shaded, minimized, float,\n"
           "                          maximized_vert, maximized_horz, maximized\n"
-          "\n"
           "  --desktop           - display windows on a specific virtual desktop.\n"
           "                          use '-1' to show windows from all desktops.\n"
           "\n"
