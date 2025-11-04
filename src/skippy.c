@@ -796,34 +796,6 @@ daemon_count_clients(MainWin *mw)
 {
 	update_clients(mw);
 
-	session_t *ps = mw->ps;
-	foreach_dlist (mw->clients) {
-		ClientWin *cw = (ClientWin *) iter->data;
-		XWindowAttributes wattr = { };
-		XGetWindowAttributes(ps->dpy, cw->src.window, &wattr);
-
-		{
-			Window tmpwin = None;
-			XTranslateCoordinates(ps->dpy, cw->src.window, wattr.root,
-					-wattr.border_width, -wattr.border_width,
-					&cw->src.x, &cw->src.y, &tmpwin);
-
-			if (wattr.width == 0 && wattr.height == 0) {
-				XGetWindowAttributes(ps->dpy, cw->wid_client, &wattr);
-				XTranslateCoordinates(ps->dpy, cw->wid_client, wattr.root,
-						-wattr.border_width, -wattr.border_width,
-						&cw->src.x, &cw->src.y, &tmpwin);
-			}
-		}
-
-		cw->src.width = wattr.width;
-		cw->src.height = wattr.height;
-		cw->src0.x = cw->src.x;
-		cw->src0.y = cw->src.y;
-		cw->src0.width = cw->src.width;
-		cw->src0.height = cw->src.height;
-	}
-
 	// update mw->clientondesktop
 	long desktop = wm_get_current_desktop(mw->ps);
 
@@ -1227,11 +1199,11 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 
 	mw->client_to_focus = NULL;
 
-	daemon_count_clients(mw);
 	foreach_dlist(mw->clients) {
 		clientwin_update((ClientWin *) iter->data);
 		clientwin_update2((ClientWin *) iter->data);
 	}
+	daemon_count_clients(mw);
 
 	if (layout == LAYOUTMODE_PAGING) {
 		if (!init_paging_layout(mw, layout, leader)) {
