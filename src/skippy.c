@@ -2134,7 +2134,7 @@ show_help() {
 			"                          sticky, shaded, minimized, float,\n"
 			"                          maximized_vert, maximized_horz, maximized\n"
 			"  --desktop           - display only windows on specific virtual desktops.\n"
-            "                           use '-1' to show windows from all desktops.\n"
+			"												use '-1' to show windows from all desktops.\n"
 			"\n"
 			"  --toggle            - activate via toggle mode.\n"
 			"  --pivot             - activate via pivot mode with specified pivot key.\n"
