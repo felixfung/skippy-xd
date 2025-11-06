@@ -252,7 +252,17 @@ clientwin_update(ClientWin *cw) {
 	cw->src0.width = cw->src.width;
 	cw->src0.height = cw->src.height;
 
+	return clientwin_update3(cw);
+}
+
+bool
+clientwin_update3(ClientWin *cw) {
+	session_t *ps = cw->mainwin->ps;
+
+	XWindowAttributes wattr = { };
+	XGetWindowAttributes(ps->dpy, cw->src.window, &wattr);
 	bool isViewable = wattr.map_state == IsViewable;
+
 	cw->zombie = !isViewable;
 
 	cw->src.format = XRenderFindVisualFormat(ps->dpy, wattr.visual);
