@@ -796,6 +796,11 @@ count_and_filter_clients(MainWin *mw)
 {
 	count_clients(mw);
 
+	foreach_dlist (mw->clients) {
+		ClientWin *cw = iter->data;
+		clientwin_update(cw);
+	}
+
 	// update mw->clientondesktop
 	long desktop = wm_get_current_desktop(mw->ps);
 
@@ -1202,6 +1207,7 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 	count_and_filter_clients(mw);
 	foreach_dlist(mw->clients) {
 		clientwin_update((ClientWin *) iter->data);
+		clientwin_update3((ClientWin *) iter->data);
 		clientwin_update2((ClientWin *) iter->data);
 	}
 
@@ -1230,6 +1236,7 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 		cw->factor = 1;
 		cw->paneltype = wm_identify_panel(mw->ps, cw->wid_client);
 		clientwin_update(cw);
+		clientwin_update3(cw);
 		if (cw->paneltype == WINTYPE_DESKTOP)
 			clientwin_move(cw, 1, cw->src.x, cw->src.y, 1);
 		clientwin_update2(cw);
@@ -1286,6 +1293,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 	foreach_dlist(ps->mainwin->clients) {
 		clientwin_update((ClientWin *) iter->data);
+		clientwin_update3((ClientWin *) iter->data);
 		clientwin_update2((ClientWin *) iter->data);
 	}
 
@@ -1652,6 +1660,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					cw = (ClientWin *) iter->data;
 				if (cw) {
 					clientwin_update(cw);
+					clientwin_update3(cw);
 					clientwin_update2(cw);
 				}
             }
@@ -1662,6 +1671,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				if (iter) {
 					ClientWin *cw = (ClientWin *) iter->data;
 					clientwin_update(cw);
+					clientwin_update3(cw);
 					clientwin_update2(cw);
 				}
 				num_events--;
@@ -1680,6 +1690,14 @@ mainloop(session_t *ps, bool activate_on_start) {
 						wid = ev_window(ps, &ev);
 
 						num_events--;
+						dlist *iter = (wid ? dlist_find(ps->mainwin->clients,
+								clientwin_cmp_func, (void *) wid): NULL);
+						if (iter) {
+							ClientWin *cw = (ClientWin *) iter->data;
+							clientwin_update(cw);
+							clientwin_update3(cw);
+							clientwin_update2(cw);
+						}
 					}
 				}
 			}

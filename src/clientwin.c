@@ -252,7 +252,7 @@ clientwin_update(ClientWin *cw) {
 	cw->src0.width = cw->src.width;
 	cw->src0.height = cw->src.height;
 
-	return clientwin_update3(cw);
+	return true;
 }
 
 bool
@@ -821,6 +821,7 @@ shadow_clientwindow(ClientWin* cw, enum cliop op) {
 	usleep(10000);
 
 	clientwin_update(cw);
+	clientwin_update3(cw);
 
 	clientwin_prepmove(cw);
 	clientwin_move(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
