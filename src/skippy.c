@@ -745,7 +745,7 @@ anime(
 }
 
 static void
-update_clients(MainWin *mw)
+count_clients(MainWin *mw)
 {
 	// Update the list of windows with correct z-ordering
 	dlist *stack = dlist_first(wm_get_stack(mw->ps));
@@ -794,7 +794,7 @@ update_clients(MainWin *mw)
 static void
 daemon_count_clients(MainWin *mw)
 {
-	update_clients(mw);
+	count_clients(mw);
 
 	// update mw->clientondesktop
 	long desktop = wm_get_current_desktop(mw->ps);
