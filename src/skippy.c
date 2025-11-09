@@ -792,7 +792,7 @@ count_clients(MainWin *mw)
 }
 
 static void
-daemon_count_clients(MainWin *mw)
+count_and_filter_clients(MainWin *mw)
 {
 	count_clients(mw);
 
@@ -1204,7 +1204,7 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 
 	mw->client_to_focus = NULL;
 
-	daemon_count_clients(mw);
+	count_and_filter_clients(mw);
 	foreach_dlist(mw->clients) {
 		clientwin_update((ClientWin *) iter->data);
 		clientwin_update3((ClientWin *) iter->data);
@@ -1289,7 +1289,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 		},
 	};
 
-	daemon_count_clients(ps->mainwin);
+	count_and_filter_clients(ps->mainwin);
 
 	while (true) {
 		// Clear revents in pollfd
@@ -1637,7 +1637,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 			}
 			else if (mw && ev.type == DestroyNotify) {
 				printfdf(false, "(): else if (ev.type == DestroyNotify) {");
-				daemon_count_clients(ps->mainwin);
+				count_and_filter_clients(ps->mainwin);
 				if (!mw->clientondesktop) {
 					printfdf(false, "(): Last client window destroyed/unmapped, "
 							"exiting.");
@@ -1660,7 +1660,7 @@ mainloop(session_t *ps, bool activate_on_start) {
             }
 			else if (ev.type == CreateNotify || ev.type == UnmapNotify) {
 				printfdf(false, "(): else if (ev.type == CreateNotify || ev.type == UnmapNotify) {");
-				daemon_count_clients(ps->mainwin);
+				count_and_filter_clients(ps->mainwin);
 				dlist *iter = (wid ? dlist_find(ps->mainwin->clients, clientwin_cmp_func, (void *) wid): NULL);
 				if (iter) {
 					ClientWin *cw = (ClientWin *) iter->data;
