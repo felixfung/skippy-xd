@@ -745,7 +745,7 @@ anime(
 }
 
 static void
-update_clients(MainWin *mw)
+count_clients(MainWin *mw)
 {
 	// Update the list of windows with correct z-ordering
 	dlist *stack = dlist_first(wm_get_stack(mw->ps));
@@ -792,9 +792,14 @@ update_clients(MainWin *mw)
 }
 
 static void
-daemon_count_clients(MainWin *mw)
+count_and_filter_clients(MainWin *mw)
 {
-	update_clients(mw);
+	count_clients(mw);
+
+	foreach_dlist (mw->clients) {
+		ClientWin *cw = iter->data;
+		clientwin_update(cw);
+	}
 
 	// update mw->clientondesktop
 	long desktop = wm_get_current_desktop(mw->ps);
@@ -1199,9 +1204,10 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 
 	mw->client_to_focus = NULL;
 
-	daemon_count_clients(mw);
+	count_and_filter_clients(mw);
 	foreach_dlist(mw->clients) {
 		clientwin_update((ClientWin *) iter->data);
+		clientwin_update3((ClientWin *) iter->data);
 		clientwin_update2((ClientWin *) iter->data);
 	}
 
@@ -1230,6 +1236,7 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 		cw->factor = 1;
 		cw->paneltype = wm_identify_panel(mw->ps, cw->wid_client);
 		clientwin_update(cw);
+		clientwin_update3(cw);
 		if (cw->paneltype == WINTYPE_DESKTOP)
 			clientwin_move(cw, 1, cw->src.x, cw->src.y, 1);
 		clientwin_update2(cw);
@@ -1282,10 +1289,11 @@ mainloop(session_t *ps, bool activate_on_start) {
 		},
 	};
 
-	daemon_count_clients(ps->mainwin);
+	count_and_filter_clients(ps->mainwin);
 
 	foreach_dlist(ps->mainwin->clients) {
 		clientwin_update((ClientWin *) iter->data);
+		clientwin_update3((ClientWin *) iter->data);
 		clientwin_update2((ClientWin *) iter->data);
 	}
 
@@ -1635,7 +1643,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 			}
 			else if (mw && ev.type == DestroyNotify) {
 				printfdf(false, "(): else if (ev.type == DestroyNotify) {");
-				daemon_count_clients(ps->mainwin);
+				count_and_filter_clients(ps->mainwin);
 				if (!mw->clientondesktop) {
 					printfdf(false, "(): Last client window destroyed/unmapped, "
 							"exiting.");
@@ -1652,16 +1660,18 @@ mainloop(session_t *ps, bool activate_on_start) {
 					cw = (ClientWin *) iter->data;
 				if (cw) {
 					clientwin_update(cw);
+					clientwin_update3(cw);
 					clientwin_update2(cw);
 				}
             }
 			else if (ev.type == CreateNotify || ev.type == UnmapNotify) {
 				printfdf(false, "(): else if (ev.type == CreateNotify || ev.type == UnmapNotify) {");
-				daemon_count_clients(ps->mainwin);
+				count_and_filter_clients(ps->mainwin);
 				dlist *iter = (wid ? dlist_find(ps->mainwin->clients, clientwin_cmp_func, (void *) wid): NULL);
 				if (iter) {
 					ClientWin *cw = (ClientWin *) iter->data;
 					clientwin_update(cw);
+					clientwin_update3(cw);
 					clientwin_update2(cw);
 				}
 				num_events--;
@@ -1680,6 +1690,14 @@ mainloop(session_t *ps, bool activate_on_start) {
 						wid = ev_window(ps, &ev);
 
 						num_events--;
+						dlist *iter = (wid ? dlist_find(ps->mainwin->clients,
+								clientwin_cmp_func, (void *) wid): NULL);
+						if (iter) {
+							ClientWin *cw = (ClientWin *) iter->data;
+							clientwin_update(cw);
+							clientwin_update3(cw);
+							clientwin_update2(cw);
+						}
 					}
 				}
 			}

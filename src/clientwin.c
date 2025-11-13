@@ -252,7 +252,17 @@ clientwin_update(ClientWin *cw) {
 	cw->src0.width = cw->src.width;
 	cw->src0.height = cw->src.height;
 
+	return true;
+}
+
+bool
+clientwin_update3(ClientWin *cw) {
+	session_t *ps = cw->mainwin->ps;
+
+	XWindowAttributes wattr = { };
+	XGetWindowAttributes(ps->dpy, cw->src.window, &wattr);
 	bool isViewable = wattr.map_state == IsViewable;
+
 	cw->zombie = !isViewable;
 
 	cw->src.format = XRenderFindVisualFormat(ps->dpy, wattr.visual);
@@ -811,6 +821,7 @@ shadow_clientwindow(ClientWin* cw, enum cliop op) {
 	usleep(10000);
 
 	clientwin_update(cw);
+	clientwin_update3(cw);
 
 	clientwin_prepmove(cw);
 	clientwin_move(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
