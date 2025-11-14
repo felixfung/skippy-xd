@@ -1664,8 +1664,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 					clientwin_update2(cw);
 				}
             }
-			else if (ev.type == CreateNotify || ev.type == UnmapNotify) {
-				printfdf(false, "(): else if (ev.type == CreateNotify || ev.type == UnmapNotify) {");
+			else if (ev.type == CreateNotify || ev.type == MapNotify || ev.type == UnmapNotify) {
+				printfdf(false, "(): else if (ev.type == CreateNotify || ev.type == MapNotify || ev.type == UnmapNotify) {");
 				count_and_filter_clients(ps->mainwin);
 				dlist *iter = (wid ? dlist_find(ps->mainwin->clients, clientwin_cmp_func, (void *) wid): NULL);
 				if (iter) {
