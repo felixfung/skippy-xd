@@ -869,8 +869,12 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 		mw->client_to_focus = first->data;
 		mw->client_to_focus->focused = 1;
 		if (iter && !mw->mapped &&
-				(ps->o.switchCycleDuringWait || ps->o.switchWaitDuration == 0))
-			childwin_focus(mw->client_to_focus);
+				(ps->o.switchCycleDuringWait || ps->o.switchWaitDuration == 0)) {
+			Window wid = mw->client_to_focus->wid_client;
+			XRaiseWindow(ps->dpy, wid);
+			XSetInputFocus(ps->dpy, wid, RevertToParent, CurrentTime);
+			XFlush(ps->dpy);
+		}
 	}
 
 	if (layout == LAYOUTMODE_SWITCH && ps->o.switchLayout == LAYOUT_COSMOS)
