@@ -51,7 +51,7 @@ showOnlyCurrentScreen = true
 switchLayout = xd
 exposeLayout = cosmos
 
-# Wait time before displaying switch previews
+# Wait time in ms before displaying switch previews
 # Set = 0 to veto live previews completely
 switchWaitDuration = 100
 
@@ -63,7 +63,7 @@ switchCycleDuringWait = false
 switchCycleDesktops = false
 exposeCycleDesktops = false
 
-# Relative minimal distance between windows
+# Relative minimal pixel distance between windows
 distance = 50
 
 # Whether to show the window bigger than its original size
@@ -71,6 +71,7 @@ allowUpscale = false
 
 [display]
 
+# Animation duration in ms
 # Set = 0 to switch off animations
 animationDuration = 200
 
@@ -165,7 +166,7 @@ font = fixed-11:weight=bold
 # Focus back on skippy-xd
 enforceFocus = true
 
-# After this time, pivot "locks" into toggle mode
+# After this time in ms, pivot "locks" into toggle mode
 # And the pivot key no longer needs to be held
 # Set to 0 to disable pivot locking
 pivotLockingTime = 0
