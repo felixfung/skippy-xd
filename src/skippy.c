@@ -1798,7 +1798,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 		// Do delayed painting if it's active
 		if (mw && pending_damage && !die) {
-			printfdf(false, "(): delayed painting");
+			//printfdf(false, "(): delayed painting");
 			pending_damage = false;
 			foreach_dlist(mw->clientondesktop) {
 				if (((ClientWin *) iter->data)->damaged)
