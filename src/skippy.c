@@ -870,13 +870,10 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 		mw->client_to_focus->focused = 1;
 		if (iter && !mw->mapped &&
 				(ps->o.switchCycleDuringWait || ps->o.switchWaitDuration == 0)) {
-			childwin_focus(mw->client_to_focus);
-			foreach_dlist(mw->clientondesktop) {
-				ClientWin *cw = (ClientWin *) iter->data;
-				clientwin_update(cw);
-				clientwin_update3(cw);
-				clientwin_update2(cw);
-			}
+			Window wid = mw->client_to_focus->wid_client;
+			XRaiseWindow(ps->dpy, wid);
+			XSetInputFocus(ps->dpy, wid, RevertToParent, CurrentTime);
+			XFlush(ps->dpy);
 		}
 	}
 
