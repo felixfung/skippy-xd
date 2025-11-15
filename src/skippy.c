@@ -1590,8 +1590,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 		if (layout != LAYOUTMODE_SWITCH
 				&& !toggling && ps->o.pivotLockingTime > 0
-				&& time_in_millis() >= first_animated + ps->o.pivotLockingTime)
+				&& time_in_millis() >= first_animated + ps->o.pivotLockingTime) {
+			printfdf(false, "(): pivot locking at %d", ps->o.pivotLockingTime);
 			toggling = true;
+		}
 
 		// Process X events
 		int num_events = 0;
@@ -2816,7 +2818,7 @@ load_config_file(session_t *ps)
 	}
 
 	config_get_bool_wrap(config, "bindings", "enforceFocus", &ps->o.enforceFocus);
-    config_get_int_wrap(config, "bindings", "pivotLockingTime", &ps->o.pivotLockingTime, 0, 20);
+    config_get_int_wrap(config, "bindings", "pivotLockingTime", &ps->o.pivotLockingTime, 0, 20000);
 
     // load keybindings settings
     ps->o.bindings_keysUp = mstrdup(config_get(config, "bindings", "keysUp", "Up"));
