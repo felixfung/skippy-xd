@@ -786,7 +786,7 @@ clientwin_tooltip(ClientWin *cw) {
 				else if (hints->res_name)
 					label = (unsigned char*)hints->res_name;
 
-				len = strlen((char*)label);
+				len = (!label) ? 0 : strlen((char*)label);
 
 				//if (hints->res_class)
 					//XFree(hints->res_class);
