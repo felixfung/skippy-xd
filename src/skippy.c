@@ -2584,31 +2584,23 @@ load_config_file(session_t *ps)
     // occupies a lot more memory for non-string types.
 
 	{
-		// two -'s, the first digit of uid/xid and null terminator
-		int pipeStrLen0 = 7;
+		// null terminator
+		int pipeStrLen0 = 1;
 
-		int uid = getuid();
-		for (int num = uid; num >= 10; num /= 10)
-			pipeStrLen0++;
-
-		int xid = XConnectionNumber(ps->dpy);
-		for (int num = xid; num >= 10; num /= 10)
-			pipeStrLen0++;
-
-		for (int num = ps->screen; num >= 10; num /= 10)
-			pipeStrLen0++;
+		char *xev = getenv("DISPLAY");
+		pipeStrLen0 += strlen(xev);
 
 		const char * path = config_get(config, "system", "daemonPath", "/tmp/skippy-xd-fifo");
 		int pipeStrLen1 = pipeStrLen0 + strlen(path);
 
 		const char * path2 = config_get(config, "system", "clientPath", "/tmp/skippy-xd-fofi");
-		int pipeStrLen2 = pipeStrLen0 + strlen(path);
+		int pipeStrLen2 = pipeStrLen0 + strlen(path2);
 
 		char * pipePath = malloc (pipeStrLen1 * sizeof(unsigned char));
-		sprintf(pipePath, "%s-%i-%i-%i", path, uid, xid, ps->screen);
+		sprintf(pipePath, "%s%s", path, xev);
 
 		char * pipePath2 = malloc (pipeStrLen2 * sizeof(unsigned char));
-		sprintf(pipePath2, "%s-%i-%i-%i", path2, uid, xid, ps->screen);
+		sprintf(pipePath2, "%s%s", path2, xev);
 
 		ps->o.pipePath = pipePath;
 		ps->o.pipePath2 = pipePath2;
