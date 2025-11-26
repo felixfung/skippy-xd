@@ -5,6 +5,7 @@ Skippy-XD changelog
  - Fix multi-monitor coordinates errors
  - Fix bug on multi-desktop --next graphics artifact
  - Fix bug on pivot locking
+ - Fix segfault when labels are empty
  - Virtual desktop filtering allows desktop >= 10
  - Virtual desktop filtering -1 shows windows on all desktops
  - SKIP_PAGER, SKIP_FOCUS, SKIP_WINLIST windows no longer displayed
