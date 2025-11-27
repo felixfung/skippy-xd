@@ -256,14 +256,16 @@ tooltip_handle(Tooltip *tt, bool focused)
 	int base_x = 4;
 	int base_y = 1 + tt->extents.y + (tt->font_height - tt->extents.y)/2;
 
-	for (int dx = -1; dx <= 1; dx++) {
-		for (int dy = -1; dy <= 1; dy++) {
-			if (dx == 0 && dy == 0)
-                continue;
-			XftDrawStringUtf8(tt->draw, &tt->outline, tt->font,
-					base_x + dx, base_y + dy,
-					tt->text, tt->text_len);
-        }
+	if (tt->outline.pixel != None) {
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dy = -1; dy <= 1; dy++) {
+				if (dx == 0 && dy == 0)
+					continue;
+				XftDrawStringUtf8(tt->draw, &tt->outline, tt->font,
+						base_x + dx, base_y + dy,
+						tt->text, tt->text_len);
+			}
+		}
 	}
 
 	XftDrawStringUtf8(tt->draw, &tt->color, tt->font,
