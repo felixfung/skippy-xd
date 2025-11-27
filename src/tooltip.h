@@ -28,7 +28,7 @@ struct _Tooltip {
 	Window window;
 	XftFont *font;
 	XftDraw *draw;
-	XftColor color, background, backgroundHighlight, border, shadow;
+	XftColor color, background, backgroundHighlight, border, outline;
 	XGlyphInfo extents;
 	int font_height;
 	

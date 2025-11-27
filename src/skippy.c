@@ -2800,7 +2800,7 @@ load_config_file(session_t *ps)
 		ps->o.updatetooltip |= update_and_flag(config, "label", "background", "#202020", &ps->o.tooltip_background);
 		ps->o.updatetooltip |= update_and_flag(config, "label", "backgroundHighlight", "#666666", &ps->o.tooltip_backgroundHighlight);
 		ps->o.updatetooltip |= update_and_flag(config, "label", "text", "white", &ps->o.tooltip_text);
-		ps->o.updatetooltip |= update_and_flag(config, "label", "textShadow", "black", &ps->o.tooltip_textShadow);
+		ps->o.updatetooltip |= update_and_flag(config, "label", "textOutline", "black", &ps->o.tooltip_textOutline);
 		ps->o.updatetooltip |= update_and_flag(config, "label", "font", "fixed-11:weight=bold", &ps->o.tooltip_font);
 	}
     config_get_bool_wrap(config, "label", "show", &ps->o.tooltip_show);
@@ -3051,7 +3051,7 @@ main_end:
 			free(ps->o.tooltip_border);
 			free(ps->o.tooltip_background);
 			free(ps->o.tooltip_text);
-			free(ps->o.tooltip_textShadow);
+			free(ps->o.tooltip_textOutline);
 			free(ps->o.tooltip_font);
 			free_pictw(ps, &ps->o.background);
 			free_pictspec(ps, &ps->o.bg_spec);

@@ -156,7 +156,7 @@ background = #202020
 backgroundHighlight = #666666
 opacity = 128
 text = white
-textShadow = black
+textOutline = black
 font = fixed-11:weight=bold
 
 [bindings]

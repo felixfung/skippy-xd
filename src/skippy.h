@@ -269,7 +269,7 @@ typedef struct {
 	char *tooltip_backgroundHighlight;
 	int tooltip_opacity;
 	char *tooltip_text;
-	char *tooltip_textShadow;
+	char *tooltip_textOutline;
 	char *tooltip_font;
 	bool updatetooltip;
 
@@ -363,7 +363,7 @@ typedef struct {
 	.tooltip_backgroundHighlight = NULL, \
 	.tooltip_opacity = 128, \
 	.tooltip_text = NULL, \
-	.tooltip_textShadow = NULL, \
+	.tooltip_textOutline = NULL, \
 	.tooltip_font = NULL, \
 \
 	.enforceFocus = true, \

@@ -45,11 +45,11 @@ tooltip_destroy(Tooltip *tt)
 		             tt->mainwin->visual,
 		             tt->mainwin->colormap,
 		             &tt->border);
-	if(tt->shadow.pixel != None)
+	if(tt->outline.pixel != None)
 		XftColorFree(ps->dpy,
 		             tt->mainwin->visual,
 		             tt->mainwin->colormap,
-		             &tt->shadow);
+		             &tt->outline);
 	if(tt->window != None)
 		XDestroyWindow(ps->dpy, tt->window);
 	
@@ -69,7 +69,7 @@ tooltip_create(MainWin *mw) {
 	tt->font = 0;
 	tt->draw = 0;
 	tt->text = 0;
-	tt->color.pixel = tt->background.pixel = tt->border.pixel = tt->shadow.pixel = None;
+	tt->color.pixel = tt->background.pixel = tt->border.pixel = tt->outline.pixel = None;
 	
 	{
 		XSetWindowAttributes attr = {
@@ -132,10 +132,10 @@ tooltip_create(MainWin *mw) {
 		return 0;
 	}
 	
-	tmp = ps->o.tooltip_textShadow;
+	tmp = ps->o.tooltip_textOutline;
 	if(strcasecmp(tmp, "none") != 0)
 	{
-		if(! XftColorAllocName(ps->dpy, mw->visual, mw->colormap, tmp, &tt->shadow))
+		if(! XftColorAllocName(ps->dpy, mw->visual, mw->colormap, tmp, &tt->outline))
 		{
 			printfef(false, "(): WARNING: Couldn't allocate color '%s'.\n", tmp);
 			tooltip_destroy(tt);
@@ -195,7 +195,7 @@ tooltip_map(Tooltip *tt, ClientWin *cw, FcChar8 *text, int len)
 	}
 
 	tt->width = tt->extents.width + 8;
-	tt->height = tt->font_height + 5 + (tt->shadow.pixel ? 2 : 0);
+	tt->height = tt->font_height + 5;
 	XResizeWindow(ps->dpy, tt->window, tt->width, tt->height);
 	tooltip_move(tt, cw);
 	
@@ -243,9 +243,6 @@ tooltip_handle(Tooltip *tt, bool focused)
 	if (!tt || !tt->text)
 		return;
 
-	XftColor outline_color;
-	XftColorAllocName(tt->mainwin->ps->dpy, tt->mainwin->visual, tt->mainwin->colormap, "#000000", &outline_color);
-
 	XftDrawRect(tt->draw, &tt->border, 0, 0, tt->width, 1);
 	XftDrawRect(tt->draw, &tt->border, 0, 1, 1, tt->height - 2);
 	XftDrawRect(tt->draw, &tt->border, 0, tt->height - 1, tt->width, 1);
@@ -263,7 +260,7 @@ tooltip_handle(Tooltip *tt, bool focused)
 		for (int dy = -1; dy <= 1; dy++) {
 			if (dx == 0 && dy == 0)
                 continue;
-			XftDrawStringUtf8(tt->draw, &outline_color, tt->font,
+			XftDrawStringUtf8(tt->draw, &tt->outline, tt->font,
 					base_x + dx, base_y + dy,
 					tt->text, tt->text_len);
         }
