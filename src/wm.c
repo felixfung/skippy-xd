@@ -570,14 +570,14 @@ wm_get_desktop_name(session_t *ps, int desktop) {
 	data = buffer;
 	if (Success == status && buffer != NULL) {
 		for (int i=0; i<desktop; i++) {
-			data = strchr(data, '\0');
+			data = (unsigned char *) strchr((char *)data, '\0');
 			data++;
 		}
 		dup = malloc(strlen((char *) data) + 1);
 		strcpy((char *) dup, (char *) data);
 	} else {
 		dup = malloc(snprintf(NULL, 0, "%i", desktop) + 1);
-		sprintf(dup, "%i", desktop);
+		sprintf((char *)dup, "%i", desktop);
 	}
 
 	XFree(buffer);
