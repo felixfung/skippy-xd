@@ -1064,25 +1064,22 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 		for (int i=0; i<screenwidth && k<screencount; i++) {
 			int desktop_idx = screenwidth * j + i;
 			XSetWindowAttributes sattr = {
-				.border_pixel = 0,
-				.background_pixel = 0,
-				.colormap = mw->colormap,
 				.event_mask = ButtonPressMask | ButtonReleaseMask | KeyPressMask
 					| KeyReleaseMask | PointerMotionMask | FocusChangeMask,
-				.override_redirect = false,
+				//.override_redirect = false,
                 // exclude window frame
 			};
 			Window desktopwin = XCreateWindow(mw->ps->dpy,
 					mw->window,
-					0, 0, 0, 0,
-					0, mw->depth, InputOnly, mw->visual,
-					CWColormap | CWBackPixel | CWBorderPixel | CWEventMask | CWOverrideRedirect, &sattr);
+					0, 0, 1, 1,
+					0, 0, InputOnly, CopyFromParent,
+					CWEventMask, &sattr);
 			if (!desktopwin) return false;
 
 			if (!mw->desktopwins)
-				mw->desktopwins = dlist_add(NULL, &desktopwin);
+				mw->desktopwins = dlist_add(NULL, (void*)desktopwin);
 			else
-				mw->desktopwins = dlist_add(mw->desktopwins, &desktopwin);
+				mw->desktopwins = dlist_add(mw->desktopwins, (void*)desktopwin);
 
 			ClientWin *cw = clientwin_create(mw, desktopwin);
 			if (!cw) return false;
@@ -1108,12 +1105,6 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 			cw->y = cw->src.y = (j * (desktop_height + mw->distance)) * mw->multiplier;
 			cw->src.width = desktop_width;
 			cw->src.height = desktop_height;
-
-			if (!cw->redirected) {
-				XCompositeRedirectWindow(mw->ps->dpy, cw->src.window,
-						CompositeRedirectAutomatic);
-				cw->redirected = true;
-			}
 
 			clientwin_prepmove(cw);
 			clientwin_move(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
@@ -1819,7 +1810,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					// with pseudo-transparency,
 					// some desktops never receive refresh events
 					// so we need to refresh all desktops
-					if (cw->damaged || ps->o.pseudoTrans) {
+					if (ps->o.pseudoTrans) {
 						clientwin_update2(cw);
 						desktopwin_map(cw);
 						cw->damaged = false;
