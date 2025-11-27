@@ -156,7 +156,7 @@ background = #333333
 backgroundHighlight = #666666
 opacity = 128
 text = white
-textOutline = black
+textOutline = #0e0e0e
 font = fixed-11:weight=bold
 
 [bindings]
