@@ -1,0 +1,215 @@
+.TH SKIPPY-XD 1 "October 2025" "skippy-xd v0.10.4" "User Commands"
+.SH NAME
+skippy-xd \- lightweight X11 window selector with live preview
+.SH SYNOPSIS
+.B skippy-xd
+.RI [\ COMMAND \ ]
+.SH DESCRIPTION
+.B skippy-xd
+is a lightweight, window-manager-agnostic window selector for the X server.
+It provides three distinct modes of window management: switch (similar to Alt-Tab
+with live preview), expose (inspired by macOS), and paging (overview of all
+virtual desktops).
+.PP
+The application works as a daemon that can be controlled via command-line
+interface. When run without arguments, it activates expose mode once without
+starting the daemon.
+.SH COMMANDS
+.SS Daemon Management
+.TP
+.B --start-daemon
+Start skippy-xd in daemon mode. The daemon runs in the background and waits
+for commands from the command line interface.
+.TP
+.B --stop-daemon
+Terminate the running skippy-xd daemon.
+.SS Activation Modes
+.TP
+.B --switch [--prev|--next]
+Activate switch mode via the daemon. This mode is similar to Alt-Tab and allows
+quick window switching with live preview. Use
+.B --prev
+to focus on the previous window or
+.B --next
+to focus on the next window.
+.TP
+.B --expose
+Activate expose mode via the daemon. This shows a live preview of all open
+windows on the current desktop, inspired by macOS Exposé.
+.TP
+.B --paging
+Activate paging mode via the daemon. This displays an overview of all windows
+across all virtual desktops, allowing easy navigation and switching between
+desktops.
+.TP
+.B --multi-select
+Enable multi-select mode to select multiple windows and return all their Window
+IDs.
+.SS Toggle and Pivot Modes
+.TP
+.B --toggle
+Activate via toggle mode. This allows quick switching between the currently
+active window and the previously active window.
+.TP
+.B --pivot
+.I KEY
+Activate via pivot mode with the specified pivot key. This enables continuous
+window switching while holding down the pivot key.
+.SS Window Filtering
+.TP
+.B --wm-class
+.I CLASS
+Display only windows belonging to the specified WM class.
+.TP
+.B --wm-title
+.I TITLE
+Display only windows matching the specified title.
+.TP
+.B --wm-status
+.I STATUS
+Display only windows with the specified status. Valid status values are:
+.RS
+.IP "sticky" 4
+Sticky windows (visible on all desktops)
+.IP "shaded" 4
+Shaded windows
+.IP "minimized" 4
+Minimized windows
+.IP "float" 4
+Floating windows
+.IP "maximized_vert" 4
+Vertically maximized windows
+.IP "maximized_horz" 4
+Horizontally maximized windows
+.IP "maximized" 4
+Fully maximized windows
+.RE
+.TP
+.B --desktop
+.I DESKTOP
+Display only windows on the specified virtual desktop. Use
+.B -1
+to show windows from all desktops.
+.SS Navigation
+.TP
+.B --prev
+Focus on the previous window in the current selection.
+.TP
+.B --next
+Focus on the next window in the current selection.
+.SS Configuration
+.TP
+.B --config
+.I PATH
+Load or reload the configuration file from the specified path. The daemon will
+read this configuration file at startup.
+.TP
+.B --config-reload
+Reload the configuration file without changing the path. Useful for applying
+config changes without restarting the daemon.
+.SS Utilities
+.TP
+.B --help
+Display the help message showing all available commands.
+.TP
+.B --debug-log
+Enable debugging logs for troubleshooting.
+.SH FILES
+.TP
+.I ~/.config/skippy-xd/skippy-xd.rc
+Default user configuration file (typical location, may vary).
+.TP
+.I /etc/skippy-xd.rc
+System-wide configuration file.
+.TP
+.I ./skippy-xd.sample.rc
+Sample configuration file included with the distribution.
+.SH EXAMPLES
+.SS Starting the Daemon
+.IP
+.B skippy-xd --start-daemon
+.PP
+Starts the skippy-xd daemon in the background.
+.SS Window Switching
+.IP
+.B skippy-xd --switch --next
+.PP
+Focus on the next window in switch mode.
+.IP
+.B skippy-xd --switch --prev
+.PP
+Focus on the previous window in switch mode.
+.SS Viewing All Windows
+.IP
+.B skippy-xd --expose
+.PP
+Show live preview of all windows on the current desktop.
+.SS Desktop Overview
+.IP
+.B skippy-xd --paging
+.PP
+Display overview of all windows across all virtual desktops.
+.SS Filtered Window Selection
+.IP
+.B skippy-xd --expose --wm-class "firefox"
+.PP
+Show only Firefox windows in expose mode.
+.IP
+.B skippy-xd --expose --desktop 1
+.PP
+Show windows only from desktop 1.
+.SS One-shot Expose
+.IP
+.B skippy-xd
+.PP
+Activate expose mode once without starting the daemon.
+.SH COMPATIBILITY
+.B skippy-xd
+works with any X Window Manager and desktop environment. See the project wiki
+for a comprehensive compatibility list:
+.IP
+https://github.com/felixfung/skippy-xd/wiki/Adoption
+.SH SUPPORTED IMAGE FORMATS
+.B skippy-xd
+supports the following image formats for window thumbnails:
+.IP
+.B PNG
+.I (with libpng support)
+.IP
+.B JPEG
+.I (with libjpeg support)
+.IP
+.B GIF
+.I (with libgif support)
+.SH FEATURES
+.IP "\(bu" 2
+Live preview window switching
+.IP "\(bu" 2
+MacOS-inspired Exposé view
+.IP "\(bu" 2
+Virtual desktop overview with paging
+.IP "\(bu" 2
+Advanced window filtering
+.IP "\(bu" 2
+Configurable key bindings and themes
+.IP "\(bu" 2
+Multi-select mode for batch operations
+.IP "\(bu" 2
+Daemon mode for persistent operation
+.SH SEE ALSO
+For detailed usage instructions, advanced tips, and configuration guides, visit:
+.IP
+Documentation: https://github.com/felixfung/skippy-xd/wiki
+.IP
+YouTube Tutorials: https://www.youtube.com/channel/UCgTNupxATX_4KMw3LUwS0Eg
+.SH AUTHORS
+.B skippy-xd
+was originally developed by Hyriand and is currently maintained by Felix Fung.
+.SH LICENSE
+.B skippy-xd
+is released under the GNU General Public License v2.0 or later.
+See the COPYING file included with the distribution for details.
+.SH BUGS
+For bug reports and feature requests, visit:
+.IP
+https://github.com/felixfung/skippy-xd/issues
