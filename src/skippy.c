@@ -891,13 +891,31 @@ calculatePanelBorders(MainWin *mw,
 	// e.g. a panel on the bottom
 	*x1 = 0;
 	*y1 = 0;
-	*x2 = mw->x + mw->width;
-	*y2 = mw->y + mw->height;
+	*x2 = mw->width;
+	*y2 = mw->height;
 
 	foreach_dlist(mw->panels) {
 		ClientWin *cw = iter->data;
 		if (cw->paneltype != WINTYPE_PANEL)
 			continue;
+
+#ifdef CFG_XINERAMA
+		int midx = cw->src.x + cw->src.width / 2;
+		int midy = cw->src.y + cw->src.height / 2;
+
+		XineramaScreenInfo *xiter = mw->xin_info;
+		for (int i=0; i<mw->xin_screens; i++)
+		{
+			if(xiter->x_org <= midx && midx < xiter->x_org + xiter->width &&
+			   xiter->y_org <= midy && midy < xiter->y_org + xiter->height)
+			{
+				cw->src.x -= xiter->x_org;
+				cw->src.y -= xiter->y_org;
+			}
+		}
+
+#endif /* CFG_XINERAMA */
+
 		// assumed horizontal panel
 		if (cw->src.width >= cw->src.height) {
 			// assumed top panel
@@ -922,10 +940,10 @@ calculatePanelBorders(MainWin *mw,
 		}
 	}
 
-	*x2 = mw->x + mw->width - *x2;
-	*y2 = mw->y + mw->height - *y2;
+	*x2 = mw->width - *x2;
+	*y2 = mw->height - *y2;
 
-	printfdf(false,"() panel framing calculations: (%d,%d) (%d,%d)", *x1, *y1, *x2, *y2);
+	printfdf(false,"(): panel framing calculations: (%d,%d) (%d,%d)", *x1, *y1, *x2, *y2);
 }
 
 static bool
