@@ -4,7 +4,7 @@ skippy-xd - lightweight X11 window selector with
 switch/expose/paging.
 .SH SYNOPSIS
 .B skippy-xd
-.RI [\ COMMAND \ ]
+.RI [ COMMAND  ]
 .SH DESCRIPTION
 .B skippy-xd
 is a lightweight, window-manager-agnostic window
