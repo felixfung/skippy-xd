@@ -59,7 +59,7 @@ INCS = $(shell pkg-config --cflags $(PACKAGES))
 LIBS += -lm $(shell pkg-config --libs $(PACKAGES))
 
 # === Version string ===
-SKIPPYXD_VERSION = "$(shell cat version.txt)"
+# SKIPPYXD_VERSION = "$(shell cat version.txt)"
 CPPFLAGS += -DSKIPPYXD_VERSION=\"${SKIPPYXD_VERSION}\"
 
 # === Recipes ===
@@ -77,8 +77,12 @@ OBJS = $(foreach name,$(SRCS_RAW),$(name).o)
 skippy-xd${EXESUFFIX}: ${OBJS}
 	${CC} ${LDFLAGS} -o skippy-xd${EXESUFFIX} ${OBJS} ${LIBS}
 
+# === Man page creation ===
+VERSION := $(shell cat version.txt)
+
 skippy-xd.1: skippy-xd.1.in version.txt
-	sed 's/@VERSION@/$(shell cat version.txt)/' skippy-xd.1.in > skippy-xd.1
+	sed "s|@VERSION@|$(VERSION)|" $< > $@
+
 
 clean:
 	rm -f ${BINS} ${OBJS} src/.clang_complete skippy-xd.1
