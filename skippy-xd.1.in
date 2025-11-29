@@ -1,4 +1,4 @@
-.TH SKIPPY-XD 1 "October 2025" "skippy-xd v0.10.4 (2025.10.05) - Standpipe Edition" "User Commands"
+.TH SKIPPY-XD 1 "October 2025" "skippy-xd @VERSION@" "User Commands"
 .SH NAME
 skippy-xd - lightweight X11 window selector with
 switch/expose/paging.
