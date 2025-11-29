@@ -136,15 +136,10 @@ Enable debugging logs for troubleshooting.
 .SH FILES
 .TP
 .I ~/.config/skippy-xd/skippy-xd.rc
-Default user configuration file (typical location,
-may vary).
+Default location user configuration file.
 .TP
-.I /etc/xdg/skippy-xd/skippy-xd.rc
+.I /etc/xdg/skippy-xd/skippy-xd.sample.rc
 System-wide configuration file.
-.TP
-.I /etc/xdg/skippy-xd.sample.rc
-Sample configuration file included with the
-distribution.
 .SH EXAMPLES
 .SS Starting the Daemon
 .IP
