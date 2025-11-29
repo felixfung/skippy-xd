@@ -8,8 +8,8 @@ switch/expose/paging.
 .SH DESCRIPTION
 .B skippy-xd
 is a lightweight, window-manager-agnostic window
-selector for the X server. It provides three metaphors
-for window management: switch (similar to Alt-Tab with
+selector for the X server. It provides three window 
+management modes: switch (similar to Alt-Tab with
 live preview), expose (inspired by macOS), and paging
 (overview of all virtual desktops). These can be
 activated via toggle or pivot activation modes.
@@ -31,7 +31,7 @@ Terminate the running skippy-xd daemon.
 .SS Activation Metaphors
 .TP
 .B --switch [--prev|--next]
-Activate switch metaphor via the daemon. This metaphor
+Activate switch mode via the daemon. This mode
 is similar to Alt-Tab and allows quick window switching
 with live preview. Use
 .B --prev
@@ -40,12 +40,12 @@ to focus on the previous window or
 to focus on the next window.
 .TP
 .B --expose
-Activate expose metaphor via the daemon. This shows a
+Activate expose mode via the daemon. This shows a
 live preview of all open windows on the current
 desktop, inspired by macOS Exposé.
 .TP
 .B --paging
-Activate paging metaphor via the daemon. This displays
+Activate paging mode via the daemon. This displays
 an overview of all virtual desktops, allowing easy
 navigation and switching between desktops.
 .TP
@@ -136,10 +136,10 @@ Enable debugging logs for troubleshooting.
 .SH FILES
 .TP
 .I ~/.config/skippy-xd/skippy-xd.rc
-Default location user configuration file.
+Default user configuration file.
 .TP
 .I /etc/xdg/skippy-xd/skippy-xd.sample.rc
-System-wide configuration file.
+Sample configuration file.
 .SH EXAMPLES
 .SS Starting the Daemon
 .IP
@@ -187,10 +187,10 @@ Show windows only from desktop 1.
 Activate expose metaphor via pivot mode with Super_L
 as the pivot key, highlighting the next window.
 .IP
-.B skippy-xd --expose --desktop -1 --wm-class firefox --wm-status float,maximized_vert
+.B skippy-xd --expose --desktop -1 --wm-class firefox --wm-status float,maximized_vert --config ~/.config/skippy-xd/other.rc
 .PP
 Show Firefox windows from all desktops that are
-floating or vertically maximized.
+floating or vertically maximized. Using a custom config file.
 .SS One-shot Expose
 .IP
 .B skippy-xd
@@ -235,10 +235,8 @@ Daemon mode for persistent operation to preview
 shadow windows (e.g., minimized and/or windows on
 other virtual desktops)
 .SH SEE ALSO
-For detailed usage instructions, advanced tips, and
-configuration guides, visit:
-.IP
-Documentation: https://github.com/felixfung/skippy-xd/wiki
+For detailed usage instructions, advanced tips, and configuration guidance,
+please refer to the Skippy-XD \fBwiki\fR for Skippy-XD.
 .IP
 YouTube: https://www.youtube.com/@skippy-xd
 .SH AUTHORS
