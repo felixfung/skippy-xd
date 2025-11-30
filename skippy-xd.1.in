@@ -12,7 +12,7 @@ selector for the X server. It provides three window
 management modes: switch (similar to Alt-Tab with
 live preview), expose (inspired by macOS), and paging
 (overview of all virtual desktops). These can be
-Wactivated via toggle or pivot activation modes.
+activated via toggle or pivot activation modes.
 .PP
 The application works as a daemon that can be
 controlled via command-line interface. When run without
