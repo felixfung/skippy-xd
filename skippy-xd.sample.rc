@@ -103,7 +103,7 @@ color = #333333
 iconPlace = left left
 iconSize = 48
 
-# Windows that are not filler, highlight, shadow, multiselect
+# Live window previews
 [normal]
 opacity = 255
 icon = true
