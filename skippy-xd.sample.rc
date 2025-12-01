@@ -1,4 +1,11 @@
-# Copy this to ~/.config/skippy-xd/skippy-xd.rc and edit it to your liking
+# Skippy-xd config file
+#
+# Skippy-xd searches for this file in these locations,
+#    According to this order:
+# 1. $XDG_CONFIG_HOME/skippy-xd/skippy-xd.rc
+# 2. $HOME/.config/skippy-xd/skippy-xd.rc
+# 3. $XDG_CONFIG_DIRS/skippy-xd.rc
+# 4. /etc/xdg/skippy-xd.rc
 #
 # File Syntax:
 # Comments must be on their own seperate lines that start with a #
