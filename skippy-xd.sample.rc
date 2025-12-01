@@ -104,7 +104,7 @@ iconSize = 48
 # Windows that were never shown before
 [filler]
 color = #333333
-iconPlace = mid mid
+iconPlace = left left
 iconSize = 48
 
 # Windows that are not filler, highlight, shadow, multiselect
