@@ -111,7 +111,7 @@ iconPlace = left left
 iconSize = 48
 
 # Live window previews
-[normal]
+[livepreview]
 opacity = 255
 icon = true
 iconPlace = left left

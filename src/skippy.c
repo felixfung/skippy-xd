@@ -2730,7 +2730,7 @@ load_config_file(session_t *ps)
         };
 
         bool thumbnail_icons = true;
-        config_get_bool_wrap(config, "normal", "icon", &thumbnail_icons);
+        config_get_bool_wrap(config, "livepreview", "icon", &thumbnail_icons);
         if (thumbnail_icons) {
             ps->o.clientDisplayModes = allocchk(malloc(sizeof(DEF_CLIDISPM_ICON)));
             memcpy(ps->o.clientDisplayModes, &DEF_CLIDISPM_ICON, sizeof(DEF_CLIDISPM_ICON));
@@ -2742,14 +2742,14 @@ load_config_file(session_t *ps)
     }
 	{
 		char defaultstr2[256] = "orig ";
-		const char* sspec2 = config_get(config, "normal", "iconPlace", "left left");
+		const char* sspec2 = config_get(config, "livepreview", "iconPlace", "left left");
 		strcat(defaultstr2, sspec2);
 		const char space[] = " ";
 		strcat(defaultstr2, space);
 		char sspec[] = "#333333";
 		strcat(defaultstr2, sspec);
 
-		config_get_int_wrap(config, "normal", "iconSize",
+		config_get_int_wrap(config, "livepreview", "iconSize",
 				&ps->o.iconSize, 1, INT_MAX);
 
 		if (!parse_pictspec(ps, defaultstr2, &ps->o.iconSpec))
@@ -2792,7 +2792,7 @@ load_config_file(session_t *ps)
 			return RET_BADARG;
 	}
 
-    config_get_int_wrap(config, "normal", "opacity", &ps->o.normal_opacity, 0, 256);
+    config_get_int_wrap(config, "livepreview", "opacity", &ps->o.normal_opacity, 0, 256);
 	ps->o.highlight_tint = mstrdup(config_get(config, "highlight", "tint", "#444444"));
     config_get_int_wrap(config, "highlight", "tintOpacity", &ps->o.highlight_tintOpacity, 0, 256);
     config_get_int_wrap(config, "filler", "opacity", &ps->o.shadow_opacity, 0, 256);
