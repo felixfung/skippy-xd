@@ -206,20 +206,6 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	}
 	mw->highlightTint.alpha = alphaconv(ps->o.highlight_tintOpacity);
 
-	;
-	if(! XParseColor(ps->dpy, mw->colormap, ps->o.shadow_tint, &exact_color))
-	{
-		printfef(true, "(): Couldn't look up color '%s', reverting to #040404", ps->o.shadow_tint);
-		mw->shadowTint.red = mw->shadowTint.green =	mw->shadowTint.blue = 0x04;
-	}
-	else
-	{
-		mw->shadowTint.red = exact_color.red;
-		mw->shadowTint.green = exact_color.green;
-		mw->shadowTint.blue = exact_color.blue;
-	}
-	mw->shadowTint.alpha = alphaconv(ps->o.shadow_tintOpacity);
-
 	if(! XParseColor(ps->dpy, mw->colormap, ps->o.multiselect_tint, &exact_color))
 	{
 		printfef(true, "(): Couldn't look up color '%s', reverting to #3376BB", ps->o.multiselect_tint);

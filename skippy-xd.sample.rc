@@ -121,8 +121,6 @@ opacity = 255
 
 # Unmapped windows: minimized, shaded, not in current virtual desktop
 [shadow]
-tint = #040404
-tintOpacity = 0
 opacity = 160
 
 # Highlighted in multi-select mode

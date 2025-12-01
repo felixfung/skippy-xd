@@ -535,8 +535,6 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 			else
 				tint = &mw->multiselectTint;
 		}
-		else if (cw->zombie)
-			tint = &mw->shadowTint;
 
 		if (tint->alpha) {
 #ifdef CFG_XINERAMA

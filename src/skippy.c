@@ -2798,8 +2798,6 @@ load_config_file(session_t *ps)
 	ps->o.highlight_tint = mstrdup(config_get(config, "highlight", "tint", "#444444"));
     config_get_int_wrap(config, "highlight", "tintOpacity", &ps->o.highlight_tintOpacity, 0, 256);
     config_get_int_wrap(config, "highlight", "opacity", &ps->o.highlight_opacity, 0, 256);
-	ps->o.shadow_tint = mstrdup(config_get(config, "shadow", "tint", "#040404"));
-    config_get_int_wrap(config, "shadow", "tintOpacity", &ps->o.shadow_tintOpacity, 0, 256);
     config_get_int_wrap(config, "shadow", "opacity", &ps->o.shadow_opacity, 0, 256);
 	ps->o.multiselect_tint = mstrdup(config_get(config, "multiselect", "tint", "#3376BB"));
     config_get_int_wrap(config, "multiselect", "tintOpacity", &ps->o.multiselect_tintOpacity, 0, 256);
@@ -3065,7 +3063,6 @@ main_end:
 			free(ps->o.clientDisplayModes);
 			free(ps->o.normal_tint);
 			free(ps->o.highlight_tint);
-			free(ps->o.shadow_tint);
 			free(ps->o.tooltip_border);
 			free(ps->o.tooltip_background);
 			free(ps->o.tooltip_text);
