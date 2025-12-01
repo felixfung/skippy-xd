@@ -242,7 +242,6 @@ typedef struct {
 	int normal_opacity;
 	char *highlight_tint;
 	int highlight_tintOpacity;
-	int highlight_opacity;
 	int shadow_opacity;
 	char *multiselect_tint;
 	int multiselect_tintOpacity;
@@ -332,7 +331,6 @@ typedef struct {
 	.normal_opacity = 255, \
 	.highlight_tint = NULL, \
 	.highlight_tintOpacity = 50, \
-	.highlight_opacity = 255, \
 	.shadow_opacity = 160, \
 	.multiselect_tint = NULL, \
 	.multiselect_tintOpacity = 50, \
