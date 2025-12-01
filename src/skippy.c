@@ -2798,7 +2798,6 @@ load_config_file(session_t *ps)
     config_get_int_wrap(config, "filler", "opacity", &ps->o.shadow_opacity, 0, 256);
 	ps->o.multiselect_tint = mstrdup(config_get(config, "multiselect", "tint", "#3376BB"));
     config_get_int_wrap(config, "multiselect", "tintOpacity", &ps->o.multiselect_tintOpacity, 0, 256);
-    config_get_int_wrap(config, "multiselect", "opacity", &ps->o.multiselect_opacity, 0, 256);
 
     config_get_bool_wrap(config, "panel", "show", &ps->o.panel_show);
     config_get_bool_wrap(config, "panel", "backgroundTinting", &ps->o.panel_tinting);

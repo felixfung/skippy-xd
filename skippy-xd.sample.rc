@@ -119,7 +119,6 @@ tintOpacity = 50
 [multiselect]
 tint = #3376BB
 tintOpacity = 50
-opacity = 255
 
 # Windows of type _NET_WM_WINDOW_TYPE_DOCK
 [panel]
