@@ -109,15 +109,15 @@ icon = true
 iconPlace = left left
 iconSize = 48
 
+# Unmapped windows: minimized, shaded, not in current virtual desktop
+[shadow]
+opacity = 160
+
 # Currently highlighted window
 [highlight]
 tint = #444444
 tintOpacity = 50
 opacity = 255
-
-# Unmapped windows: minimized, shaded, not in current virtual desktop
-[shadow]
-opacity = 160
 
 # Highlighted in multi-select mode
 [multiselect]
