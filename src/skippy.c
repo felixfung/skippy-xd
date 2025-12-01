@@ -2694,11 +2694,11 @@ load_config_file(session_t *ps)
     config_get_int_wrap(config, "layout", "distance", &ps->o.distance, 5, INT_MAX);
     config_get_bool_wrap(config, "layout", "allowUpscale", &ps->o.allowUpscale);
 
-    config_get_int_wrap(config, "display", "animationDuration", &ps->o.animationDuration, 0, 2000);
-    config_get_int_wrap(config, "display", "animationRefresh", &ps->o.animationRefresh, 1, 200);
+    config_get_int_wrap(config, "appearance", "animationDuration", &ps->o.animationDuration, 0, 2000);
+    config_get_int_wrap(config, "appearance", "animationRefresh", &ps->o.animationRefresh, 1, 200);
 
     {
-        const char *sspec = config_get(config, "display", "background", "#00000055");
+        const char *sspec = config_get(config, "appearance", "background", "#00000055");
 		if (!sspec || strlen(sspec) == 0)
 			sspec = "#00000055";
 		char bg_spec[256] = "orig mid mid ";
@@ -2715,10 +2715,10 @@ load_config_file(session_t *ps)
 		free_pictspec(ps, &ps->o.bg_spec);
 		ps->o.bg_spec = spec;
 	}
-	config_get_bool_wrap(config, "display", "preservePages", &ps->o.preservePages);
+	config_get_bool_wrap(config, "appearance", "preservePages", &ps->o.preservePages);
     config_get_bool_wrap(config, "bindings", "moveMouse", &ps->o.moveMouse);
-    config_get_bool_wrap(config, "display", "includeFrame", &ps->o.includeFrame);
-	config_get_int_wrap(config, "display", "cornerRadius", &ps->o.cornerRadius, 0, INT_MAX);
+    config_get_bool_wrap(config, "appearance", "includeFrame", &ps->o.includeFrame);
+	config_get_int_wrap(config, "appearance", "cornerRadius", &ps->o.cornerRadius, 0, INT_MAX);
     {
         static client_disp_mode_t DEF_CLIDISPM[] = {
             CLIDISP_THUMBNAIL, CLIDISP_ZOMBIE, CLIDISP_ICON, CLIDISP_FILLED, CLIDISP_NONE

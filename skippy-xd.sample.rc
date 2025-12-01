@@ -69,7 +69,7 @@ distance = 50
 # Whether to show the window bigger than its original size
 allowUpscale = false
 
-[display]
+[appearance]
 
 # Animation duration in ms
 # Set = 0 to switch off animations
