@@ -96,11 +96,6 @@ includeFrame = true
 # Show window previews with rounded corners
 cornerRadius = 0
 
-# Icons on live previews
-icon = true
-iconPlace = left left
-iconSize = 48
-
 # Windows that were never shown before
 [filler]
 color = #333333
@@ -110,6 +105,9 @@ iconSize = 48
 # Windows that are not filler, highlight, shadow, multiselect
 [normal]
 opacity = 255
+icon = true
+iconPlace = left left
+iconSize = 48
 
 # Currently highlighted window
 [highlight]

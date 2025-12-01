@@ -2729,8 +2729,8 @@ load_config_file(session_t *ps)
             CLIDISP_ZOMBIE, CLIDISP_ICON, CLIDISP_FILLED, CLIDISP_NONE
         };
 
-        bool thumbnail_icons = false;
-        config_get_bool_wrap(config, "display", "icon", &thumbnail_icons);
+        bool thumbnail_icons = true;
+        config_get_bool_wrap(config, "normal", "icon", &thumbnail_icons);
         if (thumbnail_icons) {
             ps->o.clientDisplayModes = allocchk(malloc(sizeof(DEF_CLIDISPM_ICON)));
             memcpy(ps->o.clientDisplayModes, &DEF_CLIDISPM_ICON, sizeof(DEF_CLIDISPM_ICON));
@@ -2742,14 +2742,14 @@ load_config_file(session_t *ps)
     }
 	{
 		char defaultstr2[256] = "orig ";
-		const char* sspec2 = config_get(config, "display", "iconPlace", "left left");
+		const char* sspec2 = config_get(config, "normal", "iconPlace", "left left");
 		strcat(defaultstr2, sspec2);
 		const char space[] = " ";
 		strcat(defaultstr2, space);
 		char sspec[] = "#333333";
 		strcat(defaultstr2, sspec);
 
-		config_get_int_wrap(config, "display", "iconSize",
+		config_get_int_wrap(config, "normal", "iconSize",
 				&ps->o.iconSize, 1, INT_MAX);
 
 		if (!parse_pictspec(ps, defaultstr2, &ps->o.iconSpec))
