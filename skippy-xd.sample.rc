@@ -103,7 +103,7 @@ iconSize = 48
 
 # Windows that were never shown before
 [filler]
-tint = #333333
+color = #333333
 iconPlace = mid mid
 iconSize = 48
 

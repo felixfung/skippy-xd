@@ -2765,7 +2765,7 @@ load_config_file(session_t *ps)
 }
 	{
 		char defaultstr[256] = "orig mid mid ";
-		const char* sspec = config_get(config, "filler", "tint", "#333333");
+		const char* sspec = config_get(config, "filler", "color", "#333333");
 		strcat(defaultstr, sspec);
 		if (!parse_pictspec(ps, defaultstr, &ps->o.fillSpec))
 			return RET_BADARG;
