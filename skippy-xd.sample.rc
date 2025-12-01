@@ -98,6 +98,7 @@ cornerRadius = 0
 
 # Windows that were never shown before
 [filler]
+opacity = 160
 color = #333333
 iconPlace = left left
 iconSize = 48
@@ -108,10 +109,6 @@ opacity = 255
 icon = true
 iconPlace = left left
 iconSize = 48
-
-# Unmapped windows: minimized, shaded, not in current virtual desktop
-[shadow]
-opacity = 160
 
 # Currently highlighted window
 [highlight]
