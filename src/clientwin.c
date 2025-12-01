@@ -526,42 +526,42 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 	// Tinting
 	if (cw->paneltype == WINTYPE_WINDOW)
 	{
-		XRenderColor *tint = &mw->normalTint;
-		if (cw->focused || cw->multiselect) {
-			if (!ps->o.multiselect)
+		for (int j=0; j<2; j++) {
+			XRenderColor *tint = None;
+			if (j == 0 && cw->focused)
 				tint = &mw->highlightTint;
-			else
+			if (j == 1 && cw->multiselect)
 				tint = &mw->multiselectTint;
-		}
-
-		if (tint->alpha) {
+					
+			if (tint && tint->alpha) {
 #ifdef CFG_XINERAMA
-			if (cw->mode == CLIDISP_DESKTOP)
-			{
-				XineramaScreenInfo *iter = mw->xin_info;
-				for (int i = 0; i < mw->xin_screens; ++i)
+				if (cw->mode == CLIDISP_DESKTOP)
 				{
-					s_x = iter->x_org * mw->multiplier;
-					s_y = iter->y_org * mw->multiplier;
-					s_w = iter->width * mw->multiplier;
-					s_h = iter->height * mw->multiplier;
+					XineramaScreenInfo *iter = mw->xin_info;
+					for (int i = 0; i < mw->xin_screens; ++i)
+					{
+						s_x = iter->x_org * mw->multiplier;
+						s_y = iter->y_org * mw->multiplier;
+						s_w = iter->width * mw->multiplier;
+						s_h = iter->height * mw->multiplier;
 
-					XRenderFillRectangle(mw->ps->dpy,
-							PictOpOver, cw->destination, tint,
-							s_x, s_y, s_w, s_h);
+						XRenderFillRectangle(mw->ps->dpy,
+								PictOpOver, cw->destination, tint,
+								s_x, s_y, s_w, s_h);
 
-					XClearArea(mw->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
-					iter++;
+						XClearArea(mw->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
+						iter++;
+					}
 				}
-			}
-			else {
+				else {
 #endif /* CFG_XINERAMA */
-				XRenderFillRectangle(mw->ps->dpy, PictOpOver,
-						cw->destination, tint, s_x, s_y, s_w, s_h);
-				XClearArea(mw->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
+					XRenderFillRectangle(mw->ps->dpy, PictOpOver,
+							cw->destination, tint, s_x, s_y, s_w, s_h);
+					XClearArea(mw->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
 #ifdef CFG_XINERAMA
-			}
+				}
 #endif /* CFG_XINERAMA */
+			}
 		}
 
 		if (ps->o.tooltip_show && ps->o.mode != PROGMODE_PAGING) {
