@@ -109,8 +109,6 @@ iconSize = 48
 
 # Windows that are not filler, highlight, shadow, multiselect
 [normal]
-tint = black
-tintOpacity = 0
 opacity = 255
 
 # Currently highlighted window

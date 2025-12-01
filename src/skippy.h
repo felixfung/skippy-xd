@@ -239,8 +239,6 @@ typedef struct {
 	pictspec_t fillSpec;
 	pictspec_t iconFillSpec;
 	int fillerIconSize;
-	char *normal_tint;
-	int normal_tintOpacity;
 	int normal_opacity;
 	char *highlight_tint;
 	int highlight_tintOpacity;
@@ -331,8 +329,6 @@ typedef struct {
 	.fillSpec = PICTSPECT_INIT, \
 	.iconFillSpec = PICTSPECT_INIT, \
 	.fillerIconSize = 48, \
-	.normal_tint = NULL, \
-	.normal_tintOpacity = 0, \
 	.normal_opacity = 255, \
 	.highlight_tint = NULL, \
 	.highlight_tintOpacity = 50, \

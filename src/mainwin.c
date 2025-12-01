@@ -181,18 +181,6 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 
 	XColor exact_color;
 
-	if(!XParseColor(ps->dpy, mw->colormap, ps->o.normal_tint, &exact_color)) {
-		printfef(true, "(): Couldn't look up color '%s', reverting to black.", ps->o.normal_tint);
-		mw->normalTint.red = mw->normalTint.green = mw->normalTint.blue = 0;
-	}
-	else
-	{
-		mw->normalTint.red = exact_color.red;
-		mw->normalTint.green = exact_color.green;
-		mw->normalTint.blue = exact_color.blue;
-	}
-	mw->normalTint.alpha = alphaconv(ps->o.normal_tintOpacity);
-
 	if(! XParseColor(ps->dpy, mw->colormap, ps->o.highlight_tint, &exact_color))
 	{
 		printfef(true, "(): Couldn't look up color '%s', reverting to #444444", ps->o.highlight_tint);

@@ -2792,8 +2792,6 @@ load_config_file(session_t *ps)
 			return RET_BADARG;
 	}
 
-	ps->o.normal_tint = mstrdup(config_get(config, "normal", "tint", "black"));
-    config_get_int_wrap(config, "normal", "tintOpacity", &ps->o.normal_tintOpacity, 0, 256);
     config_get_int_wrap(config, "normal", "opacity", &ps->o.normal_opacity, 0, 256);
 	ps->o.highlight_tint = mstrdup(config_get(config, "highlight", "tint", "#444444"));
     config_get_int_wrap(config, "highlight", "tintOpacity", &ps->o.highlight_tintOpacity, 0, 256);
@@ -3061,7 +3059,6 @@ main_end:
 			free(ps->o.pipePath);
 			free(ps->o.pipePath2);
 			free(ps->o.clientDisplayModes);
-			free(ps->o.normal_tint);
 			free(ps->o.highlight_tint);
 			free(ps->o.tooltip_border);
 			free(ps->o.tooltip_background);
