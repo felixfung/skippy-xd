@@ -240,16 +240,6 @@ mainwin_create_pixmap(MainWin *mw) {
 			XRenderFindStandardFormat(ps->dpy, PictStandardA8), CPRepeat, &pa);
 	XRenderFillRectangle(ps->dpy, PictOpSrc, mw->normalPicture, &clear, 0, 0, 1, 1);
 
-	clear.alpha = alphaconv(ps->o.highlight_opacity);
-	if(mw->highlightPixmap != None)
-		XFreePixmap(ps->dpy, mw->highlightPixmap);
-	mw->highlightPixmap = XCreatePixmap(ps->dpy, mw->window, 1, 1, 8);
-	if(mw->highlightPicture != None)
-		XRenderFreePicture(ps->dpy, mw->highlightPicture);
-	mw->highlightPicture = XRenderCreatePicture(ps->dpy, mw->highlightPixmap,
-			XRenderFindStandardFormat(ps->dpy, PictStandardA8), CPRepeat, &pa);
-	XRenderFillRectangle(ps->dpy, PictOpSrc, mw->highlightPicture, &clear, 0, 0, 1, 1);
-
 	clear.alpha = alphaconv(ps->o.shadow_opacity);
 	if(mw->shadowPixmap != None)
 		XFreePixmap(ps->dpy, mw->shadowPixmap);

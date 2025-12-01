@@ -472,9 +472,7 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 	// Drawing main picture
 	{
 		Picture mask = mw->normalPicture;
-		if (cw->focused)
-			mask = mw->highlightPicture;
-		else if (cw->zombie)
+		if (cw->zombie)
 			mask = mw->shadowPicture;
 
 		if (!ps->o.pseudoTrans) {
