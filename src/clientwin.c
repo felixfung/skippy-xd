@@ -528,10 +528,14 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 	{
 		for (int j=0; j<2; j++) {
 			XRenderColor *tint = None;
-			if (j == 0 && cw->focused)
-				tint = &mw->highlightTint;
+			if (j == 0 && cw->focused) {
+				if (ps->o.multiselect)
+					tint = &mw->multiselectTint;
+				else
+					tint = &mw->highlightTint;
+			}
 			if (j == 1 && cw->multiselect)
-				tint = &mw->multiselectTint;
+				tint = &mw->highlightTint;
 					
 			if (tint && tint->alpha) {
 #ifdef CFG_XINERAMA
@@ -565,7 +569,7 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 		}
 
 		if (ps->o.tooltip_show && ps->o.mode != PROGMODE_PAGING) {
-			tooltip_handle(cw->tooltip, cw->focused);
+			tooltip_handle(cw->tooltip, (!ps->o.multiselect && cw->focused) || (ps->o.multiselect && cw->multiselect));
 		}
 
 		clientwin_round_corners(cw);
@@ -718,7 +722,7 @@ clientwin_map(ClientWin *cw) {
 	if (ps->o.tooltip_show && ps->o.mode != PROGMODE_PAGING
 			&& cw->paneltype == WINTYPE_WINDOW) {
 		clientwin_tooltip(cw);
-		tooltip_handle(cw->tooltip, cw->focused);
+		tooltip_handle(cw->tooltip, (!ps->o.multiselect && cw->focused) || (ps->o.multiselect && cw->multiselect));
 	}
 }
 
