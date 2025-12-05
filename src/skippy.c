@@ -1214,7 +1214,7 @@ desktopwin_map(ClientWin *cw)
 
 	if (ps->o.tooltip_show) {
 		clientwin_tooltip(cw);
-		tooltip_handle(cw->tooltip, (!ps->o.multiselect && cw->focused) || (ps->o.multiselect && cw->multiselect));
+		tooltip_handle(cw->tooltip, ps->o.multiselect? cw->multiselect: cw->focused);
 	}
 }
 

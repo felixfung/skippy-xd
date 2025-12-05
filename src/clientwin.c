@@ -569,7 +569,7 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 		}
 
 		if (ps->o.tooltip_show && ps->o.mode != PROGMODE_PAGING) {
-			tooltip_handle(cw->tooltip, (!ps->o.multiselect && cw->focused) || (ps->o.multiselect && cw->multiselect));
+			tooltip_handle(cw->tooltip, ps->o.multiselect? cw->multiselect: cw->focused);
 		}
 
 		clientwin_round_corners(cw);
@@ -722,7 +722,7 @@ clientwin_map(ClientWin *cw) {
 	if (ps->o.tooltip_show && ps->o.mode != PROGMODE_PAGING
 			&& cw->paneltype == WINTYPE_WINDOW) {
 		clientwin_tooltip(cw);
-		tooltip_handle(cw->tooltip, (!ps->o.multiselect && cw->focused) || (ps->o.multiselect && cw->multiselect));
+		tooltip_handle(cw->tooltip, ps->o.multiselect? cw->multiselect: cw->focused);
 	}
 }
 
