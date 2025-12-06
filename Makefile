@@ -72,7 +72,7 @@ OBJS = $(foreach name,$(SRCS_RAW),$(name).o)
 %.o: src/%.c ${HDRS}
 	${CC} ${INCS} ${CFLAGS} ${CPPFLAGS} -c src/$*.c
 
-all: ${BINS} skippy-xd.1 skippy-xd.sample.rc
+all: ${BINS} skippy-xd.1 skippy-xd.rc
 
 skippy-xd${EXESUFFIX}: ${OBJS}
 	${CC} ${LDFLAGS} -o skippy-xd${EXESUFFIX} ${OBJS} ${LIBS}
@@ -88,24 +88,18 @@ clean:
 install-check:
 	@echo "'make install' target folders:"
 	@echo "PREFIX=${PREFIX} DESTDIR=${DESTDIR} BINDIR=${BINDIR}"
-	@echo "skippy executables will be installed into: ${DESTDIR}${BINDIR}"
+	@echo "skippy-xd executable will be installed into: ${DESTDIR}${BINDIR}"
 	@echo "man pages will be installed into: ${DESTDIR}${MANDIR}"
+	@echo "config file will be installed to: ${DESTDIR}/etc/xdg/skippy-xd.rc"
 
 install: all
 	install -d "${DESTDIR}${BINDIR}/" "${DESTDIR}/etc/xdg/"
 	install -m 755 ${BINS} "${DESTDIR}${BINDIR}/"
 	install -m 644 skippy-xd.1 "${DESTDIR}${MANDIR}/"
-
-ifneq ("$(wildcard skippy-xd.rc)","")
-	@echo "your custom skippy config file will be installed to: ${DESTDIR}/etc/xdg/skippy-xd.rc"
 	install -m 644 skippy-xd.rc "${DESTDIR}/etc/xdg/skippy-xd.rc"
-else
-	@echo "skippy's default config file will be installed to: ${DESTDIR}/etc/xdg/skippy-xd.rc"
-	install -m 644 skippy-xd.sample.rc "${DESTDIR}/etc/xdg/skippy-xd.rc"
-endif
 
 uninstall:
-	# Should configuration file be removed?
+	# Should configuration file and man page be removed?
 	rm -f $(foreach bin,$(BINS),"${DESTDIR}${BINDIR}/$(bin)")
 
 src/.clang_complete: Makefile
