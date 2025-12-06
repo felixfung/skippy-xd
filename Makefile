@@ -69,10 +69,10 @@ SRCS = $(foreach name,$(SRCS_RAW),src/$(name).c)
 HDRS = $(foreach name,$(SRCS_RAW),src/$(name).h)
 OBJS = $(foreach name,$(SRCS_RAW),$(name).o)
 
-.DEFAULT_GOAL := skippy-xd${EXESUFFIX}
-
 %.o: src/%.c ${HDRS}
 	${CC} ${INCS} ${CFLAGS} ${CPPFLAGS} -c src/$*.c
+
+all: ${BINS} skippy-xd.1 skippy-xd.sample.rc
 
 skippy-xd${EXESUFFIX}: ${OBJS}
 	${CC} ${LDFLAGS} -o skippy-xd${EXESUFFIX} ${OBJS} ${LIBS}
@@ -81,7 +81,6 @@ skippy-xd${EXESUFFIX}: ${OBJS}
 VERSION_SKIPPYXD := $(shell cat version.txt)
 skippy-xd.1: skippy-xd.1.in version.txt
 	sed "s|@VERSION@|$(VERSION_SKIPPYXD)|" $< > $@
-
 
 clean:
 	rm -f ${BINS} ${OBJS} src/.clang_complete skippy-xd.1
@@ -92,7 +91,7 @@ install-check:
 	@echo "skippy executables will be installed into: ${DESTDIR}${BINDIR}"
 	@echo "man pages will be installed into: ${DESTDIR}${MANDIR}"
 
-install: ${BINS} skippy-xd.1 skippy-xd.sample.rc
+install: all
 	install -d "${DESTDIR}${BINDIR}/" "${DESTDIR}/etc/xdg/"
 	install -m 755 ${BINS} "${DESTDIR}${BINDIR}/"
 	install -m 644 skippy-xd.1 "${DESTDIR}${MANDIR}/"
@@ -115,4 +114,4 @@ src/.clang_complete: Makefile
 version:
 	@echo "${COMPTON_VERSION}"
 
-.PHONY: uninstall clean docs version
+.PHONY: all uninstall clean docs version
