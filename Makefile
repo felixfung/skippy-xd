@@ -1,5 +1,6 @@
 PREFIX ?= /usr
 BINDIR ?= ${PREFIX}/bin
+MANDIR ?= ${PREFIX}/share/man/man1
 
 ifeq ($(shell command -v clang 2>&1 | grep -c "clang"), 1)
 	CC = clang
@@ -68,25 +69,32 @@ SRCS = $(foreach name,$(SRCS_RAW),src/$(name).c)
 HDRS = $(foreach name,$(SRCS_RAW),src/$(name).h)
 OBJS = $(foreach name,$(SRCS_RAW),$(name).o)
 
-.DEFAULT_GOAL := skippy-xd${EXESUFFIX}
-
 %.o: src/%.c ${HDRS}
 	${CC} ${INCS} ${CFLAGS} ${CPPFLAGS} -c src/$*.c
+
+all: ${BINS} skippy-xd.1 skippy-xd.sample.rc
 
 skippy-xd${EXESUFFIX}: ${OBJS}
 	${CC} ${LDFLAGS} -o skippy-xd${EXESUFFIX} ${OBJS} ${LIBS}
 
+# === Man page creation ===
+VERSION_SKIPPYXD := $(shell cat version.txt)
+skippy-xd.1: skippy-xd.1.in version.txt
+	sed "s|@VERSION@|$(VERSION_SKIPPYXD)|" $< > $@
+
 clean:
-	rm -f ${BINS} ${OBJS} src/.clang_complete
+	rm -f ${BINS} ${OBJS} src/.clang_complete skippy-xd.1
 
 install-check:
 	@echo "'make install' target folders:"
 	@echo "PREFIX=${PREFIX} DESTDIR=${DESTDIR} BINDIR=${BINDIR}"
 	@echo "skippy executables will be installed into: ${DESTDIR}${BINDIR}"
+	@echo "man pages will be installed into: ${DESTDIR}${MANDIR}"
 
-install: ${BINS} skippy-xd.sample.rc
+install: all
 	install -d "${DESTDIR}${BINDIR}/" "${DESTDIR}/etc/xdg/"
 	install -m 755 ${BINS} "${DESTDIR}${BINDIR}/"
+	install -m 644 skippy-xd.1 "${DESTDIR}${MANDIR}/"
 
 ifneq ("$(wildcard skippy-xd.rc)","")
 	@echo "your custom skippy config file will be installed to: ${DESTDIR}/etc/xdg/skippy-xd.rc"
@@ -106,4 +114,4 @@ src/.clang_complete: Makefile
 version:
 	@echo "${COMPTON_VERSION}"
 
-.PHONY: uninstall clean docs version
+.PHONY: all uninstall clean docs version
