@@ -225,7 +225,6 @@ clientwin_get_disp_mode(session_t *ps, ClientWin *cw, bool isViewable) {
 bool
 clientwin_update(ClientWin *cw) {
 	session_t *ps = cw->mainwin->ps;
-	clientwin_free_res2(ps, cw);
 
 	// Get window attributes
 	XWindowAttributes wattr = { };
