@@ -76,7 +76,7 @@ executable(
 )
 
 install_data(
-  sources: ['skippy-xd.sample.rc'],
+  sources: ['skippy-xd.rc'],
   rename: ['skippy-xd.rc'],
   install_dir: get_option('sysconfdir') / 'xdg',
 )
