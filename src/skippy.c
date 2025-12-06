@@ -2984,16 +2984,16 @@ int main(int argc, char *argv[]) {
 
 			poll(&r_fd, 1, -1);
 			char buffer[1024];
-			int read_ret = 0;
-			read_ret = read(ps->fd_pipe2, &buffer, 1024);
+			int read_ret = read(ps->fd_pipe2, buffer, 1023);
 			close(ps->fd_pipe2);
 			unlink(daemon2client_pipe);
 			free(daemon2client_pipe);
 
-			if (read_ret == 0) {
-				printfef(false,"(): pipe %i leak!", getpid());
+			if (read_ret <= 0) {
+				printfef(false, "(): pipe %i leak!", getpid());
 			}
 			else {
+				buffer[read_ret] = '\0';
 				printf("%s\n", buffer);
 			}
 
