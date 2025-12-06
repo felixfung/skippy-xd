@@ -239,18 +239,12 @@ typedef struct {
 	pictspec_t fillSpec;
 	pictspec_t iconFillSpec;
 	int fillerIconSize;
-	char *normal_tint;
-	int normal_tintOpacity;
 	int normal_opacity;
 	char *highlight_tint;
 	int highlight_tintOpacity;
-	int highlight_opacity;
-	char *shadow_tint;
-	int shadow_tintOpacity;
 	int shadow_opacity;
 	char *multiselect_tint;
 	int multiselect_tintOpacity;
-	int multiselect_opacity;
 
 	bool panel_show;
 	bool panel_tinting;
@@ -333,18 +327,12 @@ typedef struct {
 	.fillSpec = PICTSPECT_INIT, \
 	.iconFillSpec = PICTSPECT_INIT, \
 	.fillerIconSize = 48, \
-	.normal_tint = NULL, \
-	.normal_tintOpacity = 0, \
 	.normal_opacity = 255, \
 	.highlight_tint = NULL, \
 	.highlight_tintOpacity = 50, \
-	.highlight_opacity = 255, \
-	.shadow_tint = NULL, \
-	.shadow_tintOpacity = 0, \
 	.shadow_opacity = 160, \
 	.multiselect_tint = NULL, \
 	.multiselect_tintOpacity = 50, \
-	.multiselect_opacity = 255, \
 \
 	.panel_show = true, \
 	.panel_tinting = true, \

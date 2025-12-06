@@ -1,4 +1,11 @@
-# Copy this to ~/.config/skippy-xd/skippy-xd.rc and edit it to your liking
+# Skippy-xd config file
+#
+# Skippy-xd searches for this file in these locations,
+#    According to this order:
+# 1. $XDG_CONFIG_HOME/skippy-xd/skippy-xd.rc
+# 2. $HOME/.config/skippy-xd/skippy-xd.rc
+# 3. $XDG_CONFIG_DIRS/skippy-xd.rc
+# 4. /etc/xdg/skippy-xd.rc
 #
 # File Syntax:
 # Comments must be on their own seperate lines that start with a #
@@ -69,7 +76,7 @@ distance = 50
 # Whether to show the window bigger than its original size
 allowUpscale = false
 
-[display]
+[appearance]
 
 # Animation duration in ms
 # Set = 0 to switch off animations
@@ -96,40 +103,29 @@ includeFrame = true
 # Show window previews with rounded corners
 cornerRadius = 0
 
-# Icons on live previews
-icon = true
+# Windows that were never shown before
+[filler]
+opacity = 160
+color = #333333
 iconPlace = left left
 iconSize = 48
 
-# Windows that were never shown before
-[filler]
-tint = #333333
-iconPlace = mid mid
-iconSize = 48
-
-# Windows that are not filler, highlight, shadow, multiselect
-[normal]
-tint = black
-tintOpacity = 0
+# Live window previews
+[livepreview]
 opacity = 255
+icon = true
+iconPlace = left left
+iconSize = 48
 
 # Currently highlighted window
 [highlight]
 tint = #444444
 tintOpacity = 50
-opacity = 255
-
-# Unmapped windows: minimized, shaded, not in current virtual desktop
-[shadow]
-tint = #040404
-tintOpacity = 0
-opacity = 160
 
 # Highlighted in multi-select mode
 [multiselect]
 tint = #3376BB
 tintOpacity = 50
-opacity = 255
 
 # Windows of type _NET_WM_WINDOW_TYPE_DOCK
 [panel]

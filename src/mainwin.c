@@ -181,18 +181,6 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 
 	XColor exact_color;
 
-	if(!XParseColor(ps->dpy, mw->colormap, ps->o.normal_tint, &exact_color)) {
-		printfef(true, "(): Couldn't look up color '%s', reverting to black.", ps->o.normal_tint);
-		mw->normalTint.red = mw->normalTint.green = mw->normalTint.blue = 0;
-	}
-	else
-	{
-		mw->normalTint.red = exact_color.red;
-		mw->normalTint.green = exact_color.green;
-		mw->normalTint.blue = exact_color.blue;
-	}
-	mw->normalTint.alpha = alphaconv(ps->o.normal_tintOpacity);
-
 	if(! XParseColor(ps->dpy, mw->colormap, ps->o.highlight_tint, &exact_color))
 	{
 		printfef(true, "(): Couldn't look up color '%s', reverting to #444444", ps->o.highlight_tint);
@@ -205,20 +193,6 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 		mw->highlightTint.blue = exact_color.blue;
 	}
 	mw->highlightTint.alpha = alphaconv(ps->o.highlight_tintOpacity);
-
-	;
-	if(! XParseColor(ps->dpy, mw->colormap, ps->o.shadow_tint, &exact_color))
-	{
-		printfef(true, "(): Couldn't look up color '%s', reverting to #040404", ps->o.shadow_tint);
-		mw->shadowTint.red = mw->shadowTint.green =	mw->shadowTint.blue = 0x04;
-	}
-	else
-	{
-		mw->shadowTint.red = exact_color.red;
-		mw->shadowTint.green = exact_color.green;
-		mw->shadowTint.blue = exact_color.blue;
-	}
-	mw->shadowTint.alpha = alphaconv(ps->o.shadow_tintOpacity);
 
 	if(! XParseColor(ps->dpy, mw->colormap, ps->o.multiselect_tint, &exact_color))
 	{
@@ -265,16 +239,6 @@ mainwin_create_pixmap(MainWin *mw) {
 	mw->normalPicture = XRenderCreatePicture(ps->dpy, mw->normalPixmap,
 			XRenderFindStandardFormat(ps->dpy, PictStandardA8), CPRepeat, &pa);
 	XRenderFillRectangle(ps->dpy, PictOpSrc, mw->normalPicture, &clear, 0, 0, 1, 1);
-
-	clear.alpha = alphaconv(ps->o.highlight_opacity);
-	if(mw->highlightPixmap != None)
-		XFreePixmap(ps->dpy, mw->highlightPixmap);
-	mw->highlightPixmap = XCreatePixmap(ps->dpy, mw->window, 1, 1, 8);
-	if(mw->highlightPicture != None)
-		XRenderFreePicture(ps->dpy, mw->highlightPicture);
-	mw->highlightPicture = XRenderCreatePicture(ps->dpy, mw->highlightPixmap,
-			XRenderFindStandardFormat(ps->dpy, PictStandardA8), CPRepeat, &pa);
-	XRenderFillRectangle(ps->dpy, PictOpSrc, mw->highlightPicture, &clear, 0, 0, 1, 1);
 
 	clear.alpha = alphaconv(ps->o.shadow_opacity);
 	if(mw->shadowPixmap != None)
@@ -458,14 +422,8 @@ mainwin_destroy(MainWin *mw) {
 	if(mw->normalPicture != None)
 		XRenderFreePicture(ps->dpy, mw->normalPicture);
 	
-	if(mw->highlightPicture != None)
-		XRenderFreePicture(ps->dpy, mw->highlightPicture);
-	
 	if(mw->normalPixmap != None)
 		XFreePixmap(ps->dpy, mw->normalPixmap);
-	
-	if(mw->highlightPixmap != None)
-		XFreePixmap(ps->dpy, mw->highlightPixmap);
 	
 	XDestroyWindow(ps->dpy, mw->window);
 	
