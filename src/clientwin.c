@@ -36,6 +36,12 @@ clientwin_cmp_func(dlist *l, void *data) {
 
 void clientwin_round_corners(ClientWin *cw);
 
+void XRoundedRect(Display *dpy,
+		Picture dst,
+		XRenderColor *tint,
+		int x, int y, int w, int h,
+		int radius);
+
 int
 clientwin_validate_panel(dlist *l, void *data) {
 	ClientWin *cw = l->data;
@@ -550,9 +556,9 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 						s_w = iter->width * mw->multiplier;
 						s_h = iter->height * mw->multiplier;
 
-						XRenderFillRectangle(mw->ps->dpy,
-								PictOpOver, cw->destination, tint,
-								s_x, s_y, s_w, s_h);
+						XRoundedRect(mw->ps->dpy,
+								cw->destination, tint,
+								s_x, s_y, s_w, s_h, ps->o.cornerRadius * mw->multiplier);
 
 						XClearArea(mw->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
 						iter++;
@@ -560,8 +566,9 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 				}
 				else {
 #endif /* CFG_XINERAMA */
-					XRenderFillRectangle(mw->ps->dpy, PictOpOver,
-							cw->destination, tint, s_x, s_y, s_w, s_h);
+					XRoundedRect(mw->ps->dpy,
+							cw->destination, tint, s_x, s_y, s_w, s_h,
+							ps->o.cornerRadius * mw->multiplier);
 					XClearArea(mw->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
 #ifdef CFG_XINERAMA
 				}
@@ -644,6 +651,88 @@ void clientwin_round_corners(ClientWin *cw) {
 	XShapeCombineMask(ps->dpy, cw->mini.window, ShapeBounding, 0, 0, mask, ShapeSet);
 	XFreePixmap(ps->dpy, mask);
 	XFreeGC(ps->dpy, shape_gc);
+}
+
+void XRoundedRect(Display *dpy,
+		Picture dst,
+		XRenderColor *tint,
+		int x, int y, int w, int h,
+		int radius)
+{
+	/*--------------------------------------------------------------*
+	 * 1. Create alpha mask pixmap (A8)
+	 *--------------------------------------------------------------*/
+	int screen = DefaultScreen(dpy);
+	Pixmap mask_pix = XCreatePixmap(dpy, RootWindow(dpy, screen),
+			w, h, 8);
+
+	/* Erase pixmap to 0 (transparent) */
+	XGCValues gcv;
+	gcv.foreground = 0; // alpha = 0
+	GC gc = XCreateGC(dpy, mask_pix, GCForeground, &gcv);
+	XFillRectangle(dpy, mask_pix, gc, 0, 0, w, h);
+
+	/* Set GC to alpha=255 for drawing rounded rect mask */
+	gcv.foreground = 0xFF;     /* 8-bit alpha = 255 */
+	XChangeGC(dpy, gc, GCForeground, &gcv);
+
+	/*--------------------------------------------------------------*
+	 * 2. Draw rounded rectangle mask using arcs + rectangles
+	 *--------------------------------------------------------------*/
+	int d = radius * 2;
+
+	/* Corners */
+	if (radius > 0) {
+		/* top-left */
+		XFillArc(dpy, mask_pix, gc, 0, 0, d, d, 90 * 64, 90 * 64);
+
+		/* top-right */
+		XFillArc(dpy, mask_pix, gc, w - d, 0, d, d, 0 * 64, 90 * 64);
+
+		/* bottom-right */
+		XFillArc(dpy, mask_pix, gc, w - d, h - d, d, d, 270 * 64, 90 * 64);
+
+        /* bottom-left */
+		XFillArc(dpy, mask_pix, gc, 0, h - d, d, d, 180 * 64, 90 * 64);
+	}
+
+	XFillRectangle(dpy, mask_pix, gc, radius, 0, w - 2 * radius, radius);
+	XFillRectangle(dpy, mask_pix, gc, radius, h - radius, w - 2 * radius, radius);
+	XFillRectangle(dpy, mask_pix, gc, 0, radius, w, h - 2 * radius);
+
+	/*--------------------------------------------------------------*
+	 * 3. Convert mask pixmap to XRender Picture
+	 *--------------------------------------------------------------*/
+	XRenderPictFormat *alphaFormat =
+			XRenderFindStandardFormat(dpy, PictStandardA8);
+
+	Picture mask = XRenderCreatePicture(
+			dpy, mask_pix, alphaFormat, 0, NULL);
+
+	/*--------------------------------------------------------------*
+	 * 4. Create solid tint picture
+	 *--------------------------------------------------------------*/
+	Picture src = XRenderCreateSolidFill(dpy, tint);
+
+	/*--------------------------------------------------------------*
+	 * 5. Composite tint through mask
+	 *--------------------------------------------------------------*/
+	XRenderComposite(
+			dpy,
+			PictOpOver,
+			src, mask, dst,
+			0, 0,          /* src x,y */
+			0, 0,          /* mask x,y */
+			x, y,
+			w, h);
+
+	/*--------------------------------------------------------------*
+	 * 6. Cleanup
+	 *--------------------------------------------------------------*/
+	XRenderFreePicture(dpy, src);
+	XRenderFreePicture(dpy, mask);
+	XFreePixmap(dpy, mask_pix);
+	XFreeGC(dpy, gc);
 }
 
 void clientwin_prepmove(ClientWin *cw)
