@@ -170,8 +170,8 @@ If the skippy-xd command did not activate skippy-xd, e.g. with toggling off of e
 .I ~/.config/skippy-xd/skippy-xd.rc
 User configuration file.
 .TP
-.I /etc/xdg/skippy-xd/skippy-xd.sample.rc
-Sample configuration file.
+.I /etc/xdg/skippy-xd.rc
+System wide configuration file.
 .SH EXAMPLES
 .SS Starting the Daemon
 .PP
