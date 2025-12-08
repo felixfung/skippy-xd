@@ -258,6 +258,8 @@ bool
 clientwin_update3(ClientWin *cw) {
 	session_t *ps = cw->mainwin->ps;
 
+	clientwin_free_res2(ps, cw);
+
 	XWindowAttributes wattr = { };
 	XGetWindowAttributes(ps->dpy, cw->src.window, &wattr);
 	bool isViewable = wattr.map_state == IsViewable;
