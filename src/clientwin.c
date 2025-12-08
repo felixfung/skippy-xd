@@ -690,8 +690,6 @@ clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 
 	XMoveResizeWindow(cw->mainwin->ps->dpy, cw->mini.window,
 			cw->mini.x, cw->mini.y, cw->mini.width, cw->mini.height);
-
-	clientwin_round_corners(cw);
 }
 
 void
