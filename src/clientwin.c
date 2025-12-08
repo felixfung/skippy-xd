@@ -622,7 +622,8 @@ clientwin_schedule_repair(ClientWin *cw, XRectangle *area)
 
 void clientwin_round_corners(ClientWin *cw) {
 	session_t* ps = cw->mainwin->ps;
-	int dia = 2 * ps->o.cornerRadius;
+	int radius = ps->o.cornerRadius * cw->mainwin->multiplier;
+	int dia = 2 * radius;
 	int w = cw->mini.width;
 	int h = cw->mini.height;
 	XGCValues xgcv;
@@ -638,8 +639,8 @@ void clientwin_round_corners(ClientWin *cw) {
 		XFillArc(ps->dpy, mask, shape_gc, 0, h-dia-1, dia, dia, 0, 360 * 64);
 		XFillArc(ps->dpy, mask, shape_gc, w-dia-1, h-dia-1, dia, dia, 0, 360 * 64);
 	}
-	XFillRectangle(ps->dpy, mask, shape_gc, ps->o.cornerRadius, 0, w-dia, h);
-	XFillRectangle(ps->dpy, mask, shape_gc, 0, ps->o.cornerRadius, w, h-dia);
+	XFillRectangle(ps->dpy, mask, shape_gc, radius, 0, w-dia, h);
+	XFillRectangle(ps->dpy, mask, shape_gc, 0, radius, w, h-dia);
 	XShapeCombineMask(ps->dpy, cw->mini.window, ShapeBounding, 0, 0, mask, ShapeSet);
 	XFreePixmap(ps->dpy, mask);
 	XFreeGC(ps->dpy, shape_gc);
