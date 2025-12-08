@@ -54,6 +54,85 @@ enum pipe_param_t {
 
 session_t *ps_g = NULL;
 
+/*
+ * Create an A8 alpha mask picture containing a rounded rectangle.
+ * Caller must free the returned Picture using XRenderFreePicture(),
+ * and must also free the pixmap with XFreePixmap() if they want.
+ *
+ * Parameters:
+ *   dpy     - X Display
+ *   w, h    - mask size
+ *   radius  - corner radius
+ *   out_pix - returns the Pixmap backing the Picture (optional)
+ *
+ * Returns:
+ *   Picture of the A8 mask
+ */
+Picture XRoundedRectMask(Display *dpy,
+		int w, int h,
+		int radius,
+		Pixmap *out_pix)
+{
+	if (radius < 0) radius = 0;
+	if (radius * 2 > w) radius = w / 2;
+	if (radius * 2 > h) radius = h / 2;
+
+	int screen = DefaultScreen(dpy);
+
+	/* Create 8-bit alpha pixmap */
+	Pixmap pm = XCreatePixmap(dpy, RootWindow(dpy, screen), w, h, 8);
+
+	/* Clear to alpha = 0 */
+	XGCValues gcv;
+	gcv.foreground = 0; /* transparent */
+	GC gc = XCreateGC(dpy, pm, GCForeground, &gcv);
+	XFillRectangle(dpy, pm, gc, 0, 0, w, h);
+
+	/* Set drawing alpha = 255 */
+	gcv.foreground = 0xFF;
+	XChangeGC(dpy, gc, GCForeground, &gcv);
+
+	int d = radius * 2;
+    if (radius > 0) {
+		XFillArc(dpy, pm, gc, 0,      0,      d, d,  90*64,  90*64); /* top-left */
+		XFillArc(dpy, pm, gc, w - d, 0,      d, d,   0*64,  90*64); /* top-right */
+		XFillArc(dpy, pm, gc, w - d, h - d, d, d,  270*64,  90*64); /* bottom-right */
+		XFillArc(dpy, pm, gc, 0,      h - d, d, d, 180*64,  90*64); /* bottom-left */
+	}
+	XFillRectangle(dpy, pm, gc, radius, 0,           w - 2*radius, radius);
+	XFillRectangle(dpy, pm, gc, radius, h - radius,  w - 2*radius, radius);
+	XFillRectangle(dpy, pm, gc, 0,       radius,     w, h - 2*radius);
+
+	XFreeGC(dpy, gc);
+
+	XRenderPictFormat *fmt = XRenderFindStandardFormat(dpy, PictStandardA8);
+	Picture mask = XRenderCreatePicture(dpy, pm, fmt, 0, NULL);
+
+	if (out_pix) *out_pix = pm;
+	else XFreePixmap(dpy, pm);
+
+	return mask;
+}
+
+void XRoundedRectComposite(Display *dpy,
+		Picture src,
+		Picture dst,
+		int src_x, int src_y,
+		int dst_x, int dst_y,
+		int w, int h,
+		int radius)
+{
+	Pixmap pm;
+	Picture mask = XRoundedRectMask(dpy, w, h, radius, &pm);
+
+	XRenderComposite(dpy, PictOpOver,
+			src, mask, dst,
+			src_x, src_y, 0, 0, dst_x, dst_y, w, h);
+
+    XRenderFreePicture(dpy, mask);
+    XFreePixmap(dpy, pm);
+}
+
 /**
  * @brief Parse a string representation of enum cliop.
  */
@@ -1576,14 +1655,13 @@ mainloop(session_t *ps, bool activate_on_start) {
 				if (layout == LAYOUTMODE_PAGING && mw->ps->o.preservePages) {
 					foreach_dlist (mw->dminis) {
 						ClientWin *cw = (ClientWin *) iter->data;
-						XRenderComposite(mw->ps->dpy,
-								PictOpSrc, mw->ps->o.from,
-								None, mw->background,
+						XRoundedRectComposite(mw->ps->dpy,
+								mw->ps->o.from, mw->background,
 								cw->x + mw->xoff + mw->x, cw->y + mw->yoff + mw->y,
-								0, 0,
-								cw->x + mw->xoff, cw->y + mw->yoff,
+								cw->x + mw->xoff + mw->x, cw->y + mw->yoff + mw->y,
 								cw->src.width * mw->multiplier,
-								cw->src.height * mw->multiplier);
+								cw->src.height * mw->multiplier,
+								ps->o.cornerRadius * mw->multiplier);
 						XClearWindow(ps->dpy, mw->window);
 					}
 				}
