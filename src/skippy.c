@@ -1655,13 +1655,33 @@ mainloop(session_t *ps, bool activate_on_start) {
 				if (layout == LAYOUTMODE_PAGING && mw->ps->o.preservePages) {
 					foreach_dlist (mw->dminis) {
 						ClientWin *cw = (ClientWin *) iter->data;
+#ifdef CFG_XINERAMA
+						XineramaScreenInfo *iter = mw->xin_info;
+						for (int i = 0; i < mw->xin_screens; ++i)
+						{
+							int s_x = iter->x_org * mw->multiplier + cw->x;
+							int s_y = iter->y_org * mw->multiplier + cw->y;
+							int s_w = iter->width * mw->multiplier;
+							int s_h = iter->height * mw->multiplier;
+
+							XRoundedRectComposite(mw->ps->dpy,
+									mw->ps->o.from, mw->background,
+									s_x + mw->xoff + mw->x, s_y + mw->yoff + mw->y,
+									s_x + mw->xoff, s_y + mw->yoff,
+									s_w,
+									s_h,
+									ps->o.cornerRadius * mw->multiplier);
+							iter++;
+						}
+#else
 						XRoundedRectComposite(mw->ps->dpy,
 								mw->ps->o.from, mw->background,
 								cw->x + mw->xoff + mw->x, cw->y + mw->yoff + mw->y,
-								cw->x + mw->xoff + mw->x, cw->y + mw->yoff + mw->y,
+								cw->x + mw->xoff, cw->y + mw->yoff,
 								cw->src.width * mw->multiplier,
 								cw->src.height * mw->multiplier,
 								ps->o.cornerRadius * mw->multiplier);
+#endif /* CFG_XINERAMA */
 						XClearWindow(ps->dpy, mw->window);
 					}
 				}
