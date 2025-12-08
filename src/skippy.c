@@ -54,20 +54,6 @@ enum pipe_param_t {
 
 session_t *ps_g = NULL;
 
-/*
- * Create an A8 alpha mask picture containing a rounded rectangle.
- * Caller must free the returned Picture using XRenderFreePicture(),
- * and must also free the pixmap with XFreePixmap() if they want.
- *
- * Parameters:
- *   dpy     - X Display
- *   w, h    - mask size
- *   radius  - corner radius
- *   out_pix - returns the Pixmap backing the Picture (optional)
- *
- * Returns:
- *   Picture of the A8 mask
- */
 Picture XRoundedRectMask(Display *dpy,
 		int w, int h,
 		int radius,

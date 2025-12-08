@@ -26,15 +26,6 @@
 static int
 clientwin_action(ClientWin *cw, enum cliop action);
 
-/*
- * Apply a tint with rounded corners onto dst Picture.
- *
- * Parameters:
- *   dpy, dst    - destination Picture
- *   x, y, w, h  - target area
- *   radius      - corner radius
- *   tint        - XRenderColor tint source
- */
 void XRoundedRectTint(Display *dpy,
 		Picture dst,
 		XRenderColor *tint,
