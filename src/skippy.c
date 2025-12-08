@@ -1214,7 +1214,7 @@ desktopwin_map(ClientWin *cw)
 
 	if (ps->o.tooltip_show) {
 		clientwin_tooltip(cw);
-		tooltip_handle(cw->tooltip, cw->focused);
+		tooltip_handle(cw->tooltip, ps->o.multiselect? cw->multiselect: cw->focused);
 	}
 }
 
@@ -2686,11 +2686,11 @@ load_config_file(session_t *ps)
     config_get_int_wrap(config, "layout", "distance", &ps->o.distance, 5, INT_MAX);
     config_get_bool_wrap(config, "layout", "allowUpscale", &ps->o.allowUpscale);
 
-    config_get_int_wrap(config, "display", "animationDuration", &ps->o.animationDuration, 0, 2000);
-    config_get_int_wrap(config, "display", "animationRefresh", &ps->o.animationRefresh, 1, 200);
+    config_get_int_wrap(config, "appearance", "animationDuration", &ps->o.animationDuration, 0, 2000);
+    config_get_int_wrap(config, "appearance", "animationRefresh", &ps->o.animationRefresh, 1, 200);
 
     {
-        const char *sspec = config_get(config, "display", "background", "#00000055");
+        const char *sspec = config_get(config, "appearance", "background", "#00000055");
 		if (!sspec || strlen(sspec) == 0)
 			sspec = "#00000055";
 		char bg_spec[256] = "orig mid mid ";
@@ -2707,10 +2707,10 @@ load_config_file(session_t *ps)
 		free_pictspec(ps, &ps->o.bg_spec);
 		ps->o.bg_spec = spec;
 	}
-	config_get_bool_wrap(config, "display", "preservePages", &ps->o.preservePages);
+	config_get_bool_wrap(config, "appearance", "preservePages", &ps->o.preservePages);
     config_get_bool_wrap(config, "bindings", "moveMouse", &ps->o.moveMouse);
-    config_get_bool_wrap(config, "display", "includeFrame", &ps->o.includeFrame);
-	config_get_int_wrap(config, "display", "cornerRadius", &ps->o.cornerRadius, 0, INT_MAX);
+    config_get_bool_wrap(config, "appearance", "includeFrame", &ps->o.includeFrame);
+	config_get_int_wrap(config, "appearance", "cornerRadius", &ps->o.cornerRadius, 0, INT_MAX);
     {
         static client_disp_mode_t DEF_CLIDISPM[] = {
             CLIDISP_THUMBNAIL, CLIDISP_ZOMBIE, CLIDISP_ICON, CLIDISP_FILLED, CLIDISP_NONE
@@ -2721,8 +2721,8 @@ load_config_file(session_t *ps)
             CLIDISP_ZOMBIE, CLIDISP_ICON, CLIDISP_FILLED, CLIDISP_NONE
         };
 
-        bool thumbnail_icons = false;
-        config_get_bool_wrap(config, "display", "icon", &thumbnail_icons);
+        bool thumbnail_icons = true;
+        config_get_bool_wrap(config, "livepreview", "icon", &thumbnail_icons);
         if (thumbnail_icons) {
             ps->o.clientDisplayModes = allocchk(malloc(sizeof(DEF_CLIDISPM_ICON)));
             memcpy(ps->o.clientDisplayModes, &DEF_CLIDISPM_ICON, sizeof(DEF_CLIDISPM_ICON));
@@ -2734,14 +2734,14 @@ load_config_file(session_t *ps)
     }
 	{
 		char defaultstr2[256] = "orig ";
-		const char* sspec2 = config_get(config, "display", "iconPlace", "left left");
+		const char* sspec2 = config_get(config, "livepreview", "iconPlace", "left left");
 		strcat(defaultstr2, sspec2);
 		const char space[] = " ";
 		strcat(defaultstr2, space);
 		char sspec[] = "#333333";
 		strcat(defaultstr2, sspec);
 
-		config_get_int_wrap(config, "display", "iconSize",
+		config_get_int_wrap(config, "livepreview", "iconSize",
 				&ps->o.iconSize, 1, INT_MAX);
 
 		if (!parse_pictspec(ps, defaultstr2, &ps->o.iconSpec))
@@ -2757,7 +2757,7 @@ load_config_file(session_t *ps)
 }
 	{
 		char defaultstr[256] = "orig mid mid ";
-		const char* sspec = config_get(config, "filler", "tint", "#333333");
+		const char* sspec = config_get(config, "filler", "color", "#333333");
 		strcat(defaultstr, sspec);
 		if (!parse_pictspec(ps, defaultstr, &ps->o.fillSpec))
 			return RET_BADARG;
@@ -2784,18 +2784,12 @@ load_config_file(session_t *ps)
 			return RET_BADARG;
 	}
 
-	ps->o.normal_tint = mstrdup(config_get(config, "normal", "tint", "black"));
-    config_get_int_wrap(config, "normal", "tintOpacity", &ps->o.normal_tintOpacity, 0, 256);
-    config_get_int_wrap(config, "normal", "opacity", &ps->o.normal_opacity, 0, 256);
+    config_get_int_wrap(config, "livepreview", "opacity", &ps->o.normal_opacity, 0, 256);
 	ps->o.highlight_tint = mstrdup(config_get(config, "highlight", "tint", "#444444"));
     config_get_int_wrap(config, "highlight", "tintOpacity", &ps->o.highlight_tintOpacity, 0, 256);
-    config_get_int_wrap(config, "highlight", "opacity", &ps->o.highlight_opacity, 0, 256);
-	ps->o.shadow_tint = mstrdup(config_get(config, "shadow", "tint", "#040404"));
-    config_get_int_wrap(config, "shadow", "tintOpacity", &ps->o.shadow_tintOpacity, 0, 256);
-    config_get_int_wrap(config, "shadow", "opacity", &ps->o.shadow_opacity, 0, 256);
+    config_get_int_wrap(config, "filler", "opacity", &ps->o.shadow_opacity, 0, 256);
 	ps->o.multiselect_tint = mstrdup(config_get(config, "multiselect", "tint", "#3376BB"));
     config_get_int_wrap(config, "multiselect", "tintOpacity", &ps->o.multiselect_tintOpacity, 0, 256);
-    config_get_int_wrap(config, "multiselect", "opacity", &ps->o.multiselect_opacity, 0, 256);
 
     config_get_bool_wrap(config, "panel", "show", &ps->o.panel_show);
     config_get_bool_wrap(config, "panel", "backgroundTinting", &ps->o.panel_tinting);
@@ -3055,9 +3049,7 @@ main_end:
 			free(ps->o.pipePath);
 			free(ps->o.pipePath2);
 			free(ps->o.clientDisplayModes);
-			free(ps->o.normal_tint);
 			free(ps->o.highlight_tint);
-			free(ps->o.shadow_tint);
 			free(ps->o.tooltip_border);
 			free(ps->o.tooltip_background);
 			free(ps->o.tooltip_text);
