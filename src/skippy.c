@@ -102,6 +102,15 @@ void XRoundedRectComposite(session_t *ps,
 		int w, int h,
 		int radius)
 {
+	if (radius == 0)
+		return XRenderComposite(ps->dpy,
+				PictOpSrc, src,
+				None, dst,
+				src_x, src_y,
+				0, 0,
+				dst_x, dst_y,
+				w, h);
+
 	Pixmap pm;
 	Picture mask = XRoundedRectMask(ps, w, h, radius, &pm);
 

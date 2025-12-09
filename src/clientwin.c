@@ -633,6 +633,11 @@ void XRoundedRectTint(session_t *ps,
 		int w, int h,
 		int radius)
 {
+	if (radius == 0)
+		return XRenderFillRectangle(ps->dpy,
+				PictOpOver, dst, tint,
+				x, y, w, h);
+
 	Pixmap pm;
 	Picture mask = XRoundedRectMask(ps, w, h, radius, &pm);
 	Picture src = XRenderCreateSolidFill(ps->dpy, tint);
