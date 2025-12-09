@@ -899,23 +899,6 @@ calculatePanelBorders(MainWin *mw,
 		if (cw->paneltype != WINTYPE_PANEL)
 			continue;
 
-#ifdef CFG_XINERAMA
-		int midx = cw->src.x + cw->src.width / 2;
-		int midy = cw->src.y + cw->src.height / 2;
-
-		XineramaScreenInfo *xiter = mw->xin_info;
-		for (int i=0; i<mw->xin_screens; i++)
-		{
-			if(xiter->x_org <= midx && midx < xiter->x_org + xiter->width &&
-			   xiter->y_org <= midy && midy < xiter->y_org + xiter->height)
-			{
-				cw->src.x -= xiter->x_org;
-				cw->src.y -= xiter->y_org;
-			}
-		}
-
-#endif /* CFG_XINERAMA */
-
 		// assumed horizontal panel
 		if (cw->src.width >= cw->src.height) {
 			// assumed top panel
@@ -1233,6 +1216,29 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 		clientwin_update2((ClientWin *) iter->data);
 	}
 
+#ifdef CFG_XINERAMA
+	foreach_dlist(mw->panels) {
+		ClientWin *cw = iter->data;
+		if (cw->paneltype != WINTYPE_PANEL)
+			continue;
+
+		int midx = cw->src.x + cw->src.width / 2;
+		int midy = cw->src.y + cw->src.height / 2;
+
+		XineramaScreenInfo *xiter = mw->xin_info;
+		for (int i=0; i<mw->xin_screens; i++)
+		{
+			if(xiter->x_org <= midx && midx < xiter->x_org + xiter->width &&
+			   xiter->y_org <= midy && midy < xiter->y_org + xiter->height)
+			{
+				cw->src.x -= xiter->x_org;
+				cw->src.y -= xiter->y_org;
+			}
+			xiter++;
+		}
+	}
+#endif /* CFG_XINERAMA */
+
 	if (layout == LAYOUTMODE_PAGING) {
 		if (!init_paging_layout(mw, layout, leader)) {
 			printfef(false, "(): failed.");
@@ -1257,11 +1263,12 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 		ClientWin *cw = iter->data;
 		cw->factor = 1;
 		cw->paneltype = wm_identify_panel(mw->ps, cw->wid_client);
-		clientwin_update(cw);
-		clientwin_update3(cw);
+		if (!mw->ps->o.pseudoTrans) {
+			cw->src.x += mw->x;
+			cw->src.y += mw->y;
+		}
 		if (cw->paneltype == WINTYPE_DESKTOP)
 			clientwin_move(cw, 1, cw->src.x, cw->src.y, 1);
-		clientwin_update2(cw);
 	}
 
 	return true;

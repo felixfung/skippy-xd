@@ -671,18 +671,13 @@ clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 		// here, cw->mini has destination coordinates, cw->src has original coordinates
 		MainWin *mw = cw->mainwin;
 		session_t *ps = mw->ps;
-		int mwx = 0, mwy = 0, srcx = cw->src.x, srcy = cw->src.y;
-		if (!ps->o.pseudoTrans) {
-			mwx = mw->x;
-			mwy = mw->y;
-		}
-		else {
-			srcx = cw->src.x - mw->x;
-			srcy = cw->src.y - mw->y;
-		}
 
-		cw->mini.x = srcx + (cw->x + mwx - srcx + x) * timeslice;
-		cw->mini.y = srcy + (cw->y + mwy - srcy + y) * timeslice;
+		cw->mini.x = cw->src.x + (cw->x - cw->src.x + x) * timeslice;
+		cw->mini.y = cw->src.y + (cw->y - cw->src.y + y) * timeslice;
+		if (!ps->o.pseudoTrans) {
+			cw->mini.x += mw->x;
+			cw->mini.y += mw->y;
+		}
 
 		cw->mini.width = cw->src.width * f;
 		cw->mini.height = cw->src.height * f;
