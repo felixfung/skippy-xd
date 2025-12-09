@@ -26,25 +26,6 @@
 static int
 clientwin_action(ClientWin *cw, enum cliop action);
 
-void XRoundedRectTint(Display *dpy,
-		Picture dst,
-		XRenderColor *tint,
-		int x, int y,
-		int w, int h,
-		int radius)
-{
-	Pixmap pm;
-	Picture mask = XRoundedRectMask(dpy, w, h, radius, &pm);
-	Picture src = XRenderCreateSolidFill(dpy, tint);
-
-	XRenderComposite(dpy, PictOpOver, src, mask, dst,
-			0, 0, 0, 0, x, y, w, h);
-
-	XRenderFreePicture(dpy, src);
-	XRenderFreePicture(dpy, mask);
-	XFreePixmap(dpy, pm);
-}
-
 int
 clientwin_cmp_func(dlist *l, void *data) {
 	ClientWin *cw = (ClientWin *) l->data;
@@ -52,6 +33,13 @@ clientwin_cmp_func(dlist *l, void *data) {
 		|| cw->wid_client == (Window) data
 		|| cw == (ClientWin *) data;
 }
+
+void XRoundedRectTint(session_t *ps,
+		Picture dst,
+		XRenderColor *tint,
+		int x, int y,
+		int w, int h,
+		int radius);
 
 void clientwin_round_corners(ClientWin *cw);
 
@@ -569,7 +557,7 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 						s_w = iter->width * mw->multiplier;
 						s_h = iter->height * mw->multiplier;
 
-						XRoundedRectTint(mw->ps->dpy,
+						XRoundedRectTint(mw->ps,
 								cw->destination, tint,
 								s_x, s_y, s_w, s_h, ps->o.cornerRadius * mw->multiplier);
 
@@ -579,7 +567,7 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 				}
 				else {
 #endif /* CFG_XINERAMA */
-					XRoundedRectTint(mw->ps->dpy,
+					XRoundedRectTint(mw->ps,
 							cw->destination, tint, s_x, s_y, s_w, s_h,
 							ps->o.cornerRadius * mw->multiplier);
 					XClearArea(mw->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
@@ -638,6 +626,25 @@ void
 clientwin_schedule_repair(ClientWin *cw, XRectangle *area)
 {
 	cw->damaged = true;
+}
+
+void XRoundedRectTint(session_t *ps,
+		Picture dst,
+		XRenderColor *tint,
+		int x, int y,
+		int w, int h,
+		int radius)
+{
+	Pixmap pm;
+	Picture mask = XRoundedRectMask(ps, w, h, radius, &pm);
+	Picture src = XRenderCreateSolidFill(ps->dpy, tint);
+
+	XRenderComposite(ps->dpy, PictOpOver, src, mask, dst,
+			0, 0, 0, 0, x, y, w, h);
+
+	XRenderFreePicture(ps->dpy, src);
+	XRenderFreePicture(ps->dpy, mask);
+	XFreePixmap(ps->dpy, pm);
 }
 
 void clientwin_round_corners(ClientWin *cw) {

@@ -1419,12 +1419,12 @@ sort_cw_by_id(dlist* dlist1, dlist* dlist2, void* data)
 		return 0;
 }
 
-Picture XRoundedRectMask(Display *dpy,
+Picture XRoundedRectMask(session_t *ps,
 		int w, int h,
 		int radius,
 		Pixmap *out_pix);
 
-void XRoundedRectComposite(Display *dpy,
+void XRoundedRectComposite(session_t *ps,
 		Picture src,
 		Picture dst,
 		int src_x, int src_y,

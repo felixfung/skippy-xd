@@ -54,53 +54,47 @@ enum pipe_param_t {
 
 session_t *ps_g = NULL;
 
-Picture XRoundedRectMask(Display *dpy,
+Picture XRoundedRectMask(session_t *ps,
 		int w, int h,
 		int radius,
 		Pixmap *out_pix)
 {
-	if (radius < 0) radius = 0;
-	if (radius * 2 > w) radius = w / 2;
-	if (radius * 2 > h) radius = h / 2;
-
-	int screen = DefaultScreen(dpy);
-
 	/* Create 8-bit alpha pixmap */
-	Pixmap pm = XCreatePixmap(dpy, RootWindow(dpy, screen), w, h, 8);
+	Pixmap pm = XCreatePixmap(ps->dpy, RootWindow(ps->dpy, ps->screen), w, h, 8);
 
 	/* Clear to alpha = 0 */
 	XGCValues gcv;
 	gcv.foreground = 0; /* transparent */
-	GC gc = XCreateGC(dpy, pm, GCForeground, &gcv);
-	XFillRectangle(dpy, pm, gc, 0, 0, w, h);
+	GC gc = XCreateGC(ps->dpy, pm, GCForeground, &gcv);
+	XFillRectangle(ps->dpy, pm, gc, 0, 0, w, h);
 
 	/* Set drawing alpha = 255 */
 	gcv.foreground = 0xFF;
-	XChangeGC(dpy, gc, GCForeground, &gcv);
+	XChangeGC(ps->dpy, gc, GCForeground, &gcv);
 
-	int d = radius * 2;
+	int dia = radius * 2;
     if (radius > 0) {
-		XFillArc(dpy, pm, gc, 0,      0,      d, d,  90*64,  90*64); /* top-left */
-		XFillArc(dpy, pm, gc, w - d, 0,      d, d,   0*64,  90*64); /* top-right */
-		XFillArc(dpy, pm, gc, w - d, h - d, d, d,  270*64,  90*64); /* bottom-right */
-		XFillArc(dpy, pm, gc, 0,      h - d, d, d, 180*64,  90*64); /* bottom-left */
+		XFillArc(ps->dpy, pm, gc, 0,       0,       dia, dia,  90*64, 90*64);
+		XFillArc(ps->dpy, pm, gc, w - dia, 0,       dia, dia,   0*64, 90*64);
+		XFillArc(ps->dpy, pm, gc, w - dia, h - dia, dia, dia, 270*64, 90*64);
+		XFillArc(ps->dpy, pm, gc, 0,       h - dia, dia, dia, 180*64, 90*64);
 	}
-	XFillRectangle(dpy, pm, gc, radius, 0,           w - 2*radius, radius);
-	XFillRectangle(dpy, pm, gc, radius, h - radius,  w - 2*radius, radius);
-	XFillRectangle(dpy, pm, gc, 0,       radius,     w, h - 2*radius);
+	XFillRectangle(ps->dpy, pm, gc, radius, 0,          w - 2*radius, radius);
+	XFillRectangle(ps->dpy, pm, gc, radius, h - radius, w - 2*radius, radius);
+	XFillRectangle(ps->dpy, pm, gc, 0,       radius,    w, h - 2*radius);
 
-	XFreeGC(dpy, gc);
+	XFreeGC(ps->dpy, gc);
 
-	XRenderPictFormat *fmt = XRenderFindStandardFormat(dpy, PictStandardA8);
-	Picture mask = XRenderCreatePicture(dpy, pm, fmt, 0, NULL);
+	XRenderPictFormat *fmt = XRenderFindStandardFormat(ps->dpy, PictStandardA8);
+	Picture mask = XRenderCreatePicture(ps->dpy, pm, fmt, 0, NULL);
 
 	if (out_pix) *out_pix = pm;
-	else XFreePixmap(dpy, pm);
+	else XFreePixmap(ps->dpy, pm);
 
 	return mask;
 }
 
-void XRoundedRectComposite(Display *dpy,
+void XRoundedRectComposite(session_t *ps,
 		Picture src,
 		Picture dst,
 		int src_x, int src_y,
@@ -109,14 +103,14 @@ void XRoundedRectComposite(Display *dpy,
 		int radius)
 {
 	Pixmap pm;
-	Picture mask = XRoundedRectMask(dpy, w, h, radius, &pm);
+	Picture mask = XRoundedRectMask(ps, w, h, radius, &pm);
 
-	XRenderComposite(dpy, PictOpOver,
+	XRenderComposite(ps->dpy, PictOpOver,
 			src, mask, dst,
 			src_x, src_y, 0, 0, dst_x, dst_y, w, h);
 
-    XRenderFreePicture(dpy, mask);
-    XFreePixmap(dpy, pm);
+    XRenderFreePicture(ps->dpy, mask);
+    XFreePixmap(ps->dpy, pm);
 }
 
 /**
@@ -1650,7 +1644,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 							int s_w = iter->width * mw->multiplier;
 							int s_h = iter->height * mw->multiplier;
 
-							XRoundedRectComposite(mw->ps->dpy,
+							XRoundedRectComposite(mw->ps,
 									mw->ps->o.from, mw->background,
 									s_x + mw->xoff + mw->x, s_y + mw->yoff + mw->y,
 									s_x + mw->xoff, s_y + mw->yoff,
