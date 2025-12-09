@@ -511,10 +511,10 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 				int width = dwin->src.width * mw->multiplier;
 				int height = dwin->src.height * mw->multiplier;
 
-				XRenderComposite(ps->dpy,
-						PictOpSrc, source,
-						None, cw->destination,
-						x, y, 0, 0, x, y, width, height);
+				XRoundedRectComposite(mw->ps,
+						source, cw->destination,
+						x, y, x, y, width, height,
+						ps->o.cornerRadius * mw->multiplier);
 			}
 		}
 
