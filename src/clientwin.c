@@ -506,6 +506,22 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 			foreach_dlist (mw->dminis) {
 				ClientWin *dwin = (ClientWin *) iter->data;
 
+#ifdef CFG_XINERAMA
+				XineramaScreenInfo *iter = mw->xin_info;
+				for (int i = 0; i < mw->xin_screens; ++i)
+				{
+					int x = dwin->x + iter->x_org + mw->xoff - cw->src.x + mw->x;
+					int y = dwin->y + iter->y_org + mw->yoff - cw->src.y + mw->y;
+					int width = iter->width * mw->multiplier;
+					int height = iter->height * mw->multiplier;
+
+					XRoundedRectComposite(mw->ps,
+							source, cw->destination,
+							x, y, x, y, width, height,
+							ps->o.cornerRadius * mw->multiplier);
+					iter++;
+				}
+#else
 				int x = dwin->x + mw->xoff - cw->src.x + mw->x;
 				int y = dwin->y + mw->yoff - cw->src.y + mw->y;
 				int width = dwin->src.width * mw->multiplier;
@@ -515,6 +531,7 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 						source, cw->destination,
 						x, y, x, y, width, height,
 						ps->o.cornerRadius * mw->multiplier);
+#endif /* CFG_XINERAMA */
 			}
 		}
 
