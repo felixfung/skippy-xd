@@ -1663,7 +1663,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 							iter++;
 						}
 #else
-						XRoundedRectComposite(mw->ps->dpy,
+						XRoundedRectComposite(mw->ps,
 								mw->ps->o.from, mw->background,
 								cw->x + mw->xoff + mw->x, cw->y + mw->yoff + mw->y,
 								cw->x + mw->xoff, cw->y + mw->yoff,
