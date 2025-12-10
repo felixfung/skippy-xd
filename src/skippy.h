@@ -1419,6 +1419,19 @@ sort_cw_by_id(dlist* dlist1, dlist* dlist2, void* data)
 		return 0;
 }
 
+Picture XRoundedRectMask(session_t *ps,
+		int w, int h,
+		int radius,
+		Pixmap *out_pix);
+
+void XRoundedRectComposite(session_t *ps,
+		Picture src,
+		Picture dst,
+		int src_x, int src_y,
+		int dst_x, int dst_y,
+		int w, int h,
+		int radius);
+
 extern session_t *ps_g;
 
 int load_config_file(session_t *ps);

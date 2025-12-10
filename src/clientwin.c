@@ -34,6 +34,13 @@ clientwin_cmp_func(dlist *l, void *data) {
 		|| cw == (ClientWin *) data;
 }
 
+void XRoundedRectTint(session_t *ps,
+		Picture dst,
+		XRenderColor *tint,
+		int x, int y,
+		int w, int h,
+		int radius);
+
 void clientwin_round_corners(ClientWin *cw);
 
 int
@@ -499,15 +506,32 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 			foreach_dlist (mw->dminis) {
 				ClientWin *dwin = (ClientWin *) iter->data;
 
+#ifdef CFG_XINERAMA
+				XineramaScreenInfo *iter = mw->xin_info;
+				for (int i = 0; i < mw->xin_screens; ++i)
+				{
+					int x = dwin->x + iter->x_org + mw->xoff - cw->src.x + mw->x;
+					int y = dwin->y + iter->y_org + mw->yoff - cw->src.y + mw->y;
+					int width = iter->width * mw->multiplier;
+					int height = iter->height * mw->multiplier;
+
+					XRoundedRectComposite(mw->ps,
+							source, cw->destination,
+							x, y, x, y, width, height,
+							ps->o.cornerRadius * mw->multiplier);
+					iter++;
+				}
+#else
 				int x = dwin->x + mw->xoff - cw->src.x + mw->x;
 				int y = dwin->y + mw->yoff - cw->src.y + mw->y;
 				int width = dwin->src.width * mw->multiplier;
 				int height = dwin->src.height * mw->multiplier;
 
-				XRenderComposite(ps->dpy,
-						PictOpSrc, source,
-						None, cw->destination,
-						x, y, 0, 0, x, y, width, height);
+				XRoundedRectComposite(mw->ps,
+						source, cw->destination,
+						x, y, x, y, width, height,
+						ps->o.cornerRadius * mw->multiplier);
+#endif /* CFG_XINERAMA */
 			}
 		}
 
@@ -550,9 +574,9 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 						s_w = iter->width * mw->multiplier;
 						s_h = iter->height * mw->multiplier;
 
-						XRenderFillRectangle(mw->ps->dpy,
-								PictOpOver, cw->destination, tint,
-								s_x, s_y, s_w, s_h);
+						XRoundedRectTint(mw->ps,
+								cw->destination, tint,
+								s_x, s_y, s_w, s_h, ps->o.cornerRadius * mw->multiplier);
 
 						XClearArea(mw->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
 						iter++;
@@ -572,8 +596,6 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 		if (ps->o.tooltip_show && ps->o.mode != PROGMODE_PAGING) {
 			tooltip_handle(cw->tooltip, ps->o.multiselect? cw->multiselect: cw->focused);
 		}
-
-		clientwin_round_corners(cw);
 	}
 
 	XClearArea(mw->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
@@ -620,9 +642,34 @@ clientwin_schedule_repair(ClientWin *cw, XRectangle *area)
 	cw->damaged = true;
 }
 
+void XRoundedRectTint(session_t *ps,
+		Picture dst,
+		XRenderColor *tint,
+		int x, int y,
+		int w, int h,
+		int radius)
+{
+	if (radius == 0)
+		return XRenderFillRectangle(ps->dpy,
+				PictOpOver, dst, tint,
+				x, y, w, h);
+
+	Pixmap pm;
+	Picture mask = XRoundedRectMask(ps, w, h, radius, &pm);
+	Picture src = XRenderCreateSolidFill(ps->dpy, tint);
+
+	XRenderComposite(ps->dpy, PictOpOver, src, mask, dst,
+			0, 0, 0, 0, x, y, w, h);
+
+	XRenderFreePicture(ps->dpy, src);
+	XRenderFreePicture(ps->dpy, mask);
+	XFreePixmap(ps->dpy, pm);
+}
+
 void clientwin_round_corners(ClientWin *cw) {
 	session_t* ps = cw->mainwin->ps;
-	int dia = 2 * ps->o.cornerRadius;
+	int radius = ps->o.cornerRadius * cw->mainwin->multiplier;
+	int dia = 2 * radius;
 	int w = cw->mini.width;
 	int h = cw->mini.height;
 	XGCValues xgcv;
@@ -638,8 +685,8 @@ void clientwin_round_corners(ClientWin *cw) {
 		XFillArc(ps->dpy, mask, shape_gc, 0, h-dia-1, dia, dia, 0, 360 * 64);
 		XFillArc(ps->dpy, mask, shape_gc, w-dia-1, h-dia-1, dia, dia, 0, 360 * 64);
 	}
-	XFillRectangle(ps->dpy, mask, shape_gc, ps->o.cornerRadius, 0, w-dia, h);
-	XFillRectangle(ps->dpy, mask, shape_gc, 0, ps->o.cornerRadius, w, h-dia);
+	XFillRectangle(ps->dpy, mask, shape_gc, radius, 0, w-dia, h);
+	XFillRectangle(ps->dpy, mask, shape_gc, 0, radius, w, h-dia);
 	XShapeCombineMask(ps->dpy, cw->mini.window, ShapeBounding, 0, 0, mask, ShapeSet);
 	XFreePixmap(ps->dpy, mask);
 	XFreeGC(ps->dpy, shape_gc);
