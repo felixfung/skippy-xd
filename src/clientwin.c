@@ -226,14 +226,10 @@ clientwin_get_disp_mode(session_t *ps, ClientWin *cw, bool isViewable) {
 	return CLIDISP_NONE;
 }
 
-/**
- * @brief Update window data to prepare for rendering.
- */
 bool
 clientwin_update(ClientWin *cw) {
 	session_t *ps = cw->mainwin->ps;
 
-	// Get window attributes
 	XWindowAttributes wattr = { };
 	XGetWindowAttributes(ps->dpy, cw->src.window, &wattr);
 
