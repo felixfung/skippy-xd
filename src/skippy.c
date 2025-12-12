@@ -1922,9 +1922,16 @@ mainloop(session_t *ps, bool activate_on_start) {
 					// with pseudo-transparency,
 					// some desktops never receive refresh events
 					// so we need to refresh all desktops
-					if (ps->o.pseudoTrans) {
-						clientwin_update2(cw);
-						desktopwin_map(cw);
+					if (cw->damaged || ps->o.pseudoTrans) {
+						if (ps->o.pseudoTrans) {
+							clientwin_update2(cw);
+							desktopwin_map(cw);
+						}
+						else if (ps->o.tooltip_show) {
+							clientwin_tooltip(cw);
+							tooltip_handle(cw->tooltip,
+									ps->o.multiselect? cw->multiselect: cw->focused);
+						}
 						cw->damaged = false;
 					}
 				}
