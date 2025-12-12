@@ -770,31 +770,6 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 }
 
 static void
-panel_map(ClientWin *cw)
-{
-	int border = 0;
-	XSetWindowBorderWidth(cw->mainwin->ps->dpy, cw->mini.window, border);
-
-	cw->mini.x = cw->src.x;
-	cw->mini.y = cw->src.y;
-	cw->mini.width = cw->src.width;
-	cw->mini.height = cw->src.height;
-
-	XMoveResizeWindow(cw->mainwin->ps->dpy, cw->mini.window, cw->mini.x - border, cw->mini.y - border, cw->mini.width, cw->mini.height);
-
-	if(cw->pixmap)
-		XFreePixmap(cw->mainwin->ps->dpy, cw->pixmap);
-
-	if(cw->destination)
-		XRenderFreePicture(cw->mainwin->ps->dpy, cw->destination);
-
-	cw->pixmap = XCreatePixmap(cw->mainwin->ps->dpy, cw->mini.window, cw->mini.width, cw->mini.height, cw->mainwin->depth);
-	XSetWindowBackgroundPixmap(cw->mainwin->ps->dpy, cw->mini.window, cw->pixmap);
-
-	cw->destination = XRenderCreatePicture(cw->mainwin->ps->dpy, cw->pixmap, cw->mini.format, 0, 0);
-}
-
-static void
 anime(
 	MainWin *mw,
 	dlist *clients,
@@ -1074,7 +1049,7 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 	int screenwidth = desktop_dim;
 	int screenheight = ceil((float)screencount / (float)screenwidth);
 
-	foreach_dlist (mw->clients) {
+	foreach_dlist (mw->clientondesktop) {
 		ClientWin *cw = (ClientWin *) iter->data;
 		int win_desktop = wm_get_window_desktop(mw->ps, cw->wid_client);
 		int current_desktop = wm_get_current_desktop(mw->ps);
@@ -1319,7 +1294,7 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 		}
 	}
 
-	foreach_dlist(mw->clients) {
+	foreach_dlist(mw->clientondesktop) {
 		ClientWin *cw = iter->data;
 		cw->x *= mw->multiplier;
 		cw->y *= mw->multiplier;
@@ -1330,12 +1305,8 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 		ClientWin *cw = iter->data;
 		cw->factor = 1;
 		cw->paneltype = wm_identify_panel(mw->ps, cw->wid_client);
-		if (!mw->ps->o.pseudoTrans) {
-			cw->src.x += mw->x;
-			cw->src.y += mw->y;
-		}
-		if (cw->paneltype == WINTYPE_DESKTOP)
-			clientwin_move(cw, 1, cw->src.x, cw->src.y, 1);
+		clientwin_prepmove(cw);
+		clientwin_move(cw, 1, 0, 0, 0);
 	}
 
 	return true;
@@ -1607,7 +1578,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 					}
 					foreach_dlist (mw->panels) {
 						ClientWin *cw = iter->data;
-						panel_map(cw);
 						clientwin_map(cw);
 					}
 
@@ -1639,7 +1609,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 					}
 					foreach_dlist (mw->panels) {
 						ClientWin *cw = iter->data;
-						panel_map(cw);
 						clientwin_map(cw);
 					}
 

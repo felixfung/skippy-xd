@@ -249,8 +249,8 @@ clientwin_update(ClientWin *cw) {
 
 	cw->src.width = wattr.width;
 	cw->src.height = wattr.height;
-	cw->src0.x = cw->src.x;
-	cw->src0.y = cw->src.y;
+	cw->x = cw->src0.x = cw->src.x;
+	cw->y = cw->src0.y = cw->src.y;
 	cw->src0.width = cw->src.width;
 	cw->src0.height = cw->src.height;
 
@@ -729,7 +729,8 @@ clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 	XMoveResizeWindow(cw->mainwin->ps->dpy, cw->mini.window,
 			cw->mini.x, cw->mini.y, cw->mini.width, cw->mini.height);
 
-	clientwin_round_corners(cw);
+	if (cw->paneltype == WINTYPE_WINDOW)
+		clientwin_round_corners(cw);
 }
 
 void
