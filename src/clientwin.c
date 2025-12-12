@@ -403,7 +403,8 @@ clientwin_destroy(ClientWin *cw, bool destroyed) {
 	MainWin *mw = cw->mainwin;
 	session_t * const ps = mw->ps;
 
-	free_picture(ps, &cw->origin);
+	if (ps->o.pseudoTrans)
+		free_picture(ps, &cw->origin);
 	free_picture(ps, &cw->destination);
 	free_picture(ps, &cw->shadow);
 	free_pixmap(ps, &cw->pixmap);
