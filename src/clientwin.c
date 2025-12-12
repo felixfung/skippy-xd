@@ -743,7 +743,8 @@ clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 	cw->mini.height = cw->src.height * f;
 
 	XMoveResizeWindow(cw->mainwin->ps->dpy, cw->mini.window,
-			cw->mini.x, cw->mini.y, cw->mini.width, cw->mini.height);
+			cw->mini.x + ps->o.leftFrameBorder, cw->mini.y + ps->o.topFrameBorder,
+			cw->mini.width, cw->mini.height);
 
 	if (cw->paneltype == WINTYPE_WINDOW)
 		clientwin_round_corners(cw);
