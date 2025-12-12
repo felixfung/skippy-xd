@@ -226,14 +226,10 @@ clientwin_get_disp_mode(session_t *ps, ClientWin *cw, bool isViewable) {
 	return CLIDISP_NONE;
 }
 
-/**
- * @brief Update window data to prepare for rendering.
- */
 bool
 clientwin_update(ClientWin *cw) {
 	session_t *ps = cw->mainwin->ps;
 
-	// Get window attributes
 	XWindowAttributes wattr = { };
 	XGetWindowAttributes(ps->dpy, cw->src.window, &wattr);
 
@@ -253,8 +249,8 @@ clientwin_update(ClientWin *cw) {
 
 	cw->src.width = wattr.width;
 	cw->src.height = wattr.height;
-	cw->src0.x = cw->src.x;
-	cw->src0.y = cw->src.y;
+	cw->x = cw->src0.x = cw->src.x;
+	cw->y = cw->src0.y = cw->src.y;
 	cw->src0.width = cw->src.width;
 	cw->src0.height = cw->src.height;
 
@@ -507,12 +503,18 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 			foreach_dlist (mw->dminis) {
 				ClientWin *dwin = (ClientWin *) iter->data;
 
+				int leftborder = 0, topborder = 0;
+				if (wm_get_fullscreen(ps, cw->wid_client)) {
+					leftborder = ps->o.leftFrameBorder;
+					topborder = ps->o.topFrameBorder;
+				}
+
 #ifdef CFG_XINERAMA
 				XineramaScreenInfo *iter = mw->xin_info;
 				for (int i = 0; i < mw->xin_screens; ++i)
 				{
-					int x = dwin->x + iter->x_org + mw->xoff - cw->src.x + mw->x;
-					int y = dwin->y + iter->y_org + mw->yoff - cw->src.y + mw->y;
+					int x = dwin->x + iter->x_org + mw->xoff - cw->src.x + mw->x + leftborder;
+					int y = dwin->y + iter->y_org + mw->yoff - cw->src.y + mw->y + topborder;
 					int width = iter->width * mw->multiplier;
 					int height = iter->height * mw->multiplier;
 
@@ -523,8 +525,8 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 					iter++;
 				}
 #else
-				int x = dwin->x + mw->xoff - cw->src.x + mw->x;
-				int y = dwin->y + mw->yoff - cw->src.y + mw->y;
+				int x = dwin->x + mw->xoff - cw->src.x + mw->x + leftborder;
+				int y = dwin->y + mw->yoff - cw->src.y + mw->y topborder;
 				int width = dwin->src.width * mw->multiplier;
 				int height = dwin->src.height * mw->multiplier;
 
@@ -713,28 +715,29 @@ void clientwin_prepmove(ClientWin *cw)
 void
 clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 {
-	cw->factor = f;
-	{
-		// animate window by changing these in time linearly:
-		// here, cw->mini has destination coordinates, cw->src has original coordinates
-		MainWin *mw = cw->mainwin;
-		session_t *ps = mw->ps;
+	MainWin *mw = cw->mainwin;
+	session_t *ps = mw->ps;
 
-		cw->mini.x = cw->src.x + (cw->x - cw->src.x + x) * timeslice;
-		cw->mini.y = cw->src.y + (cw->y - cw->src.y + y) * timeslice;
-		if (!ps->o.pseudoTrans) {
-			cw->mini.x += mw->x;
-			cw->mini.y += mw->y;
-		}
-
-		cw->mini.width = cw->src.width * f;
-		cw->mini.height = cw->src.height * f;
+	cw->mini.x = cw->src.x + (cw->x - cw->src.x + x) * timeslice;
+	cw->mini.y = cw->src.y + (cw->y - cw->src.y + y) * timeslice;
+	if (!ps->o.pseudoTrans) {
+		cw->mini.x += mw->x;
+		cw->mini.y += mw->y;
 	}
 
-	XMoveResizeWindow(cw->mainwin->ps->dpy, cw->mini.window,
-			cw->mini.x, cw->mini.y, cw->mini.width, cw->mini.height);
+	cw->factor = f;
+	cw->mini.width = cw->src.width * f;
+	cw->mini.height = cw->src.height * f;
 
-	clientwin_round_corners(cw);
+	int leftborder = ps->o.leftFrameBorder, topborder = ps->o.topFrameBorder;
+	if (wm_get_fullscreen(ps, cw->wid_client))
+		leftborder = topborder = 0;
+	XMoveResizeWindow(cw->mainwin->ps->dpy, cw->mini.window,
+			cw->mini.x + leftborder, cw->mini.y + topborder,
+			cw->mini.width, cw->mini.height);
+
+	if (cw->paneltype == WINTYPE_WINDOW)
+		clientwin_round_corners(cw);
 }
 
 void
@@ -868,7 +871,6 @@ shadow_clientwindow(ClientWin* cw, enum cliop op) {
 	clientwin_update3(cw);
 
 	clientwin_prepmove(cw);
-	clientwin_move(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
 	clientwin_map(cw);
 
 	focus_miniw(ps, cw);

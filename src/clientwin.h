@@ -81,15 +81,6 @@ clientwin_free_res2(session_t *ps, ClientWin *cw) {
 	free_pictw(ps, &cw->pict_filled);
 }
 
-static inline void
-clientwin_free_res(session_t *ps, ClientWin *cw) {
-	clientwin_free_res2(ps, cw);
-	free_pixmap(ps, &cw->cpixmap);
-	free_picture(ps, &cw->origin);
-	free_pictw(ps, &cw->icon_pict);
-	free_pictw(ps, &cw->icon_pict_filler);
-}
-
 int clientwin_validate_panel(dlist *, void *);
 int clientwin_filter_func(dlist *, void *);
 int clientwin_sort_func(dlist *, dlist *, void *);

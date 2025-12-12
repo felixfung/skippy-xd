@@ -227,6 +227,8 @@ typedef struct {
 	bool preservePages;
 	bool moveMouse;
 	bool includeFrame;
+	int leftFrameBorder;
+	int topFrameBorder;
 	int cornerRadius;
 	client_disp_mode_t *clientDisplayModes;
 	pictspec_t iconSpec;
@@ -319,6 +321,8 @@ typedef struct {
 	.preservePages = true, \
 	.moveMouse = false, \
 	.includeFrame = false, \
+	.leftFrameBorder = 0, \
+	.topFrameBorder = 0, \
 	.cornerRadius = 0, \
 	.clientDisplayModes = NULL, \
 	.iconSpec = PICTSPECT_INIT, \

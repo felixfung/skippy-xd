@@ -637,6 +637,31 @@ wm_get_group_leader(Display *dpy, Window window)
 	return leader;
 }
 
+bool wm_get_fullscreen(session_t *ps, Window window) {
+	Atom actualType;
+	int actualFormat;
+	unsigned long numItems, bytesAfter;
+	Atom *atoms = NULL;
+
+	if (XGetWindowProperty(ps->dpy, window,
+			get_atom(ps, "_NET_WM_STATE"), 0, (~0L),
+			False, AnyPropertyType,
+			&actualType, &actualFormat,
+			&numItems, &bytesAfter,
+			(unsigned char**)&atoms) != Success)
+		return false;
+
+	bool fullscreen = false;
+	for (unsigned long i = 0; i < numItems; i++)
+		if (atoms[i] == get_atom(ps, "_NET_WM_STATE_FULLSCREEN")) {
+			fullscreen = true;
+			break;
+		}
+
+	if (atoms) XFree(atoms);
+	return fullscreen;
+}
+
 void
 wm_set_fullscreen(session_t *ps, Window window,
 		int x, int y, unsigned width, unsigned height) {

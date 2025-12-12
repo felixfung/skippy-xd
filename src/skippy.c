@@ -770,31 +770,6 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 }
 
 static void
-panel_map(ClientWin *cw)
-{
-	int border = 0;
-	XSetWindowBorderWidth(cw->mainwin->ps->dpy, cw->mini.window, border);
-
-	cw->mini.x = cw->src.x;
-	cw->mini.y = cw->src.y;
-	cw->mini.width = cw->src.width;
-	cw->mini.height = cw->src.height;
-
-	XMoveResizeWindow(cw->mainwin->ps->dpy, cw->mini.window, cw->mini.x - border, cw->mini.y - border, cw->mini.width, cw->mini.height);
-
-	if(cw->pixmap)
-		XFreePixmap(cw->mainwin->ps->dpy, cw->pixmap);
-
-	if(cw->destination)
-		XRenderFreePicture(cw->mainwin->ps->dpy, cw->destination);
-
-	cw->pixmap = XCreatePixmap(cw->mainwin->ps->dpy, cw->mini.window, cw->mini.width, cw->mini.height, cw->mainwin->depth);
-	XSetWindowBackgroundPixmap(cw->mainwin->ps->dpy, cw->mini.window, cw->pixmap);
-
-	cw->destination = XRenderCreatePicture(cw->mainwin->ps->dpy, cw->pixmap, cw->mini.format, 0, 0);
-}
-
-static void
 anime(
 	MainWin *mw,
 	dlist *clients,
@@ -1074,7 +1049,7 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 	int screenwidth = desktop_dim;
 	int screenheight = ceil((float)screencount / (float)screenwidth);
 
-	foreach_dlist (mw->clients) {
+	foreach_dlist (mw->clientondesktop) {
 		ClientWin *cw = (ClientWin *) iter->data;
 		int win_desktop = wm_get_window_desktop(mw->ps, cw->wid_client);
 		int current_desktop = wm_get_current_desktop(mw->ps);
@@ -1270,7 +1245,6 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 
 	count_and_filter_clients(mw);
 	foreach_dlist(mw->clients) {
-		clientwin_update((ClientWin *) iter->data);
 		clientwin_update3((ClientWin *) iter->data);
 		clientwin_update2((ClientWin *) iter->data);
 	}
@@ -1311,7 +1285,7 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 		}
 	}
 
-	foreach_dlist(mw->clients) {
+	foreach_dlist(mw->clientondesktop) {
 		ClientWin *cw = iter->data;
 		cw->x *= mw->multiplier;
 		cw->y *= mw->multiplier;
@@ -1322,12 +1296,8 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 		ClientWin *cw = iter->data;
 		cw->factor = 1;
 		cw->paneltype = wm_identify_panel(mw->ps, cw->wid_client);
-		if (!mw->ps->o.pseudoTrans) {
-			cw->src.x += mw->x;
-			cw->src.y += mw->y;
-		}
-		if (cw->paneltype == WINTYPE_DESKTOP)
-			clientwin_move(cw, 1, cw->src.x, cw->src.y, 1);
+		clientwin_prepmove(cw);
+		clientwin_move(cw, 1, 0, 0, 0);
 	}
 
 	return true;
@@ -1380,7 +1350,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 	count_and_filter_clients(ps->mainwin);
 
 	foreach_dlist(ps->mainwin->clients) {
-		clientwin_update((ClientWin *) iter->data);
 		clientwin_update3((ClientWin *) iter->data);
 		clientwin_update2((ClientWin *) iter->data);
 	}
@@ -1600,7 +1569,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 					}
 					foreach_dlist (mw->panels) {
 						ClientWin *cw = iter->data;
-						panel_map(cw);
 						clientwin_map(cw);
 					}
 
@@ -1632,7 +1600,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 					}
 					foreach_dlist (mw->panels) {
 						ClientWin *cw = iter->data;
-						panel_map(cw);
 						clientwin_map(cw);
 					}
 
@@ -1653,8 +1620,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 							XRoundedRectComposite(mw->ps,
 									mw->ps->o.from, mw->background,
-									s_x + mw->xoff + mw->x, s_y + mw->yoff + mw->y,
-									s_x + mw->xoff, s_y + mw->yoff,
+									s_x + mw->xoff + mw->x + ps->o.leftFrameBorder,
+									s_y + mw->yoff + mw->y + ps->o.topFrameBorder,
+									s_x + mw->xoff + ps->o.leftFrameBorder,
+									s_y + mw->yoff + ps->o.topFrameBorder,
 									s_w,
 									s_h,
 									ps->o.cornerRadius * mw->multiplier);
@@ -1663,8 +1632,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 #else
 						XRoundedRectComposite(mw->ps,
 								mw->ps->o.from, mw->background,
-								cw->x + mw->xoff + mw->x, cw->y + mw->yoff + mw->y,
-								cw->x + mw->xoff, cw->y + mw->yoff,
+								cw->x + mw->xoff + mw->x + ps->o.leftFrameBorder,
+								cw->y + mw->yoff + mw->y + ps->o.topFrameBorder,
+								cw->x + mw->xoff + ps->o.leftFrameBorder,
+								cw->y + mw->yoff + ps->o.topFrameBorder,
 								cw->src.width * mw->multiplier,
 								cw->src.height * mw->multiplier,
 								ps->o.cornerRadius * mw->multiplier);
@@ -1779,7 +1750,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 				dlist *iter = (wid ? dlist_find(ps->mainwin->clients, clientwin_cmp_func, (void *) wid): NULL);
 				if (iter) {
 					ClientWin *cw = (ClientWin *) iter->data;
-					clientwin_update(cw);
 					clientwin_update3(cw);
 					clientwin_update2(cw);
 				}
@@ -1803,7 +1773,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 								clientwin_cmp_func, (void *) wid): NULL);
 						if (iter) {
 							ClientWin *cw = (ClientWin *) iter->data;
-							clientwin_update(cw);
 							clientwin_update3(cw);
 							clientwin_update2(cw);
 						}
@@ -2802,7 +2771,9 @@ load_config_file(session_t *ps)
 	config_get_bool_wrap(config, "appearance", "preservePages", &ps->o.preservePages);
     config_get_bool_wrap(config, "bindings", "moveMouse", &ps->o.moveMouse);
     config_get_bool_wrap(config, "appearance", "includeFrame", &ps->o.includeFrame);
-	config_get_int_wrap(config, "appearance", "cornerRadius", &ps->o.cornerRadius, 0, INT_MAX);
+	config_get_int_wrap(config, "appearance", "leftFrameBorder", &ps->o.leftFrameBorder, 0, 100);
+	config_get_int_wrap(config, "appearance", "topFrameBorder", &ps->o.topFrameBorder, 0, 100);
+	config_get_int_wrap(config, "appearance", "cornerRadius", &ps->o.cornerRadius, 0, 100);
     {
         static client_disp_mode_t DEF_CLIDISPM[] = {
             CLIDISP_THUMBNAIL, CLIDISP_ZOMBIE, CLIDISP_ICON, CLIDISP_FILLED, CLIDISP_NONE

@@ -100,6 +100,11 @@ preservePages = true
 # Whether to display window frames
 includeFrame = true
 
+# Depending on your environment and window frame,
+# Introduce pixel offsets for better alignment
+leftFrameBorder = 0
+topFrameBorder = 0
+
 # Show window previews with rounded corners
 cornerRadius = 0
 
