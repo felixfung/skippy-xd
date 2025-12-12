@@ -239,18 +239,12 @@ typedef struct {
 	pictspec_t fillSpec;
 	pictspec_t iconFillSpec;
 	int fillerIconSize;
-	char *normal_tint;
-	int normal_tintOpacity;
 	int normal_opacity;
 	char *highlight_tint;
 	int highlight_tintOpacity;
-	int highlight_opacity;
-	char *shadow_tint;
-	int shadow_tintOpacity;
 	int shadow_opacity;
 	char *multiselect_tint;
 	int multiselect_tintOpacity;
-	int multiselect_opacity;
 
 	bool panel_show;
 	bool panel_tinting;
@@ -269,7 +263,7 @@ typedef struct {
 	char *tooltip_backgroundHighlight;
 	int tooltip_opacity;
 	char *tooltip_text;
-	char *tooltip_textShadow;
+	char *tooltip_textOutline;
 	char *tooltip_font;
 	bool updatetooltip;
 
@@ -333,18 +327,12 @@ typedef struct {
 	.fillSpec = PICTSPECT_INIT, \
 	.iconFillSpec = PICTSPECT_INIT, \
 	.fillerIconSize = 48, \
-	.normal_tint = NULL, \
-	.normal_tintOpacity = 0, \
 	.normal_opacity = 255, \
 	.highlight_tint = NULL, \
 	.highlight_tintOpacity = 50, \
-	.highlight_opacity = 255, \
-	.shadow_tint = NULL, \
-	.shadow_tintOpacity = 0, \
 	.shadow_opacity = 160, \
 	.multiselect_tint = NULL, \
 	.multiselect_tintOpacity = 50, \
-	.multiselect_opacity = 255, \
 \
 	.panel_show = true, \
 	.panel_tinting = true, \
@@ -363,7 +351,7 @@ typedef struct {
 	.tooltip_backgroundHighlight = NULL, \
 	.tooltip_opacity = 128, \
 	.tooltip_text = NULL, \
-	.tooltip_textShadow = NULL, \
+	.tooltip_textOutline = NULL, \
 	.tooltip_font = NULL, \
 \
 	.enforceFocus = true, \
@@ -1430,6 +1418,19 @@ sort_cw_by_id(dlist* dlist1, dlist* dlist2, void* data)
 	else
 		return 0;
 }
+
+Picture XRoundedRectMask(session_t *ps,
+		int w, int h,
+		int radius,
+		Pixmap *out_pix);
+
+void XRoundedRectComposite(session_t *ps,
+		Picture src,
+		Picture dst,
+		int src_x, int src_y,
+		int dst_x, int dst_y,
+		int w, int h,
+		int radius);
 
 extern session_t *ps_g;
 

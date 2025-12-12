@@ -76,7 +76,17 @@ executable(
 )
 
 install_data(
-  sources: ['skippy-xd.sample.rc'],
+  sources: ['skippy-xd.rc'],
   rename: ['skippy-xd.rc'],
   install_dir: get_option('sysconfdir') / 'xdg',
+)
+
+configure_file(
+  input: 'skippy-xd.1.in',
+  output: 'skippy-xd.1',
+  configuration: {
+    'VERSION': meson.project_version(),
+  },
+  install: true,
+  install_dir: get_option('mandir') / 'man1',
 )

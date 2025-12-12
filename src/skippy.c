@@ -54,6 +54,74 @@ enum pipe_param_t {
 
 session_t *ps_g = NULL;
 
+Picture XRoundedRectMask(session_t *ps,
+		int w, int h,
+		int radius,
+		Pixmap *out_pix)
+{
+	/* Create 8-bit alpha pixmap */
+	Pixmap pm = XCreatePixmap(ps->dpy, RootWindow(ps->dpy, ps->screen), w, h, 8);
+
+	/* Clear to alpha = 0 */
+	XGCValues gcv;
+	gcv.foreground = 0; /* transparent */
+	GC gc = XCreateGC(ps->dpy, pm, GCForeground, &gcv);
+	XFillRectangle(ps->dpy, pm, gc, 0, 0, w, h);
+
+	/* Set drawing alpha = 255 */
+	gcv.foreground = 0xFF;
+	XChangeGC(ps->dpy, gc, GCForeground, &gcv);
+
+	int dia = radius * 2;
+    if (radius > 0) {
+		XFillArc(ps->dpy, pm, gc, 0,       0,       dia, dia,  90*64, 90*64);
+		XFillArc(ps->dpy, pm, gc, w - dia, 0,       dia, dia,   0*64, 90*64);
+		XFillArc(ps->dpy, pm, gc, w - dia, h - dia, dia, dia, 270*64, 90*64);
+		XFillArc(ps->dpy, pm, gc, 0,       h - dia, dia, dia, 180*64, 90*64);
+	}
+	XFillRectangle(ps->dpy, pm, gc, radius, 0,          w - 2*radius, radius);
+	XFillRectangle(ps->dpy, pm, gc, radius, h - radius, w - 2*radius, radius);
+	XFillRectangle(ps->dpy, pm, gc, 0,       radius,    w, h - 2*radius);
+
+	XFreeGC(ps->dpy, gc);
+
+	XRenderPictFormat *fmt = XRenderFindStandardFormat(ps->dpy, PictStandardA8);
+	Picture mask = XRenderCreatePicture(ps->dpy, pm, fmt, 0, NULL);
+
+	if (out_pix) *out_pix = pm;
+	else XFreePixmap(ps->dpy, pm);
+
+	return mask;
+}
+
+void XRoundedRectComposite(session_t *ps,
+		Picture src,
+		Picture dst,
+		int src_x, int src_y,
+		int dst_x, int dst_y,
+		int w, int h,
+		int radius)
+{
+	if (radius == 0)
+		return XRenderComposite(ps->dpy,
+				PictOpSrc, src,
+				None, dst,
+				src_x, src_y,
+				0, 0,
+				dst_x, dst_y,
+				w, h);
+
+	Pixmap pm;
+	Picture mask = XRoundedRectMask(ps, w, h, radius, &pm);
+
+	XRenderComposite(ps->dpy, PictOpOver,
+			src, mask, dst,
+			src_x, src_y, 0, 0, dst_x, dst_y, w, h);
+
+    XRenderFreePicture(ps->dpy, mask);
+    XFreePixmap(ps->dpy, pm);
+}
+
 /**
  * @brief Parse a string representation of enum cliop.
  */
@@ -891,13 +959,14 @@ calculatePanelBorders(MainWin *mw,
 	// e.g. a panel on the bottom
 	*x1 = 0;
 	*y1 = 0;
-	*x2 = mw->x + mw->width;
-	*y2 = mw->y + mw->height;
+	*x2 = mw->width;
+	*y2 = mw->height;
 
 	foreach_dlist(mw->panels) {
 		ClientWin *cw = iter->data;
 		if (cw->paneltype != WINTYPE_PANEL)
 			continue;
+
 		// assumed horizontal panel
 		if (cw->src.width >= cw->src.height) {
 			// assumed top panel
@@ -922,10 +991,10 @@ calculatePanelBorders(MainWin *mw,
 		}
 	}
 
-	*x2 = mw->x + mw->width - *x2;
-	*y2 = mw->y + mw->height - *y2;
+	*x2 = mw->width - *x2;
+	*y2 = mw->height - *y2;
 
-	printfdf(false,"() panel framing calculations: (%d,%d) (%d,%d)", *x1, *y1, *x2, *y2);
+	printfdf(false,"(): panel framing calculations: (%d,%d) (%d,%d)", *x1, *y1, *x2, *y2);
 }
 
 static bool
@@ -1187,7 +1256,7 @@ desktopwin_map(ClientWin *cw)
 
 	if (ps->o.tooltip_show) {
 		clientwin_tooltip(cw);
-		tooltip_handle(cw->tooltip, cw->focused);
+		tooltip_handle(cw->tooltip, ps->o.multiselect? cw->multiselect: cw->focused);
 	}
 }
 
@@ -1205,6 +1274,29 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 		clientwin_update3((ClientWin *) iter->data);
 		clientwin_update2((ClientWin *) iter->data);
 	}
+
+#ifdef CFG_XINERAMA
+	foreach_dlist(mw->panels) {
+		ClientWin *cw = iter->data;
+		if (cw->paneltype != WINTYPE_PANEL)
+			continue;
+
+		int midx = cw->src.x + cw->src.width / 2;
+		int midy = cw->src.y + cw->src.height / 2;
+
+		XineramaScreenInfo *xiter = mw->xin_info;
+		for (int i=0; i<mw->xin_screens; i++)
+		{
+			if(xiter->x_org <= midx && midx < xiter->x_org + xiter->width &&
+			   xiter->y_org <= midy && midy < xiter->y_org + xiter->height)
+			{
+				cw->src.x -= xiter->x_org;
+				cw->src.y -= xiter->y_org;
+			}
+			xiter++;
+		}
+	}
+#endif /* CFG_XINERAMA */
 
 	if (layout == LAYOUTMODE_PAGING) {
 		if (!init_paging_layout(mw, layout, leader)) {
@@ -1230,11 +1322,12 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 		ClientWin *cw = iter->data;
 		cw->factor = 1;
 		cw->paneltype = wm_identify_panel(mw->ps, cw->wid_client);
-		clientwin_update(cw);
-		clientwin_update3(cw);
+		if (!mw->ps->o.pseudoTrans) {
+			cw->src.x += mw->x;
+			cw->src.y += mw->y;
+		}
 		if (cw->paneltype == WINTYPE_DESKTOP)
 			clientwin_move(cw, 1, cw->src.x, cw->src.y, 1);
-		clientwin_update2(cw);
 	}
 
 	return true;
@@ -1549,14 +1642,33 @@ mainloop(session_t *ps, bool activate_on_start) {
 				if (layout == LAYOUTMODE_PAGING && mw->ps->o.preservePages) {
 					foreach_dlist (mw->dminis) {
 						ClientWin *cw = (ClientWin *) iter->data;
-						XRenderComposite(mw->ps->dpy,
-								PictOpSrc, mw->ps->o.from,
-								None, mw->background,
+#ifdef CFG_XINERAMA
+						XineramaScreenInfo *iter = mw->xin_info;
+						for (int i = 0; i < mw->xin_screens; ++i)
+						{
+							int s_x = iter->x_org * mw->multiplier + cw->x;
+							int s_y = iter->y_org * mw->multiplier + cw->y;
+							int s_w = iter->width * mw->multiplier;
+							int s_h = iter->height * mw->multiplier;
+
+							XRoundedRectComposite(mw->ps,
+									mw->ps->o.from, mw->background,
+									s_x + mw->xoff + mw->x, s_y + mw->yoff + mw->y,
+									s_x + mw->xoff, s_y + mw->yoff,
+									s_w,
+									s_h,
+									ps->o.cornerRadius * mw->multiplier);
+							iter++;
+						}
+#else
+						XRoundedRectComposite(mw->ps,
+								mw->ps->o.from, mw->background,
 								cw->x + mw->xoff + mw->x, cw->y + mw->yoff + mw->y,
-								0, 0,
 								cw->x + mw->xoff, cw->y + mw->yoff,
 								cw->src.width * mw->multiplier,
-								cw->src.height * mw->multiplier);
+								cw->src.height * mw->multiplier,
+								ps->o.cornerRadius * mw->multiplier);
+#endif /* CFG_XINERAMA */
 						XClearWindow(ps->dpy, mw->window);
 					}
 				}
@@ -2575,31 +2687,23 @@ load_config_file(session_t *ps)
     // occupies a lot more memory for non-string types.
 
 	{
-		// two -'s, the first digit of uid/xid and null terminator
-		int pipeStrLen0 = 7;
+		// null terminator
+		int pipeStrLen0 = 1;
 
-		int uid = getuid();
-		for (int num = uid; num >= 10; num /= 10)
-			pipeStrLen0++;
-
-		int xid = XConnectionNumber(ps->dpy);
-		for (int num = xid; num >= 10; num /= 10)
-			pipeStrLen0++;
-
-		for (int num = ps->screen; num >= 10; num /= 10)
-			pipeStrLen0++;
+		char *xev = getenv("DISPLAY");
+		pipeStrLen0 += strlen(xev);
 
 		const char * path = config_get(config, "system", "daemonPath", "/tmp/skippy-xd-fifo");
 		int pipeStrLen1 = pipeStrLen0 + strlen(path);
 
 		const char * path2 = config_get(config, "system", "clientPath", "/tmp/skippy-xd-fofi");
-		int pipeStrLen2 = pipeStrLen0 + strlen(path);
+		int pipeStrLen2 = pipeStrLen0 + strlen(path2);
 
 		char * pipePath = malloc (pipeStrLen1 * sizeof(unsigned char));
-		sprintf(pipePath, "%s-%i-%i-%i", path, uid, xid, ps->screen);
+		sprintf(pipePath, "%s%s", path, xev);
 
 		char * pipePath2 = malloc (pipeStrLen2 * sizeof(unsigned char));
-		sprintf(pipePath2, "%s-%i-%i-%i", path2, uid, xid, ps->screen);
+		sprintf(pipePath2, "%s%s", path2, xev);
 
 		ps->o.pipePath = pipePath;
 		ps->o.pipePath2 = pipePath2;
@@ -2667,11 +2771,11 @@ load_config_file(session_t *ps)
     config_get_int_wrap(config, "layout", "distance", &ps->o.distance, 5, INT_MAX);
     config_get_bool_wrap(config, "layout", "allowUpscale", &ps->o.allowUpscale);
 
-    config_get_int_wrap(config, "display", "animationDuration", &ps->o.animationDuration, 0, 2000);
-    config_get_int_wrap(config, "display", "animationRefresh", &ps->o.animationRefresh, 1, 200);
+    config_get_int_wrap(config, "appearance", "animationDuration", &ps->o.animationDuration, 0, 2000);
+    config_get_int_wrap(config, "appearance", "animationRefresh", &ps->o.animationRefresh, 1, 200);
 
     {
-        const char *sspec = config_get(config, "display", "background", "#00000055");
+        const char *sspec = config_get(config, "appearance", "background", "#00000055");
 		if (!sspec || strlen(sspec) == 0)
 			sspec = "#00000055";
 		char bg_spec[256] = "orig mid mid ";
@@ -2688,10 +2792,10 @@ load_config_file(session_t *ps)
 		free_pictspec(ps, &ps->o.bg_spec);
 		ps->o.bg_spec = spec;
 	}
-	config_get_bool_wrap(config, "display", "preservePages", &ps->o.preservePages);
+	config_get_bool_wrap(config, "appearance", "preservePages", &ps->o.preservePages);
     config_get_bool_wrap(config, "bindings", "moveMouse", &ps->o.moveMouse);
-    config_get_bool_wrap(config, "display", "includeFrame", &ps->o.includeFrame);
-	config_get_int_wrap(config, "display", "cornerRadius", &ps->o.cornerRadius, 0, INT_MAX);
+    config_get_bool_wrap(config, "appearance", "includeFrame", &ps->o.includeFrame);
+	config_get_int_wrap(config, "appearance", "cornerRadius", &ps->o.cornerRadius, 0, INT_MAX);
     {
         static client_disp_mode_t DEF_CLIDISPM[] = {
             CLIDISP_THUMBNAIL, CLIDISP_ZOMBIE, CLIDISP_ICON, CLIDISP_FILLED, CLIDISP_NONE
@@ -2702,8 +2806,8 @@ load_config_file(session_t *ps)
             CLIDISP_ZOMBIE, CLIDISP_ICON, CLIDISP_FILLED, CLIDISP_NONE
         };
 
-        bool thumbnail_icons = false;
-        config_get_bool_wrap(config, "display", "icon", &thumbnail_icons);
+        bool thumbnail_icons = true;
+        config_get_bool_wrap(config, "livepreview", "icon", &thumbnail_icons);
         if (thumbnail_icons) {
             ps->o.clientDisplayModes = allocchk(malloc(sizeof(DEF_CLIDISPM_ICON)));
             memcpy(ps->o.clientDisplayModes, &DEF_CLIDISPM_ICON, sizeof(DEF_CLIDISPM_ICON));
@@ -2715,14 +2819,14 @@ load_config_file(session_t *ps)
     }
 	{
 		char defaultstr2[256] = "orig ";
-		const char* sspec2 = config_get(config, "display", "iconPlace", "left left");
+		const char* sspec2 = config_get(config, "livepreview", "iconPlace", "left left");
 		strcat(defaultstr2, sspec2);
 		const char space[] = " ";
 		strcat(defaultstr2, space);
 		char sspec[] = "#333333";
 		strcat(defaultstr2, sspec);
 
-		config_get_int_wrap(config, "display", "iconSize",
+		config_get_int_wrap(config, "livepreview", "iconSize",
 				&ps->o.iconSize, 1, INT_MAX);
 
 		if (!parse_pictspec(ps, defaultstr2, &ps->o.iconSpec))
@@ -2738,7 +2842,7 @@ load_config_file(session_t *ps)
 }
 	{
 		char defaultstr[256] = "orig mid mid ";
-		const char* sspec = config_get(config, "filler", "tint", "#333333");
+		const char* sspec = config_get(config, "filler", "color", "#333333");
 		strcat(defaultstr, sspec);
 		if (!parse_pictspec(ps, defaultstr, &ps->o.fillSpec))
 			return RET_BADARG;
@@ -2765,18 +2869,12 @@ load_config_file(session_t *ps)
 			return RET_BADARG;
 	}
 
-	ps->o.normal_tint = mstrdup(config_get(config, "normal", "tint", "black"));
-    config_get_int_wrap(config, "normal", "tintOpacity", &ps->o.normal_tintOpacity, 0, 256);
-    config_get_int_wrap(config, "normal", "opacity", &ps->o.normal_opacity, 0, 256);
+    config_get_int_wrap(config, "livepreview", "opacity", &ps->o.normal_opacity, 0, 256);
 	ps->o.highlight_tint = mstrdup(config_get(config, "highlight", "tint", "#444444"));
     config_get_int_wrap(config, "highlight", "tintOpacity", &ps->o.highlight_tintOpacity, 0, 256);
-    config_get_int_wrap(config, "highlight", "opacity", &ps->o.highlight_opacity, 0, 256);
-	ps->o.shadow_tint = mstrdup(config_get(config, "shadow", "tint", "#040404"));
-    config_get_int_wrap(config, "shadow", "tintOpacity", &ps->o.shadow_tintOpacity, 0, 256);
-    config_get_int_wrap(config, "shadow", "opacity", &ps->o.shadow_opacity, 0, 256);
+    config_get_int_wrap(config, "filler", "opacity", &ps->o.shadow_opacity, 0, 256);
 	ps->o.multiselect_tint = mstrdup(config_get(config, "multiselect", "tint", "#3376BB"));
     config_get_int_wrap(config, "multiselect", "tintOpacity", &ps->o.multiselect_tintOpacity, 0, 256);
-    config_get_int_wrap(config, "multiselect", "opacity", &ps->o.multiselect_opacity, 0, 256);
 
     config_get_bool_wrap(config, "panel", "show", &ps->o.panel_show);
     config_get_bool_wrap(config, "panel", "backgroundTinting", &ps->o.panel_tinting);
@@ -2791,7 +2889,7 @@ load_config_file(session_t *ps)
 		ps->o.updatetooltip |= update_and_flag(config, "label", "background", "#202020", &ps->o.tooltip_background);
 		ps->o.updatetooltip |= update_and_flag(config, "label", "backgroundHighlight", "#666666", &ps->o.tooltip_backgroundHighlight);
 		ps->o.updatetooltip |= update_and_flag(config, "label", "text", "white", &ps->o.tooltip_text);
-		ps->o.updatetooltip |= update_and_flag(config, "label", "textShadow", "black", &ps->o.tooltip_textShadow);
+		ps->o.updatetooltip |= update_and_flag(config, "label", "textOutline", "black", &ps->o.tooltip_textOutline);
 		ps->o.updatetooltip |= update_and_flag(config, "label", "font", "fixed-11:weight=bold", &ps->o.tooltip_font);
 	}
     config_get_bool_wrap(config, "label", "show", &ps->o.tooltip_show);
@@ -2957,16 +3055,16 @@ int main(int argc, char *argv[]) {
 
 			poll(&r_fd, 1, -1);
 			char buffer[1024];
-			int read_ret = 0;
-			read_ret = read(ps->fd_pipe2, &buffer, 1024);
+			int read_ret = read(ps->fd_pipe2, buffer, 1023);
 			close(ps->fd_pipe2);
 			unlink(daemon2client_pipe);
 			free(daemon2client_pipe);
 
-			if (read_ret == 0) {
-				printfef(false,"(): pipe %i leak!", getpid());
+			if (read_ret <= 0) {
+				printfef(false, "(): pipe %i leak!", getpid());
 			}
 			else {
+				buffer[read_ret] = '\0';
 				printf("%s\n", buffer);
 			}
 
@@ -3036,13 +3134,11 @@ main_end:
 			free(ps->o.pipePath);
 			free(ps->o.pipePath2);
 			free(ps->o.clientDisplayModes);
-			free(ps->o.normal_tint);
 			free(ps->o.highlight_tint);
-			free(ps->o.shadow_tint);
 			free(ps->o.tooltip_border);
 			free(ps->o.tooltip_background);
 			free(ps->o.tooltip_text);
-			free(ps->o.tooltip_textShadow);
+			free(ps->o.tooltip_textOutline);
 			free(ps->o.tooltip_font);
 			free_pictw(ps, &ps->o.background);
 			free_pictspec(ps, &ps->o.bg_spec);
