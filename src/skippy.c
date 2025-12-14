@@ -1784,14 +1784,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 					clientwin_update3(cw);
 					clientwin_update2(cw);
 					cw->damaged = true;
-
-					if (cw->origin && cw->paneltype == WINTYPE_WINDOW)
-						XRenderSetPictureTransform(ps->dpy,
-								cw->origin, &cw->mainwin->transform);
-
-					if (cw->shadow && cw->paneltype == WINTYPE_WINDOW)
-						XRenderSetPictureTransform(ps->dpy,
-								cw->shadow, &cw->mainwin->transform);
 				}
 				num_events--;
 
@@ -1800,25 +1792,23 @@ mainloop(session_t *ps, bool activate_on_start) {
 					while(num_events > 0)
 					{
 						XPeekEvent(ps->dpy, &ev_next);
-
 						if (ev_next.type != CreateNotify && ev_next.type != MapNotify
 						 && ev_next.type != VisibilityNotify && ev_next.type != ConfigureNotify
 						 && ev_next.type != PropertyNotify && ev_next.type != Expose
 						 && ev_next.type != FocusIn && ev_next.type != FocusOut
 						 && ev_next.type != UnmapNotify && ev_next.type != ReparentNotify
-						 && ev_next.type != ps->xinfo.damage_ev_base + XDamageNotify) {
+						 && ev_next.type != ps->xinfo.damage_ev_base + XDamageNotify)
 							break;
-						}
 
 						XNextEvent(ps->dpy, &ev);
 						wid = ev_window(ps, &ev);
+						num_events--;
 
 						if (ev.type == FocusOut)
 							focus_stolen = true;
 						if (ev.type == FocusIn)
 							focus_stolen = false;
 
-						num_events--;
 						dlist *iter = (wid ? dlist_find(ps->mainwin->clients,
 								clientwin_cmp_func, (void *) wid): NULL);
 						if (iter) {
