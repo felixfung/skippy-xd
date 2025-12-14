@@ -1777,11 +1777,13 @@ mainloop(session_t *ps, bool activate_on_start) {
 				printfdf(false, "(): else if (ev.type == CreateNotify || ev.type == MapNotify) {");
 				count_and_filter_clients(ps->mainwin);
 				dlist *iter = (wid ? dlist_find(ps->mainwin->clients, clientwin_cmp_func, (void *) wid): NULL);
+
 				if (iter) {
 					ClientWin *cw = (ClientWin *) iter->data;
 					clientwin_update(cw);
 					clientwin_update3(cw);
 					clientwin_update2(cw);
+					cw->damaged = true;
 
 					if (cw->origin && cw->paneltype == WINTYPE_WINDOW)
 						XRenderSetPictureTransform(ps->dpy,
@@ -1811,16 +1813,16 @@ mainloop(session_t *ps, bool activate_on_start) {
 						wid = ev_window(ps, &ev);
 
 						num_events--;
-						/*dlist *iter = (wid ? dlist_find(ps->mainwin->clients,
+						dlist *iter = (wid ? dlist_find(ps->mainwin->clients,
 								clientwin_cmp_func, (void *) wid): NULL);
 						if (iter) {
 							ClientWin *cw = (ClientWin *) iter->data;
-							clientwin_update(cw);
-							clientwin_update3(cw);
-							clientwin_update2(cw);
-						}*/
+							cw->damaged = true;
+						}
 					}
 				}
+
+				pending_damage = true;
 			}
 			else if (mw && (ps->xinfo.damage_ev_base + XDamageNotify == ev.type)) {
 				//printfdf(false, "(): else if (ev.type == XDamageNotify) {");
