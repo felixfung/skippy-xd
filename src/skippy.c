@@ -1782,7 +1782,14 @@ mainloop(session_t *ps, bool activate_on_start) {
 					clientwin_update(cw);
 					clientwin_update3(cw);
 					clientwin_update2(cw);
-					clientwin_map(cw);
+
+					if (cw->origin && cw->paneltype == WINTYPE_WINDOW)
+						XRenderSetPictureTransform(ps->dpy,
+								cw->origin, &cw->mainwin->transform);
+
+					if (cw->shadow && cw->paneltype == WINTYPE_WINDOW)
+						XRenderSetPictureTransform(ps->dpy,
+								cw->shadow, &cw->mainwin->transform);
 				}
 				num_events--;
 				{
