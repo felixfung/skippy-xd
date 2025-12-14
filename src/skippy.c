@@ -1812,6 +1812,11 @@ mainloop(session_t *ps, bool activate_on_start) {
 						XNextEvent(ps->dpy, &ev);
 						wid = ev_window(ps, &ev);
 
+						if (ev.type == FocusOut)
+							focus_stolen = true;
+						if (ev.type == FocusIn)
+							focus_stolen = false;
+
 						num_events--;
 						dlist *iter = (wid ? dlist_find(ps->mainwin->clients,
 								clientwin_cmp_func, (void *) wid): NULL);
