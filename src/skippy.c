@@ -1805,7 +1805,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 						 && ev_next.type != PropertyNotify && ev_next.type != Expose
 						 && ev_next.type != FocusIn && ev_next.type != FocusOut
 						 && ev_next.type != UnmapNotify && ev_next.type != ReparentNotify
-						 && ev_next.type != 91/*XInput2*/) {
+						 && ev_next.type != GenericEvent) {
 							break;
 						}
 
