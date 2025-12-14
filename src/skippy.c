@@ -1782,31 +1782,36 @@ mainloop(session_t *ps, bool activate_on_start) {
 					clientwin_update(cw);
 					clientwin_update3(cw);
 					clientwin_update2(cw);
+					clientwin_map(cw);
 				}
 				num_events--;
-
 				{
-					int ev_prev = ev.type;
 					XEvent ev_next = { };
 					while(num_events > 0)
 					{
 						XPeekEvent(ps->dpy, &ev_next);
 
-						if(ev_next.type != ev_prev)
+						if (ev_next.type != CreateNotify && ev_next.type != MapNotify
+						 && ev_next.type != VisibilityNotify && ev_next.type != ConfigureNotify
+						 && ev_next.type != PropertyNotify && ev_next.type != Expose
+						 && ev_next.type != FocusIn && ev_next.type != FocusOut
+						 && ev_next.type != UnmapNotify && ev_next.type != ReparentNotify
+						 && ev_next.type != 91/*XInput2*/) {
 							break;
+						}
 
 						XNextEvent(ps->dpy, &ev);
 						wid = ev_window(ps, &ev);
 
 						num_events--;
-						dlist *iter = (wid ? dlist_find(ps->mainwin->clients,
+						/*dlist *iter = (wid ? dlist_find(ps->mainwin->clients,
 								clientwin_cmp_func, (void *) wid): NULL);
 						if (iter) {
 							ClientWin *cw = (ClientWin *) iter->data;
 							clientwin_update(cw);
 							clientwin_update3(cw);
 							clientwin_update2(cw);
-						}
+						}*/
 					}
 				}
 			}
