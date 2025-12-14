@@ -871,6 +871,7 @@ count_and_filter_clients(MainWin *mw)
 
 	// update mw->clientondesktop
 	long desktop = wm_get_current_desktop(mw->ps);
+	printfdf(false, "(): on desktop %d", desktop);
 
 	// given the client table, update the clientondesktop
 	// the difference between mw->clients and mw->clientondesktop
