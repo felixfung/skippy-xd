@@ -1,5 +1,22 @@
 Skippy-XD changelog
 
+0.10.6 -- "Brainrot 67" (4 Jan 2026) ~/felixfung
+ - Config file hugely reorganized
+ - Add man page
+ - Pipe renamed with DISPLAY variable
+ - Window creation events optimized
+ - Eliminate X errors
+ - Panel windows display properly in multi-monitor settings
+ - Multi-selected windows tint with highlight tint
+ - Cleaned printing values
+ - Rounded corners bug fixes:
+     - Rounded corners scale with switch/expose/paging scaling
+     - Highlight tint with rounded corners
+     - Multi-monitor paging displays rounded corners properly
+     - Preserve pages with rounded corners
+     - Preserve pages with multi-monitor geometry
+ - Config options to align pixel offsets
+
 0.10.5 -- "Mukbang Obsession" (30 Nov 2025) ~/felixfung
  - Fix bug on switch z-order scrambling
  - Fix multi-monitor coordinates errors
