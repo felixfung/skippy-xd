@@ -170,6 +170,7 @@ wm_activate_window(session_t *ps, Window wid) {
 
 	// Order is important, to avoid "intelligent" WMs fixing our focus stealing
 	wm_activate_window_ewmh(ps, wid);
+	usleep(10000);
 	XSetInputFocus(ps->dpy, wid, RevertToParent, CurrentTime);
 }
 
