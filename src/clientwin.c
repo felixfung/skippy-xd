@@ -595,7 +595,7 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 		}
 
 		if (ps->o.tooltip_show && ps->o.mode != PROGMODE_PAGING) {
-			tooltip_handle(cw->tooltip, ps->o.multiselect? cw->multiselect: cw->focused);
+			tooltip_draw(cw->tooltip, ps->o.multiselect? cw->multiselect: cw->focused);
 		}
 	}
 
@@ -766,7 +766,7 @@ clientwin_map(ClientWin *cw) {
 	if (ps->o.tooltip_show && ps->o.mode != PROGMODE_PAGING
 			&& cw->paneltype == WINTYPE_WINDOW) {
 		clientwin_tooltip(cw);
-		tooltip_handle(cw->tooltip, ps->o.multiselect? cw->multiselect: cw->focused);
+		tooltip_draw(cw->tooltip, ps->o.multiselect? cw->multiselect: cw->focused);
 	}
 }
 

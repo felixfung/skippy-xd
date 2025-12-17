@@ -42,7 +42,7 @@ void tooltip_destroy(Tooltip *);
 void tooltip_map(Tooltip *tt, ClientWin *cw,
 		FcChar8 *text, int len);
 void tooltip_unmap(Tooltip *);
-void tooltip_handle(Tooltip *, bool);
+void tooltip_draw(Tooltip *, bool);
 void tooltip_move(Tooltip *tt, ClientWin *cw);
 
 #endif /* SKIPPY_TOOLTIP_H */
