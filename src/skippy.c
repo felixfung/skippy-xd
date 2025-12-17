@@ -1938,9 +1938,9 @@ mainloop(session_t *ps, bool activate_on_start) {
 							clientwin_update2(cw);
 							desktopwin_map(cw);
 						}
-						else if (ps->o.tooltip_show) {
-							clientwin_tooltip(cw);
-						}
+						if (ps->o.tooltip_show)
+							tooltip_draw(cw->tooltip,
+									ps->o.multiselect? cw->multiselect: cw->focused);
 						cw->damaged = false;
 					}
 				}
