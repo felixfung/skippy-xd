@@ -1778,38 +1778,48 @@ mainloop(session_t *ps, bool activate_on_start) {
 				printfdf(false, "(): else if (ev.type == CreateNotify || ev.type == MapNotify) {");
 				count_and_filter_clients(ps->mainwin);
 				dlist *iter = (wid ? dlist_find(ps->mainwin->clients, clientwin_cmp_func, (void *) wid): NULL);
+
 				if (iter) {
 					ClientWin *cw = (ClientWin *) iter->data;
 					clientwin_update(cw);
 					clientwin_update3(cw);
 					clientwin_update2(cw);
+					cw->damaged = true;
 				}
 				num_events--;
 
 				{
-					int ev_prev = ev.type;
 					XEvent ev_next = { };
 					while(num_events > 0)
 					{
 						XPeekEvent(ps->dpy, &ev_next);
-
-						if(ev_next.type != ev_prev)
+						if (ev_next.type != CreateNotify && ev_next.type != MapNotify
+						 && ev_next.type != VisibilityNotify && ev_next.type != ConfigureNotify
+						 && ev_next.type != PropertyNotify && ev_next.type != Expose
+						 && ev_next.type != FocusIn && ev_next.type != FocusOut
+						 && ev_next.type != UnmapNotify && ev_next.type != ReparentNotify
+						 && ev_next.type != ps->xinfo.damage_ev_base + XDamageNotify)
 							break;
 
 						XNextEvent(ps->dpy, &ev);
 						wid = ev_window(ps, &ev);
-
 						num_events--;
+
+						if (ev.type == FocusOut)
+							focus_stolen = true;
+						if (ev.type == FocusIn)
+							focus_stolen = false;
+
 						dlist *iter = (wid ? dlist_find(ps->mainwin->clients,
 								clientwin_cmp_func, (void *) wid): NULL);
 						if (iter) {
 							ClientWin *cw = (ClientWin *) iter->data;
-							clientwin_update(cw);
-							clientwin_update3(cw);
-							clientwin_update2(cw);
+							cw->damaged = true;
 						}
 					}
 				}
+
+				pending_damage = true;
 			}
 			else if (mw && (ps->xinfo.damage_ev_base + XDamageNotify == ev.type)) {
 				//printfdf(false, "(): else if (ev.type == XDamageNotify) {");
