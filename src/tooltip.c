@@ -238,7 +238,7 @@ tooltip_unmap(Tooltip *tt)
 }
 
 void
-tooltip_handle(Tooltip *tt, bool focused)
+tooltip_draw(Tooltip *tt, bool focused)
 {
 	if (!tt || !tt->text)
 		return;
