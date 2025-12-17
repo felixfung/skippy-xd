@@ -127,17 +127,22 @@ focus_miniw(session_t *ps, ClientWin *cw) {
  */
 static inline void
 focus_miniw_next(session_t *ps, ClientWin *cw) {
-	cw->focused = false;
-	clientwin_render(cw);
 	dlist *e = dlist_find_data(cw->mainwin->focuslist, cw);
 	if (!e) {
 		printfef(false, "() (%#010lx): Client window not found in list.", cw->src.window);
 		return;
 	}
+
 	if (e->next)
-		focus_miniw(ps, e->next->data);
+		e = e->next;
 	else
-		focus_miniw(ps, dlist_first(e)->data);
+		e = dlist_first(e);
+
+	if (e->data != cw) {
+		cw->focused = false;
+		clientwin_render(cw);
+		focus_miniw(ps, e->data);
+	}
 }
 
 /**
