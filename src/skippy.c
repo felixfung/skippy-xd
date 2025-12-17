@@ -846,6 +846,7 @@ count_and_filter_clients(MainWin *mw)
 
 	// update mw->clientondesktop
 	long desktop = wm_get_current_desktop(mw->ps);
+	printfdf(false, "(): on desktop %d", desktop);
 
 	// given the client table, update the clientondesktop
 	// the difference between mw->clients and mw->clientondesktop
@@ -1108,25 +1109,22 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 		for (int i=0; i<screenwidth && k<screencount; i++) {
 			int desktop_idx = screenwidth * j + i;
 			XSetWindowAttributes sattr = {
-				.border_pixel = 0,
-				.background_pixel = 0,
-				.colormap = mw->colormap,
 				.event_mask = ButtonPressMask | ButtonReleaseMask | KeyPressMask
 					| KeyReleaseMask | PointerMotionMask | FocusChangeMask,
-				.override_redirect = false,
+				//.override_redirect = false,
                 // exclude window frame
 			};
 			Window desktopwin = XCreateWindow(mw->ps->dpy,
 					mw->window,
-					0, 0, 0, 0,
-					0, mw->depth, InputOnly, mw->visual,
-					CWColormap | CWBackPixel | CWBorderPixel | CWEventMask | CWOverrideRedirect, &sattr);
+					0, 0, 1, 1,
+					0, 0, InputOnly, CopyFromParent,
+					CWEventMask, &sattr);
 			if (!desktopwin) return false;
 
 			if (!mw->desktopwins)
-				mw->desktopwins = dlist_add(NULL, &desktopwin);
+				mw->desktopwins = dlist_add(NULL, (void*)desktopwin);
 			else
-				mw->desktopwins = dlist_add(mw->desktopwins, &desktopwin);
+				mw->desktopwins = dlist_add(mw->desktopwins, (void*)desktopwin);
 
 			ClientWin *cw = clientwin_create(mw, desktopwin);
 			if (!cw) return false;
@@ -1152,12 +1150,6 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 			cw->y = cw->src.y = (j * (desktop_height + mw->distance)) * mw->multiplier;
 			cw->src.width = desktop_width;
 			cw->src.height = desktop_height;
-
-			if (!cw->redirected) {
-				XCompositeRedirectWindow(mw->ps->dpy, cw->src.window,
-						CompositeRedirectAutomatic);
-				cw->redirected = true;
-			}
 
 			clientwin_prepmove(cw);
 			clientwin_move(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
@@ -1755,40 +1747,51 @@ mainloop(session_t *ps, bool activate_on_start) {
 					clientwin_update2(cw);
 				}
             }
-			else if (ev.type == CreateNotify || ev.type == MapNotify || ev.type == UnmapNotify) {
-				printfdf(false, "(): else if (ev.type == CreateNotify || ev.type == MapNotify || ev.type == UnmapNotify) {");
+			else if (ev.type == CreateNotify || ev.type == MapNotify) {
+				printfdf(false, "(): else if (ev.type == CreateNotify || ev.type == MapNotify) {");
 				count_and_filter_clients(ps->mainwin);
 				dlist *iter = (wid ? dlist_find(ps->mainwin->clients, clientwin_cmp_func, (void *) wid): NULL);
+
 				if (iter) {
 					ClientWin *cw = (ClientWin *) iter->data;
 					clientwin_update3(cw);
 					clientwin_update2(cw);
+					cw->damaged = true;
 				}
 				num_events--;
 
 				{
-					int ev_prev = ev.type;
 					XEvent ev_next = { };
 					while(num_events > 0)
 					{
 						XPeekEvent(ps->dpy, &ev_next);
-
-						if(ev_next.type != ev_prev)
+						if (ev_next.type != CreateNotify && ev_next.type != MapNotify
+						 && ev_next.type != VisibilityNotify && ev_next.type != ConfigureNotify
+						 && ev_next.type != PropertyNotify && ev_next.type != Expose
+						 && ev_next.type != FocusIn && ev_next.type != FocusOut
+						 && ev_next.type != UnmapNotify && ev_next.type != ReparentNotify
+						 && ev_next.type != ps->xinfo.damage_ev_base + XDamageNotify)
 							break;
 
 						XNextEvent(ps->dpy, &ev);
 						wid = ev_window(ps, &ev);
-
 						num_events--;
+
+						if (ev.type == FocusOut)
+							focus_stolen = true;
+						if (ev.type == FocusIn)
+							focus_stolen = false;
+
 						dlist *iter = (wid ? dlist_find(ps->mainwin->clients,
 								clientwin_cmp_func, (void *) wid): NULL);
 						if (iter) {
 							ClientWin *cw = (ClientWin *) iter->data;
-							clientwin_update3(cw);
-							clientwin_update2(cw);
+							cw->damaged = true;
 						}
 					}
 				}
+
+				pending_damage = true;
 			}
 			else if (mw && (ps->xinfo.damage_ev_base + XDamageNotify == ev.type)) {
 				//printfdf(false, "(): else if (ev.type == XDamageNotify) {");
@@ -1903,8 +1906,15 @@ mainloop(session_t *ps, bool activate_on_start) {
 					// some desktops never receive refresh events
 					// so we need to refresh all desktops
 					if (cw->damaged || ps->o.pseudoTrans) {
-						clientwin_update2(cw);
-						desktopwin_map(cw);
+						if (ps->o.pseudoTrans) {
+							clientwin_update2(cw);
+							desktopwin_map(cw);
+						}
+						else if (ps->o.tooltip_show) {
+							clientwin_tooltip(cw);
+							tooltip_handle(cw->tooltip,
+									ps->o.multiselect? cw->multiselect: cw->focused);
+						}
 						cw->damaged = false;
 					}
 				}
