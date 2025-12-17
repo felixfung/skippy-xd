@@ -1313,6 +1313,8 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 
 	foreach_dlist(mw->clients) {
 		ClientWin *cw = iter->data;
+		cw->src.x -= mw->x;
+		cw->src.y -= mw->y;
 		cw->x *= mw->multiplier;
 		cw->y *= mw->multiplier;
 		cw->paneltype = WINTYPE_WINDOW;
