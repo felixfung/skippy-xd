@@ -525,7 +525,7 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 				}
 #else
 				int x = dwin->x + mw->xoff - cw->src.x + mw->x + leftborder;
-				int y = dwin->y + mw->yoff - cw->src.y + mw->y topborder;
+				int y = dwin->y + mw->yoff - cw->src.y + mw->y + topborder;
 				int width = dwin->src.width * mw->multiplier;
 				int height = dwin->src.height * mw->multiplier;
 
