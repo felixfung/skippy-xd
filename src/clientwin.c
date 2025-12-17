@@ -594,9 +594,8 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 			}
 		}
 
-		if (ps->o.tooltip_show && ps->o.mode != PROGMODE_PAGING) {
+		if (ps->o.tooltip_show && ps->o.mode != PROGMODE_PAGING)
 			tooltip_draw(cw->tooltip, ps->o.multiselect? cw->multiselect: cw->focused);
-		}
 	}
 
 	XClearArea(mw->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
@@ -764,10 +763,8 @@ clientwin_map(ClientWin *cw) {
 	XRaiseWindow(ps->dpy, cw->mini.window);
 
 	if (ps->o.tooltip_show && ps->o.mode != PROGMODE_PAGING
-			&& cw->paneltype == WINTYPE_WINDOW) {
+			&& cw->paneltype == WINTYPE_WINDOW)
 		clientwin_tooltip(cw);
-		tooltip_draw(cw->tooltip, ps->o.multiselect? cw->multiselect: cw->focused);
-	}
 }
 
 void
@@ -846,6 +843,8 @@ clientwin_tooltip(ClientWin *cw) {
 			free(label);
 		}
 	}
+
+	tooltip_draw(cw->tooltip, ps->o.multiselect? cw->multiselect: cw->focused);
 }
 
 void

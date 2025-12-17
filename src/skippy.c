@@ -1255,10 +1255,8 @@ desktopwin_map(ClientWin *cw)
 	XMapWindow(ps->dpy, cw->mini.window);
 	XRaiseWindow(ps->dpy, cw->mini.window);
 
-	if (ps->o.tooltip_show) {
+	if (ps->o.tooltip_show)
 		clientwin_tooltip(cw);
-		tooltip_draw(cw->tooltip, ps->o.multiselect? cw->multiselect: cw->focused);
-	}
 }
 
 static bool
@@ -1942,8 +1940,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 						}
 						else if (ps->o.tooltip_show) {
 							clientwin_tooltip(cw);
-							tooltip_draw(cw->tooltip,
-									ps->o.multiselect? cw->multiselect: cw->focused);
 						}
 						cw->damaged = false;
 					}
