@@ -1244,8 +1244,10 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 
 	count_and_filter_clients(mw);
 	foreach_dlist(mw->clients) {
-		clientwin_update3((ClientWin *) iter->data);
-		clientwin_update2((ClientWin *) iter->data);
+		ClientWin *cw = iter->data;
+		clientwin_update3(cw);
+		clientwin_update2(cw);
+		cw->paneltype = wm_identify_panel(mw->ps, cw->wid_client);
 	}
 
 #ifdef CFG_XINERAMA
@@ -1290,13 +1292,10 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 		cw->src.y -= mw->y;
 		cw->x *= mw->multiplier;
 		cw->y *= mw->multiplier;
-		cw->paneltype = WINTYPE_WINDOW;
 	}
 
 	foreach_dlist(mw->panels) {
 		ClientWin *cw = iter->data;
-		cw->factor = 1;
-		cw->paneltype = wm_identify_panel(mw->ps, cw->wid_client);
 		clientwin_prepmove(cw);
 		clientwin_move(cw, 1, 0, 0, 0);
 	}
