@@ -119,9 +119,10 @@ tooltip_create(MainWin *mw) {
 		tooltip_destroy(tt);
 		return 0;
 	}
-	
+
 	tmp_l = alphaconv(ps->o.tooltip_opacity);
 	tt->background.color.alpha = tmp_l;
+	tt->backgroundHighlight.color.alpha = tmp_l;
 	tt->border.color.alpha = tmp_l;
 	
 	tmp = ps->o.tooltip_text;

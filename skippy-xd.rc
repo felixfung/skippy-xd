@@ -148,9 +148,9 @@ offsetX = 0
 offsetY = -5
 width = 0.8
 border = #0e0e0e
-background = #333333
-backgroundHighlight = #666666
-opacity = 128
+background = #111111
+backgroundHighlight = #999999
+opacity = 196
 text = white
 textOutline = #0e0e0e
 font = fixed-11:weight=bold
