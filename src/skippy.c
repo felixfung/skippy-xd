@@ -973,7 +973,7 @@ calculatePanelBorders(MainWin *mw,
 	printfdf(false,"(): panel framing calculations: (%d,%d) (%d,%d)", *x1, *y1, *x2, *y2);
 }
 
-static bool
+static void
 init_layout(MainWin *mw, enum layoutmode layout, Window leader)
 {
 	unsigned int newwidth = 100, newheight = 100;
@@ -1003,11 +1003,9 @@ init_layout(MainWin *mw, enum layoutmode layout, Window leader)
 	mw->yoff = yoff + y1;
 
 	init_focus(mw, layout, leader);
-
-	return true;
 }
 
-static bool
+static void
 init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 {
 	int screencount = wm_get_desktops(mw->ps);
@@ -1084,7 +1082,7 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 				/ (float) totalheight;
 
 		int xoff = (mw->width - x1 - x2 - (float)(totalwidth
-					- x1 - x2)* multiplier) / 2;
+					- x1 - x2) * multiplier) / 2;
 		int yoff = (mw->height - y1 - y2 - (float)(totalheight
 					- y1 - y2) * multiplier) / 2;
 
@@ -1119,7 +1117,10 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 					0, 0, 1, 1,
 					0, 0, InputOnly, CopyFromParent,
 					CWEventMask, &sattr);
-			if (!desktopwin) return false;
+			if (!desktopwin) {
+				printfef(true, "(): X11 window creation failed");
+				exit(1);
+			}
 
 			if (!mw->desktopwins)
 				mw->desktopwins = dlist_add(NULL, (void*)desktopwin);
@@ -1127,7 +1128,10 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 				mw->desktopwins = dlist_add(mw->desktopwins, (void*)desktopwin);
 
 			ClientWin *cw = clientwin_create(mw, desktopwin);
-			if (!cw) return false;
+			if (!cw) {
+				printfef(true, "(): X11 window creation failed");
+				exit(1);
+			}
 
 			cw->slots = desktop_idx;
 			cw->mode = CLIDISP_DESKTOP;
@@ -1186,8 +1190,6 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 	}
 
 	mw->focuslist = dlist_dup(mw->dminis);
-
-	return true;
 }
 
 static void
@@ -1234,10 +1236,9 @@ desktopwin_map(ClientWin *cw)
 		clientwin_tooltip(cw);
 }
 
-static bool
+static void
 skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 {
-	// Update the main window's geometry (and Xinerama info if applicable)
 	mainwin_update(mw);
 
 	mw->client_to_focus = NULL;
@@ -1273,18 +1274,10 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 	}
 #endif /* CFG_XINERAMA */
 
-	if (layout == LAYOUTMODE_PAGING) {
-		if (!init_paging_layout(mw, layout, leader)) {
-			printfef(false, "(): failed.");
-			return false;
-		}
-	}
-	else {
-		if (!init_layout(mw, layout, leader)) {
-			printfef(false, "(): failed.");
-			return false;
-		}
-	}
+	if (layout == LAYOUTMODE_PAGING)
+		init_paging_layout(mw, layout, leader);
+	else
+		init_layout(mw, layout, leader);
 
 	foreach_dlist(mw->clientondesktop) {
 		ClientWin *cw = iter->data;
@@ -1299,8 +1292,6 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 		clientwin_prepmove(cw);
 		clientwin_move(cw, 1, 0, 0, 0);
 	}
-
-	return true;
 }
 
 static void
@@ -1365,13 +1356,12 @@ mainloop(session_t *ps, bool activate_on_start) {
 			activate = false;
 			leader = wm_get_focused(ps);
 
-			if (skippy_activate(ps->mainwin, layout, leader)) {
-				last_animated = last_rendered = time_in_millis();
-				mw = ps->mainwin;
-				pending_damage = false;
-				first_animated = time_in_millis();
-				first_animating = true;
-			}
+			skippy_activate(ps->mainwin, layout, leader);
+			last_animated = last_rendered = time_in_millis();
+			mw = ps->mainwin;
+			pending_damage = false;
+			first_animated = time_in_millis();
+			first_animating = true;
 		}
 		if (mw)
 			activate = false;
