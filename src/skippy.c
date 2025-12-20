@@ -1291,7 +1291,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 	bool first_animating = false;
 	pid_t trigger_client = 0;
 	bool focus_stolen = false;
-	Window leader = 0;
 	bool switchdesktop = false;
 
 	switch (ps->o.mode) {
@@ -1336,9 +1335,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 		if (!mw && activate) {
 			assert(ps->mainwin);
 			activate = false;
-			leader = wm_get_focused(ps);
 
-			skippy_activate(ps->mainwin, layout, leader);
+			skippy_activate(ps->mainwin, layout, wm_get_focused(ps));
 			last_animated = last_rendered = time_in_millis();
 			mw = ps->mainwin;
 			pending_damage = false;
