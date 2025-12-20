@@ -1793,6 +1793,17 @@ mainloop(session_t *ps, bool activate_on_start) {
 					while(num_events > 0)
 					{
 						XPeekEvent(ps->dpy, &ev_next);
+
+						// these events have to be handled promptly
+						// otherwise race condition may
+						// non-deterministically lead to broken state
+						if (ev_next.type == KeymapNotify || ev_next.type == MappingNotify) {
+							XNextEvent(ps->dpy, &ev);
+							XRefreshKeyboardMapping(&ev.xmapping);
+							num_events--;
+							continue;
+						}
+
 						if (ev_next.type != CreateNotify && ev_next.type != MapNotify
 						 && ev_next.type != VisibilityNotify && ev_next.type != ConfigureNotify
 						 && ev_next.type != PropertyNotify && ev_next.type != Expose
