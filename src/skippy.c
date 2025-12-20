@@ -2157,9 +2157,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 						ps->o.focus_initial--;
 					}
 					ps->o.focus_initial = oldfocus;
-
-					if (mw->client_to_focus)
-						clientwin_render(mw->client_to_focus);
 				}
 
 				// if the client did not trigger activation, return to it immediately
