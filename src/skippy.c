@@ -974,23 +974,21 @@ calculatePanelBorders(MainWin *mw,
 }
 
 static void
-init_layout(MainWin *mw, enum layoutmode layout, Window leader)
+init_multiplier(MainWin *mw, unsigned int newwidth, unsigned int newheight,
+		bool allowUpscale, int gap)
 {
-	unsigned int newwidth = 100, newheight = 100;
-	if (mw->clientondesktop)
-		layout_run(mw, mw->clientondesktop, &newwidth, &newheight, layout);
-
 	int x1=0, y1=0, x2=0, y2=0;
 	calculatePanelBorders(mw, &x1, &y1, &x2, &y2);
 	newwidth += x1 + x2;
 	newheight += y1 + y2;
 
-	float multiplier = (float) (mw->width - 2 * mw->distance
+	float multiplier = (float) (mw->width - gap * mw->distance
 			- x1 - x2) / newwidth;
-	if (multiplier * newheight > mw->height - 2 * mw->distance)
-		multiplier = (float) (mw->height - 2 * mw->distance
+	if (multiplier * newheight > mw->height - gap * mw->distance)
+		multiplier = (float) (mw->height - gap * mw->distance
 				- y1 - y2) / newheight;
-	if (!mw->ps->o.allowUpscale)
+
+	if (!allowUpscale)
 		multiplier = MIN(multiplier, 1.0f);
 
 	int xoff = (mw->width - x1 - x2 - (float)(newwidth
@@ -1001,7 +999,16 @@ init_layout(MainWin *mw, enum layoutmode layout, Window leader)
 	mw->multiplier = multiplier;
 	mw->xoff = xoff + x1;
 	mw->yoff = yoff + y1;
+}
 
+static void
+init_layout(MainWin *mw, enum layoutmode layout, Window leader)
+{
+	unsigned int newwidth = 100, newheight = 100;
+	if (mw->clientondesktop)
+		layout_run(mw, mw->clientondesktop, &newwidth, &newheight, layout);
+
+	init_multiplier(mw, newwidth, newheight, mw->ps->o.allowUpscale, 2);
 	init_focus(mw, layout, leader);
 }
 
@@ -1068,38 +1075,19 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 		cw->src.y += (win_desktop_y - current_desktop_y) * (desktop_height + mw->distance);
 	}
 
-    {
-		int x1=0, y1=0, x2=0, y2=0;
-		calculatePanelBorders(mw, &x1, &y1, &x2, &y2);
-		unsigned int totalwidth = screenwidth * (desktop_width + mw->distance) - mw->distance;
-		unsigned int totalheight = screenheight * (desktop_height + mw->distance) - mw->distance;
-		totalwidth += x1 + x2;
-		totalheight += y1 + y2;
-		float multiplier = (float) (mw->width - 1 * mw->distance - x1 - x2)
-			/ (float) totalwidth;
-		if (multiplier * totalheight > mw->height - 1 * mw->distance - y1 - y2)
-			multiplier = (float) (mw->height - 1 * mw->distance - y1 - y2)
-				/ (float) totalheight;
 
-		int xoff = (mw->width - x1 - x2 - (float)(totalwidth
-					- x1 - x2) * multiplier) / 2;
-		int yoff = (mw->height - y1 - y2 - (float)(totalheight
-					- y1 - y2) * multiplier) / 2;
-
-		mw->multiplier = multiplier;
-		mw->xoff = xoff + x1;
-		mw->yoff = yoff + y1;
-
-		mw->desktoptransform.matrix[0][0] = 1.0;
-		mw->desktoptransform.matrix[0][1] = 0.0;
-		mw->desktoptransform.matrix[0][2] = xoff + x1;
-		mw->desktoptransform.matrix[1][0] = 0.0;
-		mw->desktoptransform.matrix[1][1] = 1.0;
-		mw->desktoptransform.matrix[1][2] = yoff + y1;
-		mw->desktoptransform.matrix[2][0] = 0.0;
-		mw->desktoptransform.matrix[2][1] = 0.0;
-		mw->desktoptransform.matrix[2][2] = 1.0;
-	}
+	unsigned int totalwidth = screenwidth * (desktop_width + mw->distance) - mw->distance;
+	unsigned int totalheight = screenheight * (desktop_height + mw->distance) - mw->distance;
+	init_multiplier(mw, totalwidth, totalheight, false, 1);
+	mw->desktoptransform.matrix[0][0] = 1.0;
+	mw->desktoptransform.matrix[0][1] = 0.0;
+	mw->desktoptransform.matrix[0][2] = mw->xoff;
+	mw->desktoptransform.matrix[1][0] = 0.0;
+	mw->desktoptransform.matrix[1][1] = 1.0;
+	mw->desktoptransform.matrix[1][2] = mw->yoff;
+	mw->desktoptransform.matrix[2][0] = 0.0;
+	mw->desktoptransform.matrix[2][1] = 0.0;
+	mw->desktoptransform.matrix[2][2] = 1.0;
 
 	// create windows which represent each virtual desktop
 	int current_desktop = wm_get_current_desktop(mw->ps);
