@@ -83,7 +83,6 @@ clientwin_free_res2(session_t *ps, ClientWin *cw) {
 
 int clientwin_validate_panel(dlist *, void *);
 int clientwin_filter_func(dlist *, void *);
-int clientwin_sort_func(dlist *, dlist *, void *);
 ClientWin *clientwin_create(MainWin *, Window);
 void clientwin_destroy(ClientWin *, bool destroyed);
 void clientwin_prepmove(ClientWin *);

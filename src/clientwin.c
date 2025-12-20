@@ -115,14 +115,6 @@ clientwin_check_group_leader_func(dlist *l, void *data)
 	return wm_get_group_leader(cw->mainwin->ps->dpy, cw->wid_client) == *((Window*)data);
 }
 
-int
-clientwin_sort_func(dlist* a, dlist* b, void* data)
-{
-	unsigned int pa = ((ClientWin *) a->data)->src.x * ((ClientWin *) a->data)->src.y,
-	             pb = ((ClientWin *) b->data)->src.x * ((ClientWin *) b->data)->src.y;
-	return (pa < pb) ? -1 : (pa == pb) ? 0 : 1;
-}
-
 ClientWin *
 clientwin_create(MainWin *mw, Window client) {
 	session_t *ps = mw->ps;
