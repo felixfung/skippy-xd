@@ -15,7 +15,6 @@ Skippy-XD changelog
      - Multi-monitor paging displays rounded corners properly
      - Preserve pages with rounded corners
      - Preserve pages with multi-monitor geometry
- - Config options to align pixel offsets
 
 0.10.5 -- "Mukbang Obsession" (30 Nov 2025) ~/felixfung
  - Fix bug on switch z-order scrambling
