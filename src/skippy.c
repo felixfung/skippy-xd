@@ -846,7 +846,7 @@ count_and_filter_clients(MainWin *mw)
 
 	// update mw->clientondesktop
 	long desktop = wm_get_current_desktop(mw->ps);
-	printfdf(false, "(): on desktop %d", desktop);
+	printfdf(false, "(): on desktop %d", (int) desktop);
 
 	// given the client table, update the clientondesktop
 	// the difference between mw->clients and mw->clientondesktop
@@ -1291,7 +1291,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 	bool first_animating = false;
 	pid_t trigger_client = 0;
 	bool checkfocus = false;
-	Window leader = 0;
 	bool switchdesktop = false;
 
 	switch (ps->o.mode) {
