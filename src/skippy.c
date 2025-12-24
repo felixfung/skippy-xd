@@ -1348,7 +1348,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 	long first_animated = 0L;
 	bool first_animating = false;
 	pid_t trigger_client = 0;
-	bool focus_stolen = false;
+	bool checkfocus = false;
 	Window leader = 0;
 	bool switchdesktop = false;
 
@@ -1816,10 +1816,9 @@ mainloop(session_t *ps, bool activate_on_start) {
 						wid = ev_window(ps, &ev);
 						num_events--;
 
-						if (ev.type == FocusOut)
-							focus_stolen = true;
-						if (ev.type == FocusIn)
-							focus_stolen = false;
+						if (ev.type == FocusOut || ev.type == LeaveNotify
+						 || ev.type == FocusIn || ev.type == EnterNotify)
+							checkfocus = true;
 
 						dlist *iter = (wid ? dlist_find(ps->mainwin->clients,
 								clientwin_cmp_func, (void *) wid): NULL);
@@ -1859,17 +1858,15 @@ mainloop(session_t *ps, bool activate_on_start) {
 				}
 			}
 			else if (mw && wid == mw->window && !die) {
-				if (ev.type == FocusOut)
-					focus_stolen = true;
-				if (ev.type == FocusIn)
-					focus_stolen = false;
+				if (ev.type == FocusOut || ev.type == LeaveNotify
+				 || ev.type == FocusIn || ev.type == EnterNotify)
+					checkfocus = true;
 				die = mainwin_handle(mw, &ev);
 			}
 			else if (mw && wid) {
-				if (ev.type == FocusOut)
-					focus_stolen = true;
-				if (ev.type == FocusIn)
-					focus_stolen = false;
+				if (ev.type == FocusOut || ev.type == LeaveNotify
+				 || ev.type == FocusIn || ev.type == EnterNotify)
+					checkfocus = true;
 
 				bool processing = true;
 				dlist *iter = mw->clientondesktop;
@@ -1912,17 +1909,28 @@ mainloop(session_t *ps, bool activate_on_start) {
 			}
 		}
 
-		// prevent focus stealing by newly mapped window
-		// by checking for a FocusOut/FocusIn event pair
-		if (mw && ps->o.enforceFocus && focus_stolen) {
-			printfdf(false,"(): skippy-xd focus stolen... take back focus");
-			XSetInputFocus(ps->dpy, mw->window,
-					RevertToParent, CurrentTime);
+		if (mw && ps->o.enforceFocus && checkfocus) {
+			Window focus;
+			int revert;
+			XGetInputFocus(ps->dpy, &focus, &revert);
+
 			if (mw->client_to_focus) {
-				mw->client_to_focus->focused = true;
-				clientwin_render(mw->client_to_focus);
+				if (focus != mw->window
+				 && focus != mw->client_to_focus->mini.window) {
+					printfdf(false, "(): skippy-xd focus stolen... take back focus");
+					XSetInputFocus(ps->dpy, mw->window, RevertToParent, CurrentTime);
+					mw->client_to_focus->focused = true;
+					clientwin_render(mw->client_to_focus);
+				}
 			}
-			focus_stolen = false;
+			else {
+				if (focus != mw->window) {
+					printfdf(false, "(): skippy-xd focus stolen... take back focus");
+					XSetInputFocus(ps->dpy, mw->window, RevertToParent, CurrentTime);
+				}
+			}
+
+			checkfocus = false;
 		}
 
 		// Do delayed painting if it's active
