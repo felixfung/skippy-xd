@@ -770,31 +770,6 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 }
 
 static void
-panel_map(ClientWin *cw)
-{
-	int border = 0;
-	XSetWindowBorderWidth(cw->mainwin->ps->dpy, cw->mini.window, border);
-
-	cw->mini.x = cw->src.x;
-	cw->mini.y = cw->src.y;
-	cw->mini.width = cw->src.width;
-	cw->mini.height = cw->src.height;
-
-	XMoveResizeWindow(cw->mainwin->ps->dpy, cw->mini.window, cw->mini.x - border, cw->mini.y - border, cw->mini.width, cw->mini.height);
-
-	if(cw->pixmap)
-		XFreePixmap(cw->mainwin->ps->dpy, cw->pixmap);
-
-	if(cw->destination)
-		XRenderFreePicture(cw->mainwin->ps->dpy, cw->destination);
-
-	cw->pixmap = XCreatePixmap(cw->mainwin->ps->dpy, cw->mini.window, cw->mini.width, cw->mini.height, cw->mainwin->depth);
-	XSetWindowBackgroundPixmap(cw->mainwin->ps->dpy, cw->mini.window, cw->pixmap);
-
-	cw->destination = XRenderCreatePicture(cw->mainwin->ps->dpy, cw->pixmap, cw->mini.format, 0, 0);
-}
-
-static void
 anime(
 	MainWin *mw,
 	dlist *clients,
@@ -968,6 +943,23 @@ calculatePanelBorders(MainWin *mw,
 		if (cw->paneltype != WINTYPE_PANEL)
 			continue;
 
+#ifdef CFG_XINERAMA
+			int midx = cw->src.x + cw->src.width / 2;
+			int midy = cw->src.y + cw->src.height / 2;
+
+			XineramaScreenInfo *xiter = mw->xin_info;
+			for (int i=0; i<mw->xin_screens; i++)
+			{
+				if(xiter->x_org <= midx && midx < xiter->x_org + xiter->width &&
+				   xiter->y_org <= midy && midy < xiter->y_org + xiter->height)
+				{
+					cw->src.x -= xiter->x_org;
+					cw->src.y -= xiter->y_org;
+				}
+				xiter++;
+			}
+#endif /* CFG_XINERAMA */
+
 		// assumed horizontal panel
 		if (cw->src.width >= cw->src.height) {
 			// assumed top panel
@@ -998,24 +990,22 @@ calculatePanelBorders(MainWin *mw,
 	printfdf(false,"(): panel framing calculations: (%d,%d) (%d,%d)", *x1, *y1, *x2, *y2);
 }
 
-static bool
-init_layout(MainWin *mw, enum layoutmode layout, Window leader)
+static void
+init_multiplier(MainWin *mw, unsigned int newwidth, unsigned int newheight,
+		bool allowUpscale, int gap)
 {
-	unsigned int newwidth = 100, newheight = 100;
-	if (mw->clientondesktop)
-		layout_run(mw, mw->clientondesktop, &newwidth, &newheight, layout);
-
 	int x1=0, y1=0, x2=0, y2=0;
 	calculatePanelBorders(mw, &x1, &y1, &x2, &y2);
 	newwidth += x1 + x2;
 	newheight += y1 + y2;
 
-	float multiplier = (float) (mw->width - 2 * mw->distance
+	float multiplier = (float) (mw->width - gap * mw->distance
 			- x1 - x2) / newwidth;
-	if (multiplier * newheight > mw->height - 2 * mw->distance)
-		multiplier = (float) (mw->height - 2 * mw->distance
+	if (multiplier * newheight > mw->height - gap * mw->distance)
+		multiplier = (float) (mw->height - gap * mw->distance
 				- y1 - y2) / newheight;
-	if (!mw->ps->o.allowUpscale)
+
+	if (!allowUpscale)
 		multiplier = MIN(multiplier, 1.0f);
 
 	int xoff = (mw->width - x1 - x2 - (float)(newwidth
@@ -1026,13 +1016,20 @@ init_layout(MainWin *mw, enum layoutmode layout, Window leader)
 	mw->multiplier = multiplier;
 	mw->xoff = xoff + x1;
 	mw->yoff = yoff + y1;
-
-	init_focus(mw, layout, leader);
-
-	return true;
 }
 
-static bool
+static void
+init_layout(MainWin *mw, enum layoutmode layout, Window leader)
+{
+	unsigned int newwidth = 100, newheight = 100;
+	if (mw->clientondesktop)
+		layout_run(mw, mw->clientondesktop, &newwidth, &newheight, layout);
+
+	init_multiplier(mw, newwidth, newheight, mw->ps->o.allowUpscale, 2);
+	init_focus(mw, layout, leader);
+}
+
+static void
 init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 {
 	int screencount = wm_get_desktops(mw->ps);
@@ -1075,7 +1072,7 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 	int screenwidth = desktop_dim;
 	int screenheight = ceil((float)screencount / (float)screenwidth);
 
-	foreach_dlist (mw->clients) {
+	foreach_dlist (mw->clientondesktop) {
 		ClientWin *cw = (ClientWin *) iter->data;
 		int win_desktop = wm_get_window_desktop(mw->ps, cw->wid_client);
 		int current_desktop = wm_get_current_desktop(mw->ps);
@@ -1095,38 +1092,19 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 		cw->src.y += (win_desktop_y - current_desktop_y) * (desktop_height + mw->distance);
 	}
 
-    {
-		int x1=0, y1=0, x2=0, y2=0;
-		calculatePanelBorders(mw, &x1, &y1, &x2, &y2);
-		unsigned int totalwidth = screenwidth * (desktop_width + mw->distance) - mw->distance;
-		unsigned int totalheight = screenheight * (desktop_height + mw->distance) - mw->distance;
-		totalwidth += x1 + x2;
-		totalheight += y1 + y2;
-		float multiplier = (float) (mw->width - 1 * mw->distance - x1 - x2)
-			/ (float) totalwidth;
-		if (multiplier * totalheight > mw->height - 1 * mw->distance - y1 - y2)
-			multiplier = (float) (mw->height - 1 * mw->distance - y1 - y2)
-				/ (float) totalheight;
 
-		int xoff = (mw->width - x1 - x2 - (float)(totalwidth
-					- x1 - x2)* multiplier) / 2;
-		int yoff = (mw->height - y1 - y2 - (float)(totalheight
-					- y1 - y2) * multiplier) / 2;
-
-		mw->multiplier = multiplier;
-		mw->xoff = xoff + x1;
-		mw->yoff = yoff + y1;
-
-		mw->desktoptransform.matrix[0][0] = 1.0;
-		mw->desktoptransform.matrix[0][1] = 0.0;
-		mw->desktoptransform.matrix[0][2] = xoff + x1;
-		mw->desktoptransform.matrix[1][0] = 0.0;
-		mw->desktoptransform.matrix[1][1] = 1.0;
-		mw->desktoptransform.matrix[1][2] = yoff + y1;
-		mw->desktoptransform.matrix[2][0] = 0.0;
-		mw->desktoptransform.matrix[2][1] = 0.0;
-		mw->desktoptransform.matrix[2][2] = 1.0;
-	}
+	unsigned int totalwidth = screenwidth * (desktop_width + mw->distance) - mw->distance;
+	unsigned int totalheight = screenheight * (desktop_height + mw->distance) - mw->distance;
+	init_multiplier(mw, totalwidth, totalheight, false, 1);
+	mw->desktoptransform.matrix[0][0] = 1.0;
+	mw->desktoptransform.matrix[0][1] = 0.0;
+	mw->desktoptransform.matrix[0][2] = mw->xoff;
+	mw->desktoptransform.matrix[1][0] = 0.0;
+	mw->desktoptransform.matrix[1][1] = 1.0;
+	mw->desktoptransform.matrix[1][2] = mw->yoff;
+	mw->desktoptransform.matrix[2][0] = 0.0;
+	mw->desktoptransform.matrix[2][1] = 0.0;
+	mw->desktoptransform.matrix[2][2] = 1.0;
 
 	// create windows which represent each virtual desktop
 	int current_desktop = wm_get_current_desktop(mw->ps);
@@ -1144,7 +1122,10 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 					0, 0, 1, 1,
 					0, 0, InputOnly, CopyFromParent,
 					CWEventMask, &sattr);
-			if (!desktopwin) return false;
+			if (!desktopwin) {
+				printfef(true, "(): X11 window creation failed");
+				exit(1);
+			}
 
 			if (!mw->desktopwins)
 				mw->desktopwins = dlist_add(NULL, (void*)desktopwin);
@@ -1152,7 +1133,10 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 				mw->desktopwins = dlist_add(mw->desktopwins, (void*)desktopwin);
 
 			ClientWin *cw = clientwin_create(mw, desktopwin);
-			if (!cw) return false;
+			if (!cw) {
+				printfef(true, "(): X11 window creation failed");
+				exit(1);
+			}
 
 			cw->slots = desktop_idx;
 			cw->mode = CLIDISP_DESKTOP;
@@ -1211,8 +1195,6 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 	}
 
 	mw->focuslist = dlist_dup(mw->dminis);
-
-	return true;
 }
 
 static void
@@ -1259,79 +1241,39 @@ desktopwin_map(ClientWin *cw)
 		clientwin_tooltip(cw);
 }
 
-static bool
+static void
 skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 {
-	// Update the main window's geometry (and Xinerama info if applicable)
 	mainwin_update(mw);
 
 	mw->client_to_focus = NULL;
 
 	count_and_filter_clients(mw);
 	foreach_dlist(mw->clients) {
-		clientwin_update((ClientWin *) iter->data);
-		clientwin_update3((ClientWin *) iter->data);
-		clientwin_update2((ClientWin *) iter->data);
-	}
-
-#ifdef CFG_XINERAMA
-	foreach_dlist(mw->panels) {
 		ClientWin *cw = iter->data;
-		if (cw->paneltype != WINTYPE_PANEL)
-			continue;
-
-		int midx = cw->src.x + cw->src.width / 2;
-		int midy = cw->src.y + cw->src.height / 2;
-
-		XineramaScreenInfo *xiter = mw->xin_info;
-		for (int i=0; i<mw->xin_screens; i++)
-		{
-			if(xiter->x_org <= midx && midx < xiter->x_org + xiter->width &&
-			   xiter->y_org <= midy && midy < xiter->y_org + xiter->height)
-			{
-				cw->src.x -= xiter->x_org;
-				cw->src.y -= xiter->y_org;
-			}
-			xiter++;
-		}
-	}
-#endif /* CFG_XINERAMA */
-
-	if (layout == LAYOUTMODE_PAGING) {
-		if (!init_paging_layout(mw, layout, leader)) {
-			printfef(false, "(): failed.");
-			return false;
-		}
-	}
-	else {
-		if (!init_layout(mw, layout, leader)) {
-			printfef(false, "(): failed.");
-			return false;
-		}
+		clientwin_update3(cw);
+		clientwin_update2(cw);
+		cw->paneltype = wm_identify_panel(mw->ps, cw->wid_client);
 	}
 
-	foreach_dlist(mw->clients) {
+	if (layout == LAYOUTMODE_PAGING)
+		init_paging_layout(mw, layout, leader);
+	else
+		init_layout(mw, layout, leader);
+
+	foreach_dlist(mw->clientondesktop) {
 		ClientWin *cw = iter->data;
 		cw->src.x -= mw->x;
 		cw->src.y -= mw->y;
 		cw->x *= mw->multiplier;
 		cw->y *= mw->multiplier;
-		cw->paneltype = WINTYPE_WINDOW;
 	}
 
 	foreach_dlist(mw->panels) {
 		ClientWin *cw = iter->data;
-		cw->factor = 1;
-		cw->paneltype = wm_identify_panel(mw->ps, cw->wid_client);
-		if (!mw->ps->o.pseudoTrans) {
-			cw->src.x += mw->x;
-			cw->src.y += mw->y;
-		}
-		if (cw->paneltype == WINTYPE_DESKTOP)
-			clientwin_move(cw, 1, cw->src.x, cw->src.y, 1);
+		clientwin_prepmove(cw);
+		clientwin_move(cw, 1, 0, 0, 0);
 	}
-
-	return true;
 }
 
 static void
@@ -1381,7 +1323,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 	count_and_filter_clients(ps->mainwin);
 
 	foreach_dlist(ps->mainwin->clients) {
-		clientwin_update((ClientWin *) iter->data);
 		clientwin_update3((ClientWin *) iter->data);
 		clientwin_update2((ClientWin *) iter->data);
 	}
@@ -1395,15 +1336,13 @@ mainloop(session_t *ps, bool activate_on_start) {
 		if (!mw && activate) {
 			assert(ps->mainwin);
 			activate = false;
-			leader = wm_get_focused(ps);
 
-			if (skippy_activate(ps->mainwin, layout, leader)) {
-				last_animated = last_rendered = time_in_millis();
-				mw = ps->mainwin;
-				pending_damage = false;
-				first_animated = time_in_millis();
-				first_animating = true;
-			}
+			skippy_activate(ps->mainwin, layout, wm_get_focused(ps));
+			last_animated = last_rendered = time_in_millis();
+			mw = ps->mainwin;
+			pending_damage = false;
+			first_animated = time_in_millis();
+			first_animating = true;
 		}
 		if (mw)
 			activate = false;
@@ -1601,7 +1540,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 					}
 					foreach_dlist (mw->panels) {
 						ClientWin *cw = iter->data;
-						panel_map(cw);
 						clientwin_map(cw);
 					}
 
@@ -1633,7 +1571,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 					}
 					foreach_dlist (mw->panels) {
 						ClientWin *cw = iter->data;
-						panel_map(cw);
 						clientwin_map(cw);
 					}
 
@@ -1781,7 +1718,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 				if (iter) {
 					ClientWin *cw = (ClientWin *) iter->data;
-					clientwin_update(cw);
 					clientwin_update3(cw);
 					clientwin_update2(cw);
 					cw->damaged = true;

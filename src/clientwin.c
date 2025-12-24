@@ -115,14 +115,6 @@ clientwin_check_group_leader_func(dlist *l, void *data)
 	return wm_get_group_leader(cw->mainwin->ps->dpy, cw->wid_client) == *((Window*)data);
 }
 
-int
-clientwin_sort_func(dlist* a, dlist* b, void* data)
-{
-	unsigned int pa = ((ClientWin *) a->data)->src.x * ((ClientWin *) a->data)->src.y,
-	             pb = ((ClientWin *) b->data)->src.x * ((ClientWin *) b->data)->src.y;
-	return (pa < pb) ? -1 : (pa == pb) ? 0 : 1;
-}
-
 ClientWin *
 clientwin_create(MainWin *mw, Window client) {
 	session_t *ps = mw->ps;
@@ -226,14 +218,10 @@ clientwin_get_disp_mode(session_t *ps, ClientWin *cw, bool isViewable) {
 	return CLIDISP_NONE;
 }
 
-/**
- * @brief Update window data to prepare for rendering.
- */
 bool
 clientwin_update(ClientWin *cw) {
 	session_t *ps = cw->mainwin->ps;
 
-	// Get window attributes
 	XWindowAttributes wattr = { };
 	XGetWindowAttributes(ps->dpy, cw->src.window, &wattr);
 
@@ -253,8 +241,8 @@ clientwin_update(ClientWin *cw) {
 
 	cw->src.width = wattr.width;
 	cw->src.height = wattr.height;
-	cw->src0.x = cw->src.x;
-	cw->src0.y = cw->src.y;
+	cw->x = cw->src0.x = cw->src.x;
+	cw->y = cw->src0.y = cw->src.y;
 	cw->src0.width = cw->src.width;
 	cw->src0.height = cw->src.height;
 
@@ -712,28 +700,25 @@ void clientwin_prepmove(ClientWin *cw)
 void
 clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 {
-	cw->factor = f;
-	{
-		// animate window by changing these in time linearly:
-		// here, cw->mini has destination coordinates, cw->src has original coordinates
-		MainWin *mw = cw->mainwin;
-		session_t *ps = mw->ps;
+	MainWin *mw = cw->mainwin;
+	session_t *ps = mw->ps;
 
-		cw->mini.x = cw->src.x + (cw->x - cw->src.x + x) * timeslice;
-		cw->mini.y = cw->src.y + (cw->y - cw->src.y + y) * timeslice;
-		if (!ps->o.pseudoTrans) {
-			cw->mini.x += mw->x;
-			cw->mini.y += mw->y;
-		}
-
-		cw->mini.width = cw->src.width * f;
-		cw->mini.height = cw->src.height * f;
+	cw->mini.x = cw->src.x + (cw->x - cw->src.x + x) * timeslice;
+	cw->mini.y = cw->src.y + (cw->y - cw->src.y + y) * timeslice;
+	if (!ps->o.pseudoTrans) {
+		cw->mini.x += mw->x;
+		cw->mini.y += mw->y;
 	}
+
+	cw->factor = f;
+	cw->mini.width = cw->src.width * f;
+	cw->mini.height = cw->src.height * f;
 
 	XMoveResizeWindow(cw->mainwin->ps->dpy, cw->mini.window,
 			cw->mini.x, cw->mini.y, cw->mini.width, cw->mini.height);
 
-	clientwin_round_corners(cw);
+	if (cw->paneltype == WINTYPE_WINDOW)
+		clientwin_round_corners(cw);
 }
 
 void
@@ -867,7 +852,6 @@ shadow_clientwindow(ClientWin* cw, enum cliop op) {
 	clientwin_update3(cw);
 
 	clientwin_prepmove(cw);
-	clientwin_move(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
 	clientwin_map(cw);
 
 	focus_miniw(ps, cw);
