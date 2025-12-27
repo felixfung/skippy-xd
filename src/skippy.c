@@ -168,13 +168,6 @@ parse_align(session_t *ps, const char *str, enum align *dest) {
 	return 0;
 }
 
-static inline bool
-parse_align_full(session_t *ps, const char *str, enum align *dest) {
-	int r = parse_align(ps, str, dest);
-	if (r && str[r]) r = 0;
-	return r;
-}
-
 /**
  * @brief Parse a string representation of picture positioning mode.
  */
