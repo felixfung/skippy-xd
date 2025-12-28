@@ -169,6 +169,26 @@ parse_align(session_t *ps, const char *str, enum align *dest) {
 }
 
 /**
+ * @brief Parse a string representation of enum align.
+ */
+static int
+parse_alignv(session_t *ps, const char *str, enum align *dest) {
+	static const char * const STRS_ALIGN[] = {
+		[ ALIGN_LEFT  ] = "top",
+		[ ALIGN_MID   ] = "mid",
+		[ ALIGN_RIGHT ] = "bottom",
+	};
+	for (int i = 0; i < CARR_LEN(STRS_ALIGN); ++i)
+		if (str_startswithword(str, STRS_ALIGN[i])) {
+			*dest = i;
+			return strlen(STRS_ALIGN[i]);
+		}
+
+	printfef(true, "() (\"%s\"): Unrecognized operation.", str);
+	return 0;
+}
+
+/**
  * @brief Parse a string representation of picture positioning mode.
  */
 static int
@@ -325,7 +345,7 @@ parse_pictspec(session_t *ps, const char *s, pictspec_t *dest) {
 	if (!(next = parse_align(ps, s, &dest->alg)))
 		dest->alg = ALIGN_MID;
 	T_NEXTFIELD();
-	if (!(next && (next = parse_align(ps, s, &dest->valg))))
+	if (!(next && (next = parse_alignv(ps, s, &dest->valg))))
 		dest->valg = ALIGN_MID;
 	T_NEXTFIELD();
 	next = parse_color(ps, s, &dest->c);
