@@ -342,8 +342,8 @@ parse_pictspec(session_t *ps, const char *s, pictspec_t *dest) {
 	if (!(next = parse_pict_posp_mode(ps, s, &dest->mode)))
 		dest->mode = PICTPOSP_ORIG;
 	T_NEXTFIELD();
-	if (!(next = parse_align(ps, s, &dest->alg))) {
-		dest->alg = ALIGN_MID;
+	if (!(next = parse_alignv(ps, s, &dest->valg))) {
+		dest->valg = ALIGN_LEFT;
 		// set next increment to next space separated word
 		while (!isspace(*(s + next)))
 			next++;
@@ -351,8 +351,8 @@ parse_pictspec(session_t *ps, const char *s, pictspec_t *dest) {
 			next++;
 	}
 	T_NEXTFIELD();
-	if (!(next && (next = parse_alignv(ps, s, &dest->valg)))) {
-		dest->valg = ALIGN_MID;
+	if (!(next = parse_align(ps, s, &dest->alg))) {
+		dest->alg = ALIGN_LEFT;
 		// set next increment to next space separated word
 		while (!isspace(*(s + next)))
 			next++;
@@ -2759,7 +2759,7 @@ load_config_file(session_t *ps)
         const char *sspec = config_get(config, "appearance", "background", "#00000055");
 		if (!sspec || strlen(sspec) == 0)
 			sspec = "#00000055";
-		char bg_spec[256] = "orig mid mid ";
+		char bg_spec[256] = "orig top left ";
 		strcat(bg_spec, sspec);
 
 		pictspec_t spec = PICTSPECT_INIT;
@@ -2800,7 +2800,7 @@ load_config_file(session_t *ps)
     }
 	{
 		char defaultstr2[256] = "orig ";
-		const char* sspec2 = config_get(config, "livepreview", "iconPlace", "left left");
+		const char* sspec2 = config_get(config, "livepreview", "iconPlace", "top left");
 		strcat(defaultstr2, sspec2);
 		const char space[] = " ";
 		strcat(defaultstr2, space);
@@ -2822,14 +2822,14 @@ load_config_file(session_t *ps)
 			return RET_BADARG;
 }
 	{
-		char defaultstr[256] = "orig mid mid ";
+		char defaultstr[256] = "orig top left ";
 		const char* sspec = config_get(config, "filler", "color", "#333333");
 		strcat(defaultstr, sspec);
 		if (!parse_pictspec(ps, defaultstr, &ps->o.fillSpec))
 			return RET_BADARG;
 
 		char defaultstr2[256] = "orig ";
-		const char* sspec2 = config_get(config, "filler", "iconPlace", "mid mid");
+		const char* sspec2 = config_get(config, "filler", "iconPlace", "top left");
 		strcat(defaultstr2, sspec2);
 		const char space[] = " ";
 		strcat(defaultstr2, space);
