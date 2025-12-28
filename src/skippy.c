@@ -342,11 +342,23 @@ parse_pictspec(session_t *ps, const char *s, pictspec_t *dest) {
 	if (!(next = parse_pict_posp_mode(ps, s, &dest->mode)))
 		dest->mode = PICTPOSP_ORIG;
 	T_NEXTFIELD();
-	if (!(next = parse_align(ps, s, &dest->alg)))
+	if (!(next = parse_align(ps, s, &dest->alg))) {
 		dest->alg = ALIGN_MID;
+		// set next increment to next space separated word
+		while (!isspace(*(s + next)))
+			next++;
+		while (isspace(*(s + next)))
+			next++;
+	}
 	T_NEXTFIELD();
-	if (!(next && (next = parse_alignv(ps, s, &dest->valg))))
+	if (!(next && (next = parse_alignv(ps, s, &dest->valg)))) {
 		dest->valg = ALIGN_MID;
+		// set next increment to next space separated word
+		while (!isspace(*(s + next)))
+			next++;
+		while (isspace(*(s + next)))
+			next++;
+	}
 	T_NEXTFIELD();
 	next = parse_color(ps, s, &dest->c);
 	T_NEXTFIELD();
