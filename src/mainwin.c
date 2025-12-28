@@ -185,11 +185,11 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 
 		XColor exact_color;
 		if (!XParseColor(ps->dpy, mw->colormap, ps->o.highlight_tint, &exact_color)) {
-			printfef(true, "(): Couldn't look up color '%s', reverting to #CCCCCC",
+			printfef(true, "(): Couldn't look up color '%s', reverting to #EEEEEE",
 					ps->o.highlight_tint);
-			mw->highlightTint.red   = 0xCC * 257 * alpha / 65535;
-			mw->highlightTint.green = 0xCC * 257 * alpha / 65535;
-			mw->highlightTint.blue  = 0xCC * 257 * alpha / 65535;
+			mw->highlightTint.red   = 0xEE * 257 * alpha / 65535;
+			mw->highlightTint.green = 0xEE * 257 * alpha / 65535;
+			mw->highlightTint.blue  = 0xEE * 257 * alpha / 65535;
 		} else {
 			mw->highlightTint.red   = exact_color.red   * alpha / 65535;
 			mw->highlightTint.green = exact_color.green * alpha / 65535;
