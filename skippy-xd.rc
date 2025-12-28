@@ -119,7 +119,7 @@ iconSize = 48
 
 # Currently highlighted window
 [highlight]
-tint = #CCCCCC
+tint = #EEEEEE
 tintOpacity = 128
 
 # Highlighted in multi-select mode
