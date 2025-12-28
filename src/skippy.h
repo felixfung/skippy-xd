@@ -329,10 +329,10 @@ typedef struct {
 	.fillerIconSize = 48, \
 	.normal_opacity = 255, \
 	.highlight_tint = NULL, \
-	.highlight_tintOpacity = 50, \
+	.highlight_tintOpacity = 128, \
 	.shadow_opacity = 160, \
 	.multiselect_tint = NULL, \
-	.multiselect_tintOpacity = 50, \
+	.multiselect_tintOpacity = 196, \
 \
 	.panel_show = true, \
 	.panel_tinting = true, \
