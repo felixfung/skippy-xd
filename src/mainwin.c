@@ -179,33 +179,41 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	mw->colormap = XCreateColormap(dpy, ps->root, mw->visual, AllocNone);
 	mw->format = XRenderFindVisualFormat(dpy, mw->visual);
 
-	XColor exact_color;
+	{
+		unsigned short alpha = alphaconv(ps->o.highlight_tintOpacity);
+		mw->highlightTint.alpha = alpha;
 
-	if(! XParseColor(ps->dpy, mw->colormap, ps->o.highlight_tint, &exact_color))
-	{
-		printfef(true, "(): Couldn't look up color '%s', reverting to #444444", ps->o.highlight_tint);
-		mw->highlightTint.red = mw->highlightTint.green = mw->highlightTint.blue = 0x44;
+		XColor exact_color;
+		if (!XParseColor(ps->dpy, mw->colormap, ps->o.highlight_tint, &exact_color)) {
+			printfef(true, "(): Couldn't look up color '%s', reverting to #444444",
+					ps->o.highlight_tint);
+			mw->highlightTint.red   = 0x44 * 257 * alpha / 65535;
+			mw->highlightTint.green = 0x44 * 257 * alpha / 65535;
+			mw->highlightTint.blue  = 0x44 * 257 * alpha / 65535;
+		} else {
+			mw->highlightTint.red   = exact_color.red   * alpha / 65535;
+			mw->highlightTint.green = exact_color.green * alpha / 65535;
+			mw->highlightTint.blue  = exact_color.blue  * alpha / 65535;
+		}
 	}
-	else
-	{
-		mw->highlightTint.red = exact_color.red;
-		mw->highlightTint.green = exact_color.green;
-		mw->highlightTint.blue = exact_color.blue;
-	}
-	mw->highlightTint.alpha = alphaconv(ps->o.highlight_tintOpacity);
 
-	if(! XParseColor(ps->dpy, mw->colormap, ps->o.multiselect_tint, &exact_color))
 	{
-		printfef(true, "(): Couldn't look up color '%s', reverting to #3376BB", ps->o.multiselect_tint);
-		mw->multiselectTint.red = 0x33; mw->multiselectTint.green = 0x76; mw->multiselectTint.blue = 0xBB;
+		unsigned short alpha = alphaconv(ps->o.multiselect_tintOpacity);
+		mw->multiselectTint.alpha = alpha;
+
+		XColor exact_color;
+		if (!XParseColor(ps->dpy, mw->colormap, ps->o.multiselect_tint, &exact_color)) {
+			printfef(true, "(): Couldn't look up color '%s', reverting to #3376BB",
+					ps->o.highlight_tint);
+			mw->multiselectTint.red   = 0x33 * 257 * alpha / 65535;
+			mw->multiselectTint.green = 0x76 * 257 * alpha / 65535;
+			mw->multiselectTint.blue  = 0xBB * 257 * alpha / 65535;
+		} else {
+			mw->multiselectTint.red   = exact_color.red   * alpha / 65535;
+			mw->multiselectTint.green = exact_color.green * alpha / 65535;
+			mw->multiselectTint.blue  = exact_color.blue  * alpha / 65535;
+		}
 	}
-	else
-	{
-		mw->multiselectTint.red = exact_color.red;
-		mw->multiselectTint.green = exact_color.green;
-		mw->multiselectTint.blue = exact_color.blue;
-	}
-	mw->multiselectTint.alpha = alphaconv(ps->o.multiselect_tintOpacity);
 
 	mw->distance = ps->o.distance;
 

@@ -818,7 +818,7 @@ free_region(session_t *ps, XserverRegion *p) {
 
 static inline unsigned short
 alphaconv(int alpha) {
-	return MIN(alpha * 256, 65535);
+	return (alpha * 65535 + 127) / 255;
 }
 
 /**
