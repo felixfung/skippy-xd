@@ -119,13 +119,13 @@ iconSize = 48
 
 # Currently highlighted window
 [highlight]
-tint = #444444
-tintOpacity = 50
+tint = #CCCCCC
+tintOpacity = 128
 
 # Highlighted in multi-select mode
 [multiselect]
-tint = #3376BB
-tintOpacity = 50
+tint = #66B6F6
+tintOpacity = 196
 
 # Windows of type _NET_WM_WINDOW_TYPE_DOCK
 [panel]
