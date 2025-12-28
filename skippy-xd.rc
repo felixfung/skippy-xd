@@ -107,14 +107,14 @@ cornerRadius = 0
 [filler]
 opacity = 160
 color = #333333
-iconPlace = left left
+iconPlace = top left
 iconSize = 48
 
 # Live window previews
 [livepreview]
 opacity = 255
 icon = true
-iconPlace = left left
+iconPlace = top left
 iconSize = 48
 
 # Currently highlighted window
