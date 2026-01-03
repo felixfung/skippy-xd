@@ -1725,20 +1725,21 @@ mainloop(session_t *ps, bool activate_on_start) {
 			else if (!mw && (ev.type == ConfigureNotify || ev.type == PropertyNotify)) {
 				printfdf(false,
 						"(): else if (ev.type == ConfigureNotify || ev.type == PropertyNotify) {");
-				dlist *iter = (wid ? dlist_find(ps->mainwin->clients, clientwin_cmp_func, (void *) wid): NULL);
+				dlist *iter = (wid ? dlist_find(ps->mainwin->clients,
+						clientwin_cmp_func, (void *) wid): NULL);
 				ClientWin *cw = NULL;
 				if (iter)
 					cw = (ClientWin *) iter->data;
 				if (cw) {
-					clientwin_update(cw);
-					clientwin_update3(cw);
-					clientwin_update2(cw);
+					cw->damaged = true;
+					pending_damage = true;
 				}
             }
 			else if (ev.type == CreateNotify || ev.type == MapNotify) {
 				printfdf(false, "(): else if (ev.type == CreateNotify || ev.type == MapNotify) {");
 				count_and_filter_clients(ps->mainwin);
-				dlist *iter = (wid ? dlist_find(ps->mainwin->clients, clientwin_cmp_func, (void *) wid): NULL);
+				dlist *iter = (wid ? dlist_find(ps->mainwin->clients,
+						clientwin_cmp_func, (void *) wid): NULL);
 
 				if (iter) {
 					ClientWin *cw = (ClientWin *) iter->data;
@@ -1887,8 +1888,12 @@ mainloop(session_t *ps, bool activate_on_start) {
 			//printfdf(false, "(): delayed painting");
 			pending_damage = false;
 			foreach_dlist(mw->clientondesktop) {
-				if (((ClientWin *) iter->data)->damaged)
+				ClientWin *cw = (ClientWin *) iter->data;
+				if (cw->damaged) {
+					clientwin_update(cw);
+					clientwin_update2(cw);
 					clientwin_repair(iter->data);
+				}
 			}
 
 			foreach_dlist(mw->panels) {
