@@ -18,7 +18,6 @@
  */
 
 #include "skippy.h"
-#include <regex.h>
 
 Atom
 	/* Root pixmap / wallpaper atoms */
@@ -167,6 +166,76 @@ wm_get_atoms(session_t *ps) {
 	T_GETATOM(_WIN_STATE);
 	T_GETATOM(_WIN_HINTS);
 #undef T_GETATOM
+}
+
+static bool
+match_expr(const char *expr, const char *text) {
+	bool
+	contains_ci(const char *s, const char *sub) {
+		if (!*sub) return true;
+		for (; *s; s++) {
+			const char *a = s, *b = sub;
+			while (*a && *b &&
+					tolower((unsigned char)*a) == tolower((unsigned char)*b)) {
+				a++;
+				b++;
+			}
+			if (!*b) return true;
+		}
+		return false;
+	}
+
+	bool
+	eval(const char *subexpr, const char **next) {
+		const char *p = subexpr;
+		bool result = true;
+
+		while (*p && *p != ')') {
+			bool negate = false;
+			bool value;
+
+			while (*p && isspace((unsigned char)*p)) p++;
+
+			if (*p == '!') {
+				negate = true;
+				p++;
+			}
+
+			if (*p == '(') {
+				p++;
+				value = eval(p, &p);
+			}
+			else {
+				char buf[256];
+				size_t i = 0;
+				while (*p && !isspace((unsigned char)*p)
+						&& *p != ',' && *p != ')' && i < sizeof(buf)-1)
+					buf[i++] = *p++;
+				buf[i] = '\0';
+				value = (i>0) && contains_ci(text, buf);
+			}
+
+			if (negate) value = !value;
+			result &= value;
+
+			while (*p && isspace((unsigned char)*p)) p++;
+
+			if (*p == ',') {
+				bool or_result = result;
+				while (*p == ',') {
+					p++;
+					or_result |= eval(p, &p);
+				}
+				if (next) *next = p;
+				return or_result;
+			}
+		}
+
+		if (next) *next = p;
+		return result;
+	}
+
+	return eval(expr, NULL);
 }
 
 int wm_get_status(char *status) {
@@ -791,29 +860,24 @@ wm_validate_window(session_t *ps, Window wid) {
 	}
 
 	if (ps->o.wm_class) {
-		regex_t regex;
-		regcomp(&regex, ps->o.wm_class, REG_EXTENDED);
 		XClassHint *hints = allocchk(XAllocClassHint());
 		if (hints){
 			XGetClassHint(ps->dpy, wid, hints);
-			int regmatch_class = hints->res_class? regexec(&regex, hints->res_class, 0, NULL, 0): REG_NOMATCH;
-			int regmatch_name  = hints->res_name? regexec(&regex, hints->res_name,  0, NULL, 0): REG_NOMATCH;
-			if (regmatch_class != 0 && regmatch_name != 0)
+			bool regmatch_class = match_expr(ps->o.wm_class, hints->res_class);
+			bool regmatch_name = match_expr(ps->o.wm_class, hints->res_class);
+
+			if (!regmatch_class && !regmatch_name)
 				return false;
 			XFree(hints->res_name);
 			XFree(hints->res_class);
 			XFree(hints);
 		}
-		regfree(&regex);
 	}
 
 	if (ps->o.wm_title) {
-		regex_t regex;
-		regcomp(&regex, ps->o.wm_title, REG_EXTENDED);
 		FcChar8 *win_title = wm_get_window_title(ps, wid, NULL);
-		if (regexec(&regex, (char*) win_title, 0, NULL, 0) != 0)
+		if (!match_expr(ps->o.wm_title, (char *) win_title))
 			return false;
-		regfree(&regex);
 	}
 
 	return true;
