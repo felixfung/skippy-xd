@@ -169,73 +169,73 @@ wm_get_atoms(session_t *ps) {
 }
 
 static bool
+contains_ci(const char *s, const char *sub) {
+	if (!*sub) return true;
+	for (; *s; s++) {
+		const char *a = s, *b = sub;
+		while (*a && *b &&
+				tolower((unsigned char)*a) == tolower((unsigned char)*b)) {
+			a++;
+			b++;
+		}
+		if (!*b) return true;
+	}
+	return false;
+}
+
+static bool
+eval(const char *subexpr, const char *text, const char **next) {
+	const char *p = subexpr;
+	bool result = true;
+
+	while (*p && *p != ')') {
+		bool negate = false;
+		bool value;
+
+		while (*p && isspace((unsigned char)*p)) p++;
+
+		if (*p == '!') {
+			negate = true;
+			p++;
+		}
+
+		if (*p == '(') {
+			p++;
+			value = eval(p, text, &p);
+		}
+		else {
+			char buf[256];
+			size_t i = 0;
+			while (*p && !isspace((unsigned char)*p)
+					&& *p != ',' && *p != ')' && i < sizeof(buf)-1)
+				buf[i++] = *p++;
+			buf[i] = '\0';
+			value = (i>0) && contains_ci(text, buf);
+		}
+
+		if (negate) value = !value;
+		result &= value;
+
+		while (*p && isspace((unsigned char)*p)) p++;
+
+		if (*p == ',') {
+			bool or_result = result;
+			while (*p == ',') {
+				p++;
+				or_result |= eval(p, text, &p);
+			}
+			if (next) *next = p;
+			return or_result;
+		}
+	}
+
+	if (next) *next = p;
+	return result;
+}
+
+static bool
 match_expr(const char *expr, const char *text) {
-	bool
-	contains_ci(const char *s, const char *sub) {
-		if (!*sub) return true;
-		for (; *s; s++) {
-			const char *a = s, *b = sub;
-			while (*a && *b &&
-					tolower((unsigned char)*a) == tolower((unsigned char)*b)) {
-				a++;
-				b++;
-			}
-			if (!*b) return true;
-		}
-		return false;
-	}
-
-	bool
-	eval(const char *subexpr, const char **next) {
-		const char *p = subexpr;
-		bool result = true;
-
-		while (*p && *p != ')') {
-			bool negate = false;
-			bool value;
-
-			while (*p && isspace((unsigned char)*p)) p++;
-
-			if (*p == '!') {
-				negate = true;
-				p++;
-			}
-
-			if (*p == '(') {
-				p++;
-				value = eval(p, &p);
-			}
-			else {
-				char buf[256];
-				size_t i = 0;
-				while (*p && !isspace((unsigned char)*p)
-						&& *p != ',' && *p != ')' && i < sizeof(buf)-1)
-					buf[i++] = *p++;
-				buf[i] = '\0';
-				value = (i>0) && contains_ci(text, buf);
-			}
-
-			if (negate) value = !value;
-			result &= value;
-
-			while (*p && isspace((unsigned char)*p)) p++;
-
-			if (*p == ',') {
-				bool or_result = result;
-				while (*p == ',') {
-					p++;
-					or_result |= eval(p, &p);
-				}
-				if (next) *next = p;
-				return or_result;
-			}
-		}
-
-		if (next) *next = p;
-		return result;
-	}
-
-	return eval(expr, NULL);
+	return eval(expr, text, NULL);
 }
 
 int wm_get_status(char *status) {
