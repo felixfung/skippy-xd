@@ -91,12 +91,14 @@ and returns all selected window/desktop IDs, enabling sophisticated scripting.
 .B --wm-class
 .I CLASS
 Display only windows belonging to the specified WM
-class.
+class. To exclude windows matching that title instead. For example,
+.B --wm-class '!Firefox'
 .TP
 .SS
 .B --wm-title
 .I TITLE
-Display only windows matching the specified title.
+Display only windows matching the specified title. To exclude windows matching that title instead. For example,
+.B --wm-title '!Firefox'
 .TP
 .SS
 .B --wm-status
