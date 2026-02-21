@@ -360,8 +360,10 @@ parse_pictspec(session_t *ps, const char *s, pictspec_t *dest) {
 			next++;
 	}
 	T_NEXTFIELD();
-	next = parse_color(ps, s, &dest->c);
-	T_NEXTFIELD();
+	if (*s == '#') {
+		next = parse_color(ps, s, &dest->c);
+		T_NEXTFIELD();
+	}
 	if (*s)
 		dest->path = mstrdup(s);
 #undef T_NEXTFIELD
