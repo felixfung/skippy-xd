@@ -23,13 +23,11 @@ jobs:
     strategy:
       matrix:
         include:
-          - arch: amd64
-            deb_arch: amd64
+          - deb_arch: amd64
             cc_flags: ""
             pkg_config_path: "/usr/lib/x86_64-linux-gnu/pkgconfig"
 
-          - arch: i386
-            deb_arch: i386
+          - deb_arch: i386
             cc_flags: "-m32"
             pkg_config_path: "/usr/lib/i386-linux-gnu/pkgconfig"
 
@@ -108,6 +106,8 @@ jobs:
 
       # -----------------------------------------------------------------------
       # 5. Assemble .deb package structure
+      #    Uses Felix's existing Packaging/Debian/control as the base —
+      #    only Version and Architecture are patched in
       # -----------------------------------------------------------------------
       - name: Assemble .deb (${{ matrix.deb_arch }})
         run: |
@@ -123,7 +123,7 @@ jobs:
             "$PKG_DIR/etc/xdg" \
             "$PKG_DIR/DEBIAN"
 
-          # Use make install to copy files into package dir — matches install paths exactly
+          # Install binary, man page and rc via make install
           make PREFIX=/usr DESTDIR="$(pwd)/$PKG_DIR" install
 
           # Permissions
@@ -132,22 +132,13 @@ jobs:
           # Copy README if present
           cp README* "$PKG_DIR/usr/share/doc/$PKG_NAME/" 2>/dev/null || true
 
-          # DEBIAN/control
-          cat > "$PKG_DIR/DEBIAN/control" << EOF
-          Package: $PKG_NAME
-          Version: $VERSION
-          Architecture: $DEB_ARCH
-          Maintainer: felixfung <https://github.com/felixfung>
-          Depends: libc6, libx11-6, libxft2, libxrender1, libxcomposite1, libxdamage1, libxfixes3, libxext6, libxinerama1, libpng16-16, zlib1g, libjpeg62, libgif7
-          Section: x11
-          Priority: optional
-          Homepage: https://github.com/felixfung/skippy-xd
-          Description: Full-screen Exposé-like task switcher for X11
-           Skippy-XD is a lightweight daemon that displays all open windows
-           simultaneously, allowing fast switching between them. Designed for
-           use with minimal window managers that do not provide their own
-           expose functionality.
-          EOF
+          # Use Felix's existing control file as base — patch Version and Architecture
+          cp Packaging/Debian/control "$PKG_DIR/DEBIAN/control"
+          sed -i "s/^Version:.*/Version: $VERSION/"           "$PKG_DIR/DEBIAN/control"
+          sed -i "s/^Architecture:.*/Architecture: $DEB_ARCH/" "$PKG_DIR/DEBIAN/control"
+
+          echo "--- DEBIAN/control ---"
+          cat "$PKG_DIR/DEBIAN/control"
 
           # Build the .deb
           dpkg-deb --build "$PKG_DIR" "${PKG_NAME}_${VERSION}_${DEB_ARCH}.deb"
