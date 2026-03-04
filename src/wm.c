@@ -789,64 +789,109 @@ wm_validate_window(session_t *ps, Window wid) {
 			return false;
 	}
 
-	if (ps->o.wm_status_count > 0) {
-		bool statusfilter = false;
+	if (ps->o.wm_status) {
+		bool positive_match = false;
+		bool negative_match = false;
+		bool have_positive = false;
+		bool have_negative = false;
+
 		bool maxvert = false;
 		bool maxhorz = false;
-		bool filtering4float = false, floating = true;
-		bool filtering4max = false;
-		if (WMPSN_EWMH == ps->wmpsn) {
-			winprop_t prop = wid_get_prop(ps, wid, _NET_WM_STATE, 8192, XA_ATOM, 32);
-			for (int i = 0; i < prop.nitems; i++) {
-				long v = prop.data32[i];
-				maxvert |= v == _NET_WM_STATE_MAXIMIZED_VERT;
-				maxhorz |= v == _NET_WM_STATE_MAXIMIZED_HORZ;
+		bool floating = false;
 
-				for (int j=0; j<ps->o.wm_status_count && !statusfilter; j++) {
-					if (status2atom(ps->o.wm_status[j]) ==
-							(_NET_WM_STATE_MAXIMIZED_VERT + _NET_WM_STATE_MAXIMIZED_HORZ)) {
-						filtering4max = true;
-					}
-					else {
-						statusfilter = v == status2atom(ps->o.wm_status[j]);
-					}
-				}
-			}
-			if (prop.nitems == 0) {
+		winprop_t ewmh_prop = {0};
+		unsigned long gnome_state = 0;
+		bool use_ewmh = WMPSN_EWMH == ps->wmpsn;
+
+		if (use_ewmh) {
+			ewmh_prop = wid_get_prop(ps, wid, _NET_WM_STATE, 8192, XA_ATOM, 32);
+			if (ewmh_prop.nitems == 0)
 				floating = true;
-				for (int j=0; j<ps->o.wm_status_count && !statusfilter; j++) {
-					if (ps->o.wm_status[j] == -1)
-						filtering4float = true;
-				}
+
+			for (int i = 0; i < ewmh_prop.nitems; i++) {
+				Atom a = (Atom)ewmh_prop.data32[i];
+				if (a == _NET_WM_STATE_MAXIMIZED_VERT)
+					maxvert = true;
+				if (a == _NET_WM_STATE_MAXIMIZED_HORZ)
+					maxhorz = true;
 			}
-			free_winprop(&prop);
-		}
-		else if (WMPSN_GNOME == ps->wmpsn) {
+		} else if (WMPSN_GNOME == ps->wmpsn) {
 			winprop_t prop = wid_get_prop(ps, wid, _WIN_STATE, 1, XA_CARDINAL, 0);
-			maxvert |= (winprop_get_int(&prop) & _NET_WM_STATE_MAXIMIZED_VERT);
-			maxhorz |= (winprop_get_int(&prop) & _NET_WM_STATE_MAXIMIZED_HORZ);
+			gnome_state = winprop_get_int(&prop);
 
-			for (int i=0; i<ps->o.wm_status_count && !statusfilter; i++) {
-				if (status2atom(ps->o.wm_status[i]) ==
-						(WIN_STATE_MAXIMIZED_VERT | WIN_STATE_MAXIMIZED_HORIZ)) {
-					filtering4max = true;
-				}
-				else if (ps->o.wm_status[i] == -1) {
-					filtering4float = true;
-				}
-				else {
-					statusfilter = (winprop_get_int(&prop) & ps->o.wm_status[i])
-							== ps->o.wm_status[i];
-					floating = false;
-				}
-			}
+			if (gnome_state == 0)
+				floating = true;
+
+			if (gnome_state & WIN_STATE_MAXIMIZED_VERT)
+				maxvert = true;
+			if (gnome_state & WIN_STATE_MAXIMIZED_HORIZ)
+				maxhorz = true;
+
 			free_winprop(&prop);
 		}
 
-		if (filtering4max)
-			statusfilter |= maxvert && maxhorz;
-		if (filtering4float)
-			statusfilter |= floating;
+		char *input = strdup(ps->o.wm_status);
+		char *saveptr = NULL;
+		char *token = strtok_r(input, ",", &saveptr);
+
+		while (token) {
+			while (*token == ' ')
+				token++;
+
+			bool negated = false;
+			if (*token == '!') {
+				negated = true;
+				token++;
+				have_negative = true;
+			} else
+				have_positive = true;
+
+			int status = wm_get_status(token);
+			bool match = false;
+
+			if (status == -1)
+				match = floating;
+			else if (status == (WIN_STATE_MAXIMIZED_VERT | WIN_STATE_MAXIMIZED_HORIZ))
+				match = maxvert && maxhorz;
+			else if (status == WIN_STATE_MAXIMIZED_VERT)
+				match = maxvert;
+			else if (status == WIN_STATE_MAXIMIZED_HORIZ)
+				match = maxhorz;
+			else if (status != 0) {
+				if (use_ewmh) {
+					Atom atom = status2atom(status);
+					for (int i = 0; i < ewmh_prop.nitems; i++)
+						if ((Atom)ewmh_prop.data32[i] == atom) {
+							match = true;
+							break;
+						}
+				} else
+					match = (gnome_state & status) == status;
+			}
+
+			if (negated) {
+				if (match)
+					negative_match = true;
+			} else {
+				if (match)
+					positive_match = true;
+			}
+
+			token = strtok_r(NULL, ",", &saveptr);
+		}
+
+		free(input);
+
+		if (use_ewmh)
+			free_winprop(&ewmh_prop);
+
+		bool statusfilter = false;
+
+		if (have_positive)
+			statusfilter = positive_match && !negative_match;
+		else if (have_negative)
+			statusfilter = !negative_match;
+
 		if (!statusfilter)
 			return false;
 	}
