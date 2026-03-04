@@ -169,73 +169,65 @@ wm_get_atoms(session_t *ps) {
 }
 
 static bool
-contains_ci(const char *s, const char *sub) {
-	if (!*sub) return true;
-	for (; *s; s++) {
-		const char *a = s, *b = sub;
-		while (*a && *b &&
-				tolower((unsigned char)*a) == tolower((unsigned char)*b)) {
-			a++;
-			b++;
-		}
-		if (!*b) return true;
+regexmatch(const char *pattern, const char *str)
+{
+	if (*pattern == '\0') return true;
+	if (*pattern == '*')
+		// Try matching zero characters or consume one character and stay on '*'
+		return regexmatch(pattern + 1, str) || (*str && regexmatch(pattern, str + 1));
+	else
+		return (*str && *pattern == *str) && regexmatch(pattern + 1, str + 1);
+}
+
+static bool
+regexmatch_partial(const char *pattern, const char *str)
+{
+	size_t len = strlen(str);
+	for (size_t i = 0; i <= len; i++) {
+		if (regexmatch(pattern, str + i))
+			return true;
 	}
 	return false;
 }
 
 static bool
-eval(const char *subexpr, const char *text, const char **next) {
-	const char *p = subexpr;
-	bool result = true;
+match_expr(const char *expr_list, const char *str)
+{
+	bool has_positive = false;
+	bool positive_match = false;
 
-	while (*p && *p != ')') {
-		bool negate = false;
-		bool value;
-
-		while (*p && isspace((unsigned char)*p)) p++;
-
-		if (*p == '!') {
-			negate = true;
-			p++;
+	char *copy = strdup(expr_list);
+	char *token = strtok(copy, ",");
+    
+	while (token) {
+		while (*token == ' ') token++;
+		char *end = token + strlen(token) - 1;
+		while (end > token && (*end == ' ' || *end == '\n')) {
+			*end = '\0';
+			end--;
 		}
 
-		if (*p == '(') {
-			p++;
-			value = eval(p, text, &p);
-		}
-		else {
-			char buf[256];
-			size_t i = 0;
-			while (*p && !isspace((unsigned char)*p)
-					&& *p != ',' && *p != ')' && i < sizeof(buf)-1)
-				buf[i++] = *p++;
-			buf[i] = '\0';
-			value = (i>0) && contains_ci(text, buf);
-		}
-
-		if (negate) value = !value;
-		result &= value;
-
-		while (*p && isspace((unsigned char)*p)) p++;
-
-		if (*p == ',') {
-			bool or_result = result;
-			while (*p == ',') {
-				p++;
-				or_result |= eval(p, text, &p);
+		if (*token == '!') {
+			if (regexmatch_partial(token + 1, str)) {
+				free(copy);
+				return false; // negative overrides everything
 			}
-			if (next) *next = p;
-			return or_result;
+		} else {
+			has_positive = true;
+			if (regexmatch_partial(token, str))
+				positive_match = true;
 		}
+
+		token = strtok(NULL, ",");
 	}
 
-	if (next) *next = p;
-	return result;
-}
+	free(copy);
 
-static bool
-match_expr(const char *expr, const char *text) {
-	return eval(expr, text, NULL);
+	// If there are positive expressions,
+	// 	   return whether any matched
+	// If there are no positive expressions,
+	//     return true (everything allowed) unless a negative blocked it
+	return has_positive? positive_match: true;
 }
 
 int wm_get_status(char *status) {
