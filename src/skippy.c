@@ -2567,7 +2567,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 				break;
 			case OPT_DESKTOP:
 				for (int i=0; i<strlen(optarg); i++)
-					if (optarg[i] != '-' && optarg[i] != ','
+					if (optarg[i] != '-' && optarg[i] != ',' && optarg[i] != '!'
 							&& !('0'<=optarg[i] && optarg[i]<='9')) {
 						printfef(true,
 							"(): --desktop argument accepts only numerals and comma");
