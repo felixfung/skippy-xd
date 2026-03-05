@@ -90,18 +90,17 @@ and returns all selected window/desktop IDs, enabling sophisticated scripting.
 .SS
 .B --wm-class
 .I CLASS
-Display only windows belonging to the specified WM
-class.
+Display only windows belonging to the specified WM class. Use ',', '!' for OR, NOT logic. Use '*' for wildcard.
 .TP
 .SS
 .B --wm-title
 .I TITLE
-Display only windows matching the specified title.
+Display only windows matching the specified title. Use ',', '!' for OR, NOT logic. Use '*' for wildcard.
 .TP
 .SS
 .B --wm-status
 .I STATUS
-Display only windows with the specified status.
+Display only windows with the specified status. Use ',', '!' for OR, NOT logic.
 Valid status values are:
 .RS
 .IP "sticky" 4
@@ -124,7 +123,7 @@ Fully maximized windows
 .B --desktop
 .I DESKTOP
 Display only windows on the specified virtual
-desktop. Use
+desktop. Use ',', '!' for OR, NOT logic. Use
 .B -1
 to show windows from all desktops.
 .TP
@@ -218,10 +217,10 @@ skippy-xd --expose --pivot Super_L --next
 Activate expose via pivot mode with Super_L
 as the pivot key, highlighting the next window.
 .PP
-skippy-xd --expose --desktop -1 --wm-class firefox --wm-status float,maximized_vert --config ~/.config/skippy-xd/other.rc
+skippy-xd --expose --desktop -1 --wm-class firefox --wm-title '!firefox' --wm-status float,maximized_vert --config ~/.config/skippy-xd/other.rc
 .IP
 Show Firefox windows from all desktops that are
-floating or vertically maximized, with custom config file.
+floating or vertically maximized, with custom config file, excluding those whose window title contains 'firefox'.
 .SH COMPATIBILITY
 .B skippy-xd
 works with any X Window Manager and desktop
