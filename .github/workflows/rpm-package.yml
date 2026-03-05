@@ -151,6 +151,7 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.VERSION }}"
           RPM_ARCH="${{ matrix.rpm_arch }}"
+          CHANGELOG_DATE="$(date '+%a %b %d %Y')"
 
           cat > "$HOME/rpmbuild/SPECS/skippy-xd.spec" << EOF
 Name:           skippy-xd
@@ -191,7 +192,7 @@ expose functionality.
 %config(noreplace) %{_sysconfdir}/xdg/skippy-xd.rc
 
 %changelog
-* $(date "+%a %b %d %Y") felixfung <https://github.com/felixfung> - ${VERSION}-1
+* ${CHANGELOG_DATE} felixfung https://github.com/felixfung - ${VERSION}-1
 - Automated release build
 EOF
 

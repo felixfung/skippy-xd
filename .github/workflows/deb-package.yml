@@ -81,8 +81,14 @@ jobs:
             libpng-dev              libpng-dev:i386 \
             zlib1g-dev              zlib1g-dev:i386 \
             libjpeg-dev             libjpeg-dev:i386 \
-            libgif-dev              libgif-dev:i386 \
             libfreetype6-dev        libfreetype6-dev:i386
+
+          # libgif-dev and libgif-dev:i386 conflict — install only the needed one
+          if [ "${{ matrix.deb_arch }}" = "i386" ]; then
+            sudo apt-get install -y libgif-dev:i386
+          else
+            sudo apt-get install -y libgif-dev
+          fi
 
       # -----------------------------------------------------------------------
       # 4. Build skippy-xd
