@@ -33,11 +33,12 @@ jobs:
             libconfig-dev libimlib2-dev libx11-xcb-dev \
             libpng-dev libjpeg-dev libgif-dev
 
-
+      - name: Generate upstream tarball
+        run: |
+          git archive --format=tar.gz --prefix=skippy-xd-${{ steps.version.outputs.version }}/ -o ../skippy-xd_${{ steps.version.outputs.version }}.orig.tar.gz HEAD
 
       - name: Build Debian package
         run: |
-          VERSION=$(cat version.txt | sed -E 's/^v([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
           dpkg-buildpackage -us -uc
 
       - name: List built files

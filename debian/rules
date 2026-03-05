@@ -1,14 +1,10 @@
 #!/usr/bin/make -f
 
-# Variabelen
-DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
-PREFIX = /usr
-
 %:
 	dh $@
 
 override_dh_auto_configure:
-	meson setup --prefix=$(PREFIX) --libdir=$(PREFIX)/lib/$(DEB_HOST_MULTIARCH) build
+	meson setup --prefix=/usr build
 
 override_dh_auto_build:
 	ninja -C build
@@ -17,5 +13,4 @@ override_dh_auto_install:
 	DESTDIR=$(CURDIR)/debian/skippy-xd ninja -C build install
 
 override_dh_auto_clean:
-	ninja -C build clean || true
-	rm -rf build
+	-rm -rf build
