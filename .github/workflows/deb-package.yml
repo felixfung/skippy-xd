@@ -17,6 +17,7 @@ jobs:
         run: |
           VERSION=$(cat version.txt | sed -E 's/^v([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Detected version: $VERSION"
 
       - name: Install build dependencies
         run: |
@@ -28,16 +29,17 @@ jobs:
           VERSION=$(cat version.txt | sed -E 's/^v([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
           dpkg-buildpackage -us -uc
 
-      - name: List files (debug)
+      - name: List built files
         run: |
           ls -la ..
-          ls -la ../*.deb
+          find .. -name "*.deb" -type f
 
       - name: Upload Debian package
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: deb-package
           path: ../skippy-xd_*.deb
+          if-no-files-found: error
 
       - name: Release
         uses: softprops/action-gh-release@v1
