@@ -1,0 +1,168 @@
+# -----------------------------------------------------------------------------
+# Skippy-XD Debian Package Builder — GitHub Actions Workflow
+# Triggers: on every tagged release (v*) and manual dispatch
+# Produces:  skippy-xd_<version>_amd64.deb
+#            skippy-xd_<version>_i386.deb
+# Both attached to the GitHub Release page
+# -----------------------------------------------------------------------------
+
+name: Build Debian Packages
+
+on:
+  push:
+    tags:
+      - 'v*'                        # fires on v0.10.6, v1.0.0, etc.
+  workflow_dispatch:                # allows manual trigger from Actions tab
+
+permissions:
+  contents: write                   # needed to upload to GitHub Releases
+
+jobs:
+  build-deb:
+    runs-on: ubuntu-22.04           # stable LTS baseline
+    strategy:
+      matrix:
+        include:
+          - deb_arch: amd64
+            cc_flags: ""
+            pkg_config_path: "/usr/lib/x86_64-linux-gnu/pkgconfig"
+
+          - deb_arch: i386
+            cc_flags: "-m32"
+            pkg_config_path: "/usr/lib/i386-linux-gnu/pkgconfig"
+
+    steps:
+
+      # -----------------------------------------------------------------------
+      # 1. Checkout
+      # -----------------------------------------------------------------------
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # -----------------------------------------------------------------------
+      # 2. Read version from version.txt (pure bash — no awk/sed issues)
+      # -----------------------------------------------------------------------
+      - name: Read version
+        id: version
+        run: |
+          read -r raw < version.txt
+          raw="${raw%% *}"          # strip everything after first space
+          VERSION="${raw#v}"        # strip leading 'v'
+          if [ -z "$VERSION" ]; then
+            echo "ERROR: could not parse version from version.txt"
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Detected version: $VERSION"
+
+      # -----------------------------------------------------------------------
+      # 3. Install dependencies
+      #    Enable i386 multiarch for 32-bit builds
+      # -----------------------------------------------------------------------
+      - name: Install dependencies
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update -q
+          sudo apt-get install -y \
+            build-essential \
+            gcc \
+            gcc-multilib \
+            pkg-config \
+            libx11-dev              libx11-dev:i386 \
+            libxft-dev              libxft-dev:i386 \
+            libxrender-dev          libxrender-dev:i386 \
+            libxcomposite-dev       libxcomposite-dev:i386 \
+            libxdamage-dev          libxdamage-dev:i386 \
+            libxfixes-dev           libxfixes-dev:i386 \
+            libxext-dev             libxext-dev:i386 \
+            libxinerama-dev         libxinerama-dev:i386 \
+            libpng-dev              libpng-dev:i386 \
+            zlib1g-dev              zlib1g-dev:i386 \
+            libjpeg-dev             libjpeg-dev:i386 \
+            libgif-dev              libgif-dev:i386 \
+            libfreetype6-dev        libfreetype6-dev:i386
+
+      # -----------------------------------------------------------------------
+      # 4. Build skippy-xd
+      #    Pass clean VERSION so man page sed substitution never breaks
+      #    For i386: override CC with -m32 and point pkg-config to i386 libs
+      # -----------------------------------------------------------------------
+      - name: Build (${{ matrix.deb_arch }})
+        run: |
+          make clean
+          if [ "${{ matrix.deb_arch }}" = "i386" ]; then
+            make PREFIX=/usr \
+              CC="gcc ${{ matrix.cc_flags }}" \
+              CFLAGS="${{ matrix.cc_flags }} -DNDEBUG -O2 -D_FORTIFY_SOURCE=2" \
+              LDFLAGS="${{ matrix.cc_flags }} -Wl,-O1 -Wl,--as-needed" \
+              PKG_CONFIG_PATH="${{ matrix.pkg_config_path }}" \
+              VERSION_SKIPPYXD="${{ steps.version.outputs.VERSION }}"
+          else
+            make PREFIX=/usr \
+              VERSION_SKIPPYXD="${{ steps.version.outputs.VERSION }}"
+          fi
+
+      # -----------------------------------------------------------------------
+      # 5. Assemble .deb package structure
+      #    Uses Felix's existing Packaging/Debian/control as the base —
+      #    only Version and Architecture are patched in
+      # -----------------------------------------------------------------------
+      - name: Assemble .deb (${{ matrix.deb_arch }})
+        run: |
+          PKG_NAME="skippy-xd"
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          DEB_ARCH="${{ matrix.deb_arch }}"
+          PKG_DIR="${PKG_NAME}_${VERSION}_${DEB_ARCH}"
+
+          mkdir -p \
+            "$PKG_DIR/usr/bin" \
+            "$PKG_DIR/usr/share/man/man1" \
+            "$PKG_DIR/usr/share/doc/$PKG_NAME" \
+            "$PKG_DIR/etc/xdg" \
+            "$PKG_DIR/DEBIAN"
+
+          # Install binary, man page and rc via make install
+          make PREFIX=/usr DESTDIR="$(pwd)/$PKG_DIR" install
+
+          # Permissions
+          chmod 755 "$PKG_DIR/usr/bin/skippy-xd"
+
+          # Copy README if present
+          cp README* "$PKG_DIR/usr/share/doc/$PKG_NAME/" 2>/dev/null || true
+
+          # Use Felix's existing control file as base — patch Version and Architecture
+          cp Packaging/Debian/control "$PKG_DIR/DEBIAN/control"
+          sed -i "s/^Version:.*/Version: $VERSION/"           "$PKG_DIR/DEBIAN/control"
+          sed -i "s/^Architecture:.*/Architecture: $DEB_ARCH/" "$PKG_DIR/DEBIAN/control"
+
+          echo "--- DEBIAN/control ---"
+          cat "$PKG_DIR/DEBIAN/control"
+
+          # Build the .deb
+          dpkg-deb --build "$PKG_DIR" "${PKG_NAME}_${VERSION}_${DEB_ARCH}.deb"
+
+          echo "Built: ${PKG_NAME}_${VERSION}_${DEB_ARCH}.deb"
+          ls -lh "${PKG_NAME}_${VERSION}_${DEB_ARCH}.deb"
+
+      # -----------------------------------------------------------------------
+      # 6. Upload .deb to GitHub Release
+      # -----------------------------------------------------------------------
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "Skippy-XD ${{ steps.version.outputs.VERSION }}"
+          body: |
+            ## Skippy-XD ${{ steps.version.outputs.VERSION }}
+
+            ### Debian/Ubuntu packages
+            Download the `.deb` matching your system architecture and install with:
+            ```bash
+            sudo dpkg -i skippy-xd_${{ steps.version.outputs.VERSION }}_amd64.deb
+            # or for 32-bit systems:
+            sudo dpkg -i skippy-xd_${{ steps.version.outputs.VERSION }}_i386.deb
+            ```
+          files: skippy-xd_${{ steps.version.outputs.VERSION }}_${{ matrix.deb_arch }}.deb
+          fail_on_unmatched_files: true
