@@ -18,26 +18,27 @@ jobs:
           VERSION=$(cat version.txt | sed 's/^v//')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Build Debian package
-        uses: docker://ghcr.io/helsinki-systems/build-debian-package:latest
-        with:
-          entrypoint: /build-debian-package.sh
-          args: --git-buildpackage --git-export-dir=/tmp/build --git-upstream-tree=HEAD
-        env:
-          DEB_EMAIL: "mus@example.com"
-          DEB_FULLNAME: "Mus Boulange"
-
-      - name: Rename deb file (remove +dfsg if present)
+      - name: Install build dependencies
         run: |
-          cd /tmp/build
-          for file in *.deb; do
-            mv "$file" "${file/+dfsg/}"
-          done
+          sudo apt update
+          sudo apt install -y devscripts build-essential dh-make
+
+      - name: Build Debian package
+        run: |
+          VERSION=$(cat version.txt | sed 's/^v//')
+          dpkg-buildpackage -us -uc
+
+      - name: Upload Debian package
+        uses: actions/upload-artifact@v3
+        with:
+          name: deb-package
+          path: ../skippy-xd_*.deb
 
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: /tmp/build/*.deb
+          files: ../skippy-xd_*.deb
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
