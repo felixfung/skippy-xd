@@ -1,0 +1,5 @@
+skippy-xd (0.10.6 (2026.1.4) - 'Brainrot 67' Edition-1) unstable; urgency=medium
+
+  * Initial Debian package.
+
+ -- Felix Fung <felixfung@example.com>  Thu, 05 Mar 2026 20:50:34 +0100
