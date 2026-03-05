@@ -1,7 +1,7 @@
 #!/usr/bin/make -f
 
 %:
-	dh $@
+	dh $@ --buildsystem=meson --with=meson
 
-override_dh_auto_install:
-	make PREFIX=/usr DESTDIR=\$(CURDIR)/debian/skippy-xd install
+override_dh_auto_configure:
+	dh_auto_configure -- --prefix=/usr

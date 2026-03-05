@@ -22,7 +22,18 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt update
-          sudo apt install -y devscripts build-essential dh-make
+          sudo apt install -y devscripts build-essential dh-make \
+            meson ninja-build \
+            libx11-dev libxcb1-dev libxcb-util0-dev libxcb-ewmh-dev \
+            libxcb-icccm4-dev libxcb-image0-dev libxcb-keysyms1-dev \
+            libxcb-randr0-dev libxcb-shape0-dev libxcb-xinerama0-dev \
+            libxcb-xfixes0-dev libxcb-composite0-dev libxcb-damage0-dev \
+            libxcb-render-util0-dev libxcb-render0-dev libxcb-shm0-dev \
+            libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev \
+            libconfig-dev libimlib2-dev libx11-xcb-dev \
+            libpng-dev libjpeg-dev libgif-dev
+
+
 
       - name: Build Debian package
         run: |
