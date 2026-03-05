@@ -207,9 +207,7 @@ typedef struct {
 	bool filterxscreen;
 	char *wm_class;
 	char *wm_title;
-	int wm_status_count;
-	int *wm_status;
-	char *wm_status_str;
+	char *wm_status;
 	char *desktops;
 
 	int switchLayout;
@@ -300,9 +298,7 @@ typedef struct {
 \
 	.showOnlyCurrentMonitor = false, \
 	.filterxscreen = true, \
-	.wm_status_count = 0, \
 	.wm_status = NULL, \
-	.wm_status_str = "", \
 \
 	.switchLayout = LAYOUT_XD, \
 	.exposeLayout = LAYOUT_COSMOS, \
