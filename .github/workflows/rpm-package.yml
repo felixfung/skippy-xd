@@ -1,0 +1,241 @@
+# -----------------------------------------------------------------------------
+# Skippy-XD RPM Package Builder — GitHub Actions Workflow
+# Triggers: on every tagged release (v*) and manual dispatch
+# Produces:  skippy-xd-<version>-1.x86_64.rpm
+#            skippy-xd-<version>-1.i686.rpm
+# Both attached to the GitHub Release page
+# Uses Fedora container for authentic RPM building
+# -----------------------------------------------------------------------------
+
+name: Build RPM Packages
+
+on:
+  push:
+    tags:
+      - 'v*'                        # fires on v0.10.6, v1.0.0, etc.
+  workflow_dispatch:                # allows manual trigger from Actions tab
+
+permissions:
+  contents: write                   # needed to upload to GitHub Releases
+
+jobs:
+  build-rpm:
+    runs-on: ubuntu-22.04
+    container:
+      image: fedora:latest          # authentic RPM environment
+
+    strategy:
+      matrix:
+        include:
+          - rpm_arch: x86_64
+            cc_flags: ""
+            pkg_config_path: "/usr/lib64/pkgconfig"
+
+          - rpm_arch: i686
+            cc_flags: "-m32"
+            pkg_config_path: "/usr/lib/pkgconfig"
+
+    steps:
+
+      # -----------------------------------------------------------------------
+      # 1. Checkout
+      # -----------------------------------------------------------------------
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # -----------------------------------------------------------------------
+      # 2. Read version from version.txt (pure bash — no awk/sed issues)
+      # -----------------------------------------------------------------------
+      - name: Read version
+        id: version
+        run: |
+          read -r raw < version.txt
+          raw="${raw%% *}"          # strip everything after first space
+          VERSION="${raw#v}"        # strip leading 'v'
+          if [ -z "$VERSION" ]; then
+            echo "ERROR: could not parse version from version.txt"
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Detected version: $VERSION"
+
+      # -----------------------------------------------------------------------
+      # 3. Install build dependencies
+      #    glibc-devel.i686 and libgcc.i686 needed for 32-bit builds
+      # -----------------------------------------------------------------------
+      - name: Install dependencies
+        run: |
+          dnf install -y \
+            gcc \
+            gcc-c++ \
+            make \
+            pkgconfig \
+            rpm-build \
+            rpmdevtools \
+            libX11-devel \
+            libXft-devel \
+            libXrender-devel \
+            libXcomposite-devel \
+            libXdamage-devel \
+            libXfixes-devel \
+            libXext-devel \
+            libXinerama-devel \
+            libpng-devel \
+            zlib-devel \
+            libjpeg-turbo-devel \
+            giflib-devel \
+            freetype-devel \
+            glibc-devel.i686 \
+            libgcc.i686 \
+            libX11-devel.i686 \
+            libXft-devel.i686 \
+            libXrender-devel.i686 \
+            libXcomposite-devel.i686 \
+            libXdamage-devel.i686 \
+            libXfixes-devel.i686 \
+            libXext-devel.i686 \
+            libXinerama-devel.i686 \
+            libpng-devel.i686 \
+            zlib-devel.i686 \
+            libjpeg-turbo-devel.i686 \
+            giflib-devel.i686 \
+            freetype-devel.i686
+
+      # -----------------------------------------------------------------------
+      # 4. Build skippy-xd
+      #    Pass clean VERSION so man page sed substitution never breaks
+      # -----------------------------------------------------------------------
+      - name: Build (${{ matrix.rpm_arch }})
+        run: |
+          make clean
+          if [ "${{ matrix.rpm_arch }}" = "i686" ]; then
+            make PREFIX=/usr \
+              CC="gcc ${{ matrix.cc_flags }}" \
+              CFLAGS="${{ matrix.cc_flags }} -DNDEBUG -O2 -D_FORTIFY_SOURCE=2" \
+              LDFLAGS="${{ matrix.cc_flags }} -Wl,-O1 -Wl,--as-needed" \
+              PKG_CONFIG_PATH="${{ matrix.pkg_config_path }}" \
+              VERSION_SKIPPYXD="${{ steps.version.outputs.VERSION }}"
+          else
+            make PREFIX=/usr \
+              VERSION_SKIPPYXD="${{ steps.version.outputs.VERSION }}"
+          fi
+
+      # -----------------------------------------------------------------------
+      # 5. Set up RPM build tree and install built files
+      # -----------------------------------------------------------------------
+      - name: Set up RPM build tree (${{ matrix.rpm_arch }})
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          RPM_ARCH="${{ matrix.rpm_arch }}"
+
+          rpmdev-setuptree
+
+          # Install into BUILDROOT
+          BUILDROOT="$HOME/rpmbuild/BUILDROOT/skippy-xd-${VERSION}-1.${RPM_ARCH}"
+          mkdir -p \
+            "$BUILDROOT/usr/bin" \
+            "$BUILDROOT/usr/share/man/man1" \
+            "$BUILDROOT/etc/xdg"
+
+          make PREFIX=/usr DESTDIR="$BUILDROOT" install
+
+          chmod 755 "$BUILDROOT/usr/bin/skippy-xd"
+
+      # -----------------------------------------------------------------------
+      # 6. Generate .spec file
+      #    Kept minimal — KISS, matches Makefile dependencies exactly
+      # -----------------------------------------------------------------------
+      - name: Create spec file (${{ matrix.rpm_arch }})
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          RPM_ARCH="${{ matrix.rpm_arch }}"
+          CHANGELOG_DATE="$(date '+%a %b %d %Y')"
+
+          cat > "$HOME/rpmbuild/SPECS/skippy-xd.spec" << EOF
+Name:           skippy-xd
+Version:        ${VERSION}
+Release:        1%{?dist}
+Summary:        Full-screen Expose-like task switcher for X11
+License:        GPL-2.0-or-later
+URL:            https://github.com/felixfung/skippy-xd
+BuildArch:      ${RPM_ARCH}
+
+Requires:       libX11
+Requires:       libXft
+Requires:       libXrender
+Requires:       libXcomposite
+Requires:       libXdamage
+Requires:       libXfixes
+Requires:       libXext
+Requires:       libXinerama
+Requires:       libpng
+Requires:       zlib
+Requires:       libjpeg-turbo
+Requires:       giflib
+Requires:       freetype
+
+%description
+Skippy-XD is a lightweight daemon that displays all open windows
+simultaneously, allowing fast switching between them. Designed for
+use with minimal window managers that do not provide their own
+expose functionality.
+
+%install
+# Files already staged in BUILDROOT by 'make install' step above
+# Nothing to do here
+
+%files
+%{_bindir}/skippy-xd
+%{_mandir}/man1/skippy-xd.1*
+%config(noreplace) %{_sysconfdir}/xdg/skippy-xd.rc
+
+%changelog
+* ${CHANGELOG_DATE} felixfung https://github.com/felixfung - ${VERSION}-1
+- Automated release build
+EOF
+
+          echo "==> spec file:"
+          cat "$HOME/rpmbuild/SPECS/skippy-xd.spec"
+
+      # -----------------------------------------------------------------------
+      # 7. Build the RPM
+      # -----------------------------------------------------------------------
+      - name: Build RPM (${{ matrix.rpm_arch }})
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          RPM_ARCH="${{ matrix.rpm_arch }}"
+
+          rpmbuild -bb \
+            --target "${RPM_ARCH}" \
+            --define "_rpmdir $(pwd)" \
+            "$HOME/rpmbuild/SPECS/skippy-xd.spec"
+
+          # Find and rename to flat output
+          find . -name "skippy-xd-*.rpm" -not -path "*/SRPMS/*" \
+            -exec cp {} "skippy-xd-${VERSION}-1.${RPM_ARCH}.rpm" \;
+
+          echo "Built: skippy-xd-${VERSION}-1.${RPM_ARCH}.rpm"
+          ls -lh "skippy-xd-${VERSION}-1.${RPM_ARCH}.rpm"
+
+      # -----------------------------------------------------------------------
+      # 8. Upload RPM to GitHub Release
+      # -----------------------------------------------------------------------
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "Skippy-XD ${{ steps.version.outputs.VERSION }}"
+          body: |
+            ## Skippy-XD ${{ steps.version.outputs.VERSION }}
+
+            ### RPM packages (Fedora/openSUSE/RHEL)
+            Download the `.rpm` matching your system architecture and install with:
+            ```bash
+            sudo rpm -i skippy-xd-${{ steps.version.outputs.VERSION }}-1.x86_64.rpm
+            # or for 32-bit systems:
+            sudo rpm -i skippy-xd-${{ steps.version.outputs.VERSION }}-1.i686.rpm
+            ```
+          files: skippy-xd-${{ steps.version.outputs.VERSION }}-1.${{ matrix.rpm_arch }}.rpm
+          fail_on_unmatched_files: true
