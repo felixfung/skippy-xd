@@ -1,0 +1,12 @@
+Source: skippy-xd
+Section: x11
+Priority: optional
+Maintainer: Felix Fung <your.email@example.com>
+Build-Depends: debhelper (>= 10), meson, libx11-dev, libxcomposite-dev, libxdamage-dev, libxext-dev, libxfixes-dev, libxrender-dev
+Standards-Version: 4.5.0
+Homepage: https://github.com/felixfung/skippy-xd
+
+Package: skippy-xd
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: A lightweight, window-manager agnostic window selector for X11
