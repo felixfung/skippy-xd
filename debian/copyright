@@ -1,9 +1,9 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: skippy-xd
-Source: https://github.com/felixfung/skippy-xd
+Source: https://github.com/musqz/skippy-xd
 
 Files: *
-Copyright: 2020-2026 Felix Fung <felixfung@example.com>
+Copyright: 2020-2026 Mus Boulange <mus@example.com>
 License: MIT
 
 License: MIT

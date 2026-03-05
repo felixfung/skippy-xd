@@ -1,5 +1,5 @@
-skippy-xd (0.10.6 (2026.1.4) - 'Brainrot 67' Edition-1) unstable; urgency=medium
+skippy-xd (0.10.6-1) unstable; urgency=medium
 
   * Initial Debian package.
 
- -- Felix Fung <felixfung@example.com>  Thu, 05 Mar 2026 20:50:34 +0100
+ -- Mus Boulange <mus@example.com>  Thu, 05 Mar 2026 21:14:58 +0100
