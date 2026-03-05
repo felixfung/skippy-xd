@@ -1,11 +1,3 @@
-# -----------------------------------------------------------------------------
-# Skippy-XD Debian Package Builder — GitHub Actions Workflow
-# Triggers: on every tagged release (v*) and manual dispatch
-# Produces:  skippy-xd_<version>_amd64.deb
-#            skippy-xd_<version>_i386.deb
-# Both attached to the GitHub Release page
-# -----------------------------------------------------------------------------
-
 name: Build Debian Packages
 
 on:
@@ -47,6 +39,7 @@ jobs:
       - name: Read version
         id: version
         run: |
+          set -e
           read -r raw < version.txt
           raw="${raw%% *}"          # strip everything after first space
           VERSION="${raw#v}"        # strip leading 'v'
@@ -63,8 +56,9 @@ jobs:
       # -----------------------------------------------------------------------
       - name: Install dependencies
         run: |
+          set -e
           sudo dpkg --add-architecture i386
-          sudo apt-get update -q
+          sudo apt-get update -qq
           sudo apt-get install -y \
             build-essential \
             gcc \
@@ -97,6 +91,7 @@ jobs:
       # -----------------------------------------------------------------------
       - name: Build (${{ matrix.deb_arch }})
         run: |
+          set -e
           make clean
           if [ "${{ matrix.deb_arch }}" = "i386" ]; then
             make PREFIX=/usr \
@@ -117,6 +112,7 @@ jobs:
       # -----------------------------------------------------------------------
       - name: Assemble .deb (${{ matrix.deb_arch }})
         run: |
+          set -e
           PKG_NAME="skippy-xd"
           VERSION="${{ steps.version.outputs.VERSION }}"
           DEB_ARCH="${{ matrix.deb_arch }}"
@@ -146,6 +142,9 @@ jobs:
           echo "--- DEBIAN/control ---"
           cat "$PKG_DIR/DEBIAN/control"
 
+          # Validate package structure
+          ls -R "$PKG_DIR"
+
           # Build the .deb
           dpkg-deb --build "$PKG_DIR" "${PKG_NAME}_${VERSION}_${DEB_ARCH}.deb"
 
@@ -166,9 +165,9 @@ jobs:
             ### Debian/Ubuntu packages
             Download the `.deb` matching your system architecture and install with:
             ```bash
-            sudo dpkg -i skippy-xd_${{ steps.version.outputs.VERSION }}_amd64.deb
+            sudo dpkg -i skippy-xd_\${{ steps.version.outputs.VERSION }}_amd64.deb
             # or for 32-bit systems:
-            sudo dpkg -i skippy-xd_${{ steps.version.outputs.VERSION }}_i386.deb
+            sudo dpkg -i skippy-xd_\${{ steps.version.outputs.VERSION }}_i386.deb
             ```
           files: skippy-xd_${{ steps.version.outputs.VERSION }}_${{ matrix.deb_arch }}.deb
           fail_on_unmatched_files: true

@@ -1,12 +1,3 @@
-# -----------------------------------------------------------------------------
-# Skippy-XD RPM Package Builder — GitHub Actions Workflow
-# Triggers: on every tagged release (v*) and manual dispatch
-# Produces:  skippy-xd-<version>-1.x86_64.rpm
-#            skippy-xd-<version>-1.i686.rpm
-# Both attached to the GitHub Release page
-# Uses Fedora container for authentic RPM building
-# -----------------------------------------------------------------------------
-
 name: Build RPM Packages
 
 on:
@@ -22,7 +13,7 @@ jobs:
   build-rpm:
     runs-on: ubuntu-22.04
     container:
-      image: fedora:latest          # authentic RPM environment
+      image: fedora:39              # pinned to a stable Fedora version
 
     strategy:
       matrix:
@@ -51,6 +42,7 @@ jobs:
       - name: Read version
         id: version
         run: |
+          set -e
           read -r raw < version.txt
           raw="${raw%% *}"          # strip everything after first space
           VERSION="${raw#v}"        # strip leading 'v'
@@ -63,10 +55,11 @@ jobs:
 
       # -----------------------------------------------------------------------
       # 3. Install build dependencies
-      #    glibc-devel.i686 and libgcc.i686 needed for 32-bit builds
       # -----------------------------------------------------------------------
       - name: Install dependencies
         run: |
+          set -e
+          dnf clean all
           dnf install -y \
             gcc \
             gcc-c++ \
@@ -105,10 +98,10 @@ jobs:
 
       # -----------------------------------------------------------------------
       # 4. Build skippy-xd
-      #    Pass clean VERSION so man page sed substitution never breaks
       # -----------------------------------------------------------------------
       - name: Build (${{ matrix.rpm_arch }})
         run: |
+          set -e
           make clean
           if [ "${{ matrix.rpm_arch }}" = "i686" ]; then
             make PREFIX=/usr \
@@ -127,6 +120,7 @@ jobs:
       # -----------------------------------------------------------------------
       - name: Set up RPM build tree (${{ matrix.rpm_arch }})
         run: |
+          set -e
           VERSION="${{ steps.version.outputs.VERSION }}"
           RPM_ARCH="${{ matrix.rpm_arch }}"
 
@@ -145,10 +139,10 @@ jobs:
 
       # -----------------------------------------------------------------------
       # 6. Generate .spec file
-      #    Kept minimal — KISS, matches Makefile dependencies exactly
       # -----------------------------------------------------------------------
       - name: Create spec file (${{ matrix.rpm_arch }})
         run: |
+          set -e
           VERSION="${{ steps.version.outputs.VERSION }}"
           RPM_ARCH="${{ matrix.rpm_arch }}"
           CHANGELOG_DATE="$(date '+%a %b %d %Y')"
@@ -199,11 +193,15 @@ EOF
           echo "==> spec file:"
           cat "$HOME/rpmbuild/SPECS/skippy-xd.spec"
 
+          # Validate spec file
+          rpmlint "$HOME/rpmbuild/SPECS/skippy-xd.spec"
+
       # -----------------------------------------------------------------------
       # 7. Build the RPM
       # -----------------------------------------------------------------------
       - name: Build RPM (${{ matrix.rpm_arch }})
         run: |
+          set -e
           VERSION="${{ steps.version.outputs.VERSION }}"
           RPM_ARCH="${{ matrix.rpm_arch }}"
 
@@ -233,9 +231,9 @@ EOF
             ### RPM packages (Fedora/openSUSE/RHEL)
             Download the `.rpm` matching your system architecture and install with:
             ```bash
-            sudo rpm -i skippy-xd-${{ steps.version.outputs.VERSION }}-1.x86_64.rpm
+            sudo rpm -i skippy-xd-\${{ steps.version.outputs.VERSION }}-1.x86_64.rpm
             # or for 32-bit systems:
-            sudo rpm -i skippy-xd-${{ steps.version.outputs.VERSION }}-1.i686.rpm
+            sudo rpm -i skippy-xd-\${{ steps.version.outputs.VERSION }}-1.i686.rpm
             ```
           files: skippy-xd-${{ steps.version.outputs.VERSION }}-1.${{ matrix.rpm_arch }}.rpm
           fail_on_unmatched_files: true

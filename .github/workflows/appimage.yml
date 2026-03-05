@@ -1,9 +1,3 @@
-# -----------------------------------------------------------------------------
-# Skippy-XD AppImage Builder — GitHub Actions Workflow
-# Triggers: on every tagged release (v*) and manual dispatch
-# Produces:  Skippy-xd-<version>-x86_64.AppImage attached to the GitHub Release
-# -----------------------------------------------------------------------------
-
 name: Build AppImage
 
 on:
@@ -35,15 +29,16 @@ jobs:
       - name: Read version
         id: version
         run: |
+          set -e
           read -r raw < version.txt
-          raw="${raw%% *}"          # strip everything after first space
-          VERSION="${raw#v}"        # strip leading 'v'
-          if [ -z "$VERSION" ]; then
+          raw="\${raw%% *}"          # strip everything after first space
+          VERSION="\${raw#v}"        # strip leading 'v'
+          if [ -z "\$VERSION" ]; then
             echo "ERROR: could not parse version from version.txt"
             exit 1
           fi
-          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Detected version: $VERSION"
+          echo "VERSION=\$VERSION" >> "\$GITHUB_OUTPUT"
+          echo "Detected version: \$VERSION"
 
       # -----------------------------------------------------------------------
       # 3. Install build dependencies
@@ -52,7 +47,8 @@ jobs:
       # -----------------------------------------------------------------------
       - name: Install dependencies
         run: |
-          sudo apt-get update -q
+          set -e
+          sudo apt-get update -qq
           sudo apt-get install -y \
             build-essential pkg-config wget \
             libx11-dev libxft-dev libxrender-dev \
@@ -69,28 +65,34 @@ jobs:
       # -----------------------------------------------------------------------
       - name: Build
         run: |
-          make PREFIX=/usr VERSION_SKIPPYXD="${{ steps.version.outputs.VERSION }}"
+          set -e
+          make clean
+          make PREFIX=/usr VERSION_SKIPPYXD="\${{ steps.version.outputs.VERSION }}"
 
       # -----------------------------------------------------------------------
       # 5. Assemble AppDir
       # -----------------------------------------------------------------------
       - name: Assemble AppDir
         run: |
+          set -e
           APP="skippy-xd.AppDir"
 
           mkdir -p \
-            "$APP/usr/bin" \
-            "$APP/usr/lib" \
-            "$APP/usr/share/man/man1" \
-            "$APP/usr/share/applications" \
-            "$APP/usr/share/icons/hicolor/256x256/apps" \
-            "$APP/usr/share/metainfo" \
-            "$APP/etc/xdg"
+            "\$APP/usr/bin" \
+            "\$APP/usr/lib" \
+            "\$APP/usr/share/man/man1" \
+            "\$APP/usr/share/applications" \
+            "\$APP/usr/share/icons/hicolor/256x256/apps" \
+            "\$APP/usr/share/metainfo" \
+            "\$APP/etc/xdg"
 
           # Install binary, man page and rc via make install
-          make PREFIX=/usr DESTDIR="$(pwd)/$APP" install
+          make PREFIX=/usr DESTDIR="\$(pwd)/\$APP" install
 
-          chmod +x "$APP/usr/bin/skippy-xd"
+          chmod +x "\$APP/usr/bin/skippy-xd"
+
+          # Verify build output
+          ls -lh "\$APP/usr/bin/skippy-xd"
 
       # -----------------------------------------------------------------------
       # 6. AppRun
@@ -98,21 +100,21 @@ jobs:
       # -----------------------------------------------------------------------
       - name: Create AppRun
         run: |
+          set -e
           cat > skippy-xd.AppDir/AppRun << 'APPRUN_EOF'
 #!/bin/bash
-HERE=$(dirname "$(readlink -f "$0")")
-=======
+HERE=\$(dirname "\$(readlink -f "$0")")
 export PATH="${HERE}/usr/bin:${PATH}"
 export LD_LIBRARY_PATH="${HERE}/usr/lib:${LD_LIBRARY_PATH}"
 export XDG_CONFIG_DIRS="${HERE}/etc/xdg:${XDG_CONFIG_DIRS}"
-export XDG_DATA_DIRS="${HERE}/usr/share:${XDG_DATA_DIRS}"
+export XDG_DATA_DIRS="${HERE}/usr/share:\${XDG_DATA_DIRS}"
 
 if [ "$1" = "--help-man" ]; then
   for MP in \
     "${HERE}/usr/share/man/man1/skippy-xd.1.gz" \
-    "${HERE}/usr/share/man/man1/skippy-xd.1"; do
-    [ -f "$MP" ] || continue
-    [[ "$MP" == *.gz ]] && zcat "$MP" | man -l - || man -l "$MP"
+    "\${HERE}/usr/share/man/man1/skippy-xd.1"; do
+    [ -f "\$MP" ] || continue
+    [[ "\$MP" == *.gz ]] && zcat "\$MP" | man -l - || man -l "$MP"
     exit $?
   done
   echo "Error: Manpage not found"; exit 1
@@ -122,6 +124,9 @@ exec "${HERE}/usr/bin/skippy-xd" "$@"
 APPRUN_EOF
           chmod +x skippy-xd.AppDir/AppRun
 
+          # Verify AppRun
+          head -n 1 skippy-xd.AppDir/AppRun
+
       # -----------------------------------------------------------------------
       # 7. Desktop file
       #    NoDisplay=true — skippy-xd is a daemon, not a menu app
@@ -129,6 +134,7 @@ APPRUN_EOF
       # -----------------------------------------------------------------------
       - name: Create desktop file
         run: |
+          set -e
           cat > skippy-xd.AppDir/skippy-xd.desktop << 'EOF'
 [Desktop Entry]
 Type=Application
@@ -153,6 +159,7 @@ EOF
       # -----------------------------------------------------------------------
       - name: Generate icon
         run: |
+          set -e
           python3 - << 'PYEOF'
 import struct, zlib
 
@@ -188,6 +195,9 @@ write_png('skippy-xd.AppDir/usr/share/icons/hicolor/256x256/apps/skippy-xd.png')
 print("Icon: OK")
 PYEOF
 
+          # Verify icon
+          ls -lh skippy-xd.AppDir/skippy-xd.png
+
       # -----------------------------------------------------------------------
       # 9. AppStream metainfo
       #    Filename MUST match component <id> exactly — appstreamcli requirement
@@ -195,6 +205,7 @@ PYEOF
       # -----------------------------------------------------------------------
       - name: Create AppStream metainfo
         run: |
+          set -e
           VERSION="${{ steps.version.outputs.VERSION }}"
           DATE="$(date +%Y-%m-%d)"
 
@@ -232,48 +243,4 @@ PYEOF
   <categories>
     <category>Utility</category>
   </categories>
-  <content_rating type="oars-1.1"/>
-</component>
-EOF
-
-          appstreamcli validate --no-net \
-            "skippy-xd.AppDir/usr/share/metainfo/io.github.felixfung.skippy-xd.appdata.xml" \
-            && echo "Metainfo: OK"
-
-      # -----------------------------------------------------------------------
-      # 10. Download appimagetool and build the AppImage
-      # -----------------------------------------------------------------------
-      - name: Download appimagetool
-        run: |
-          wget -q -O appimagetool \
-            "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
-          chmod +x appimagetool
-
-      - name: Build AppImage
-        run: |
-          VERSION="${{ steps.version.outputs.VERSION }}"
-          ARCH=x86_64 ./appimagetool \
-            skippy-xd.AppDir \
-            "Skippy-xd-${VERSION}-x86_64.AppImage"
-          echo "Built: Skippy-xd-${VERSION}-x86_64.AppImage"
-          ls -lh Skippy-xd-*.AppImage
-
-      # -----------------------------------------------------------------------
-      # 11. Upload AppImage to the GitHub Release
-      # -----------------------------------------------------------------------
-      - name: Upload to GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: "Skippy-XD ${{ steps.version.outputs.VERSION }}"
-          body: |
-            ## Skippy-XD ${{ steps.version.outputs.VERSION }}
-
-            ### AppImage (Linux x86_64)
-            Download `Skippy-xd-${{ steps.version.outputs.VERSION }}-x86_64.AppImage`, make it executable and run:
-            ```bash
-            chmod +x Skippy-xd-${{ steps.version.outputs.VERSION }}-x86_64.AppImage
-            ./Skippy-xd-${{ steps.version.outputs.VERSION }}-x86_64.AppImage --start-daemon
-            ```
-          files: Skippy-xd-${{ steps.version.outputs.VERSION }}-x86_64.AppImage
-          fail_on_unmatched_files: true
+  <c
