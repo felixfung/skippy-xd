@@ -15,8 +15,9 @@ jobs:
       - name: Read version
         id: version
         run: |
-	   VERSION=$(cat version.txt | sed -E 's/^v([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
-           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          VERSION=$(cat version.txt | sed -E 's/^v([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Install build dependencies
         run: |
           sudo apt update
@@ -24,8 +25,13 @@ jobs:
 
       - name: Build Debian package
         run: |
-          VERSION=$(cat version.txt | sed 's/^v//')
+          VERSION=$(cat version.txt | sed -E 's/^v([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
           dpkg-buildpackage -us -uc
+
+      - name: List files (debug)
+        run: |
+          ls -la ..
+          ls -la ../*.deb
 
       - name: Upload Debian package
         uses: actions/upload-artifact@v3
@@ -40,4 +46,3 @@ jobs:
           files: ../skippy-xd_*.deb
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
