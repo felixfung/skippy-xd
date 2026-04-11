@@ -1,16 +1,12 @@
 #!/usr/bin/make -f
-
 %:
 	dh $@
 
-override_dh_auto_configure:
-	meson setup --prefix=/usr build
-
 override_dh_auto_build:
-	ninja -C build
+	$(MAKE)
 
 override_dh_auto_install:
-	DESTDIR=$(CURDIR)/debian/skippy-xd ninja -C build install
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/skippy-xd PREFIX=/usr MANDIR=/usr/share/man/man1
 
 override_dh_auto_clean:
-	-rm -rf build
+	$(MAKE) clean || true

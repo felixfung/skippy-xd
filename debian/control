@@ -1,41 +1,27 @@
 Source: skippy-xd
 Section: x11
 Priority: optional
-Maintainer: Mus Boulange <mus@example.com>
+Maintainer: musqz <musqz@github>
 Build-Depends:
- debhelper (>= 10),
- meson,
- ninja-build,
+ debhelper (>= 13),
  libx11-dev,
- libxcb1-dev,
- libxcb-util0-dev,
- libxcb-ewmh-dev,
- libxcb-icccm4-dev,
- libxcb-image0-dev,
- libxcb-keysyms1-dev,
- libxcb-randr0-dev,
- libxcb-shape0-dev,
- libxcb-xinerama0-dev,
- libxcb-xfixes0-dev,
- libxcb-composite0-dev,
- libxcb-damage0-dev,
- libxcb-render-util0-dev,
- libxcb-render0-dev,
- libxcb-shm0-dev,
- libxcb-xkb-dev,
- libxkbcommon-dev,
- libxkbcommon-x11-dev,
- libconfig-dev,
+ libxft-dev,
+ libxrender-dev,
+ libxcomposite-dev,
+ libxdamage-dev,
+ libxfixes-dev,
+ libxext-dev,
  libimlib2-dev,
- libx11-xcb-dev,
- libpng-dev,
  libjpeg-dev,
- libgif-dev
+ libgif-dev,
+ libpng-dev
 Standards-Version: 4.6.0
 Homepage: https://github.com/musqz/skippy-xd
 
 Package: skippy-xd
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: Lightweight X11 compositor and window switcher
- Skippy-XD is a full-screen task switcher for X11, with live thumbnails of all your windows.
+Description: Full-screen window switcher for X11
+ Skippy-XD is a full-screen task switcher for X11 with live thumbnails
+ of all open windows, similar to the Expose feature in macOS.
+ It is window-manager agnostic and works with any EWMH-compliant WM.

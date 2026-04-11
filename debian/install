@@ -1,1 +1,3 @@
 skippy-xd usr/bin
+skippy-xd.1 usr/share/man/man1
+skippy-xd.rc etc/xdg
