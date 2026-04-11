@@ -45,6 +45,7 @@ jobs:
         uses: jtdor/build-deb-action@v1
         with:
           host-arch: ${{ matrix.arch }}
+          buildpackage-opts: "--build=binary -us -uc"
           extra-build-deps: >-
             libx11-dev
             libxft-dev
