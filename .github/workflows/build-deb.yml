@@ -10,6 +10,7 @@ jobs:
   build-deb:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         arch: [amd64, i386]
 
@@ -20,7 +21,6 @@ jobs:
       - name: Extract version
         id: version
         run: |
-          # Works for both tag trigger and manual dispatch
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
             VERSION="${GITHUB_REF#refs/tags/v}"
           else
@@ -41,55 +41,27 @@ jobs:
            -- musqz <musqz@github>  $DATE
           EOF
 
-      - name: Set up i386 support
-        if: matrix.arch == 'i386'
-        run: |
-          sudo dpkg --add-architecture i386
-          sudo apt-get update
-
-      - name: Install build dependencies (amd64)
-        if: matrix.arch == 'amd64'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            debhelper build-essential \
-            libx11-dev libxft-dev libxrender-dev \
-            libxcomposite-dev libxdamage-dev libxfixes-dev libxext-dev \
-            libimlib2-dev libjpeg-dev libgif-dev libpng-dev
-
-      - name: Install build dependencies (i386)
-        if: matrix.arch == 'i386'
-        run: |
-          sudo apt-get install -y \
-            debhelper build-essential \
-            gcc-multilib \
-            libx11-dev:i386 libxft-dev:i386 libxrender-dev:i386 \
-            libxcomposite-dev:i386 libxdamage-dev:i386 libxfixes-dev:i386 \
-            libxext-dev:i386 libimlib2-dev:i386 libjpeg-dev:i386 \
-            libgif-dev:i386 libpng-dev:i386
-
-      - name: Build Debian package (amd64)
-        if: matrix.arch == 'amd64'
-        run: |
-          dpkg-buildpackage -us -uc -b
-
-      - name: Build Debian package (i386)
-        if: matrix.arch == 'i386'
-        run: |
-          dpkg-buildpackage -us -uc -b -a i386
-
-      - name: Find built .deb
-        id: find_deb
-        run: |
-          DEB=$(find .. -name "*.deb" | head -1)
-          echo "deb_path=$DEB" >> $GITHUB_OUTPUT
-          echo "Found: $DEB"
+      - name: Build .deb package
+        uses: jtdor/build-deb-action@v1
+        with:
+          host-arch: ${{ matrix.arch }}
+          extra-build-deps: >-
+            libx11-dev
+            libxft-dev
+            libxrender-dev
+            libxcomposite-dev
+            libxdamage-dev
+            libxfixes-dev
+            libxext-dev
+            libjpeg-dev
+            libgif-dev
+            libpng-dev
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: skippy-xd-${{ steps.version.outputs.version }}-${{ matrix.arch }}
-          path: ${{ steps.find_deb.outputs.deb_path }}
+          path: debian/artifacts/*.deb
           if-no-files-found: error
 
   release:
