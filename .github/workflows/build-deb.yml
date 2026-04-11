@@ -57,6 +57,7 @@ jobs:
             libjpeg-dev
             libgif-dev
             libpng-dev
+            libxinerama-dev
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
