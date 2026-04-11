@@ -29,6 +29,7 @@ jobs:
       - name: Install build dependencies
         run: |
           dnf install -y \
+            git \
             rpm-build make gcc \
             libX11-devel libXft-devel libXrender-devel \
             libXcomposite-devel libXdamage-devel libXfixes-devel \
