@@ -29,7 +29,6 @@ jobs:
       - name: Install build dependencies
         run: |
           dnf install -y \
-            git \
             rpm-build make gcc \
             libX11-devel libXft-devel libXrender-devel \
             libXcomposite-devel libXdamage-devel libXfixes-devel \
@@ -43,11 +42,10 @@ jobs:
       - name: Create source tarball
         run: |
           VERSION=${{ steps.version.outputs.version }}
-          git config --global --add safe.directory '*'
-          git archive --format=tar.gz \
-            --prefix=skippy-xd-$VERSION/ \
-            -o ~/rpmbuild/SOURCES/skippy-xd-$VERSION.tar.gz \
-            HEAD
+          mkdir -p /tmp/skippy-xd-$VERSION
+          cp -r . /tmp/skippy-xd-$VERSION/
+          tar -czf ~/rpmbuild/SOURCES/skippy-xd-$VERSION.tar.gz \
+            -C /tmp skippy-xd-$VERSION/
 
       - name: Prepare spec file
         run: |
