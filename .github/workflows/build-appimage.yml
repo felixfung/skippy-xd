@@ -51,6 +51,7 @@ jobs:
 
       - name: Install binary and files into AppDir
         run: |
+          mkdir -p skippy-xd.AppDir/usr/share/man/man1
           make install \
             DESTDIR=$(pwd)/skippy-xd.AppDir \
             PREFIX=/usr \
@@ -65,6 +66,24 @@ jobs:
           export LD_LIBRARY_PATH="${HERE}/usr/lib:${LD_LIBRARY_PATH}"
           export XDG_CONFIG_DIRS="${HERE}/etc/xdg:${XDG_CONFIG_DIRS}"
           export XDG_DATA_DIRS="${HERE}/usr/share:${XDG_DATA_DIRS}"
+
+          if [ "$1" = "--help-man" ]; then
+              for MANPAGE in \
+                  "${HERE}/usr/share/man/man1/skippy-xd.1.gz" \
+                  "${HERE}/usr/share/man/man1/skippy-xd.1"; do
+                  if [ -f "$MANPAGE" ]; then
+                      if [[ "$MANPAGE" == *.gz ]]; then
+                          zcat "$MANPAGE" | man -l -
+                      else
+                          man -l "$MANPAGE"
+                      fi
+                      exit $?
+                  fi
+              done
+              echo "Error: man page not found"
+              exit 1
+          fi
+
           exec "${HERE}/usr/bin/skippy-xd" "$@"
           APPRUN
           chmod +x skippy-xd.AppDir/AppRun
