@@ -1,0 +1,209 @@
+name: Build AppImage
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-appimage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            VERSION=$(echo "${GITHUB_REF#refs/tags/v}" | grep -oP '^\d+\.\d+\.\d+')
+          else
+            VERSION=$(grep -oP '\d+\.\d+\.\d+' version.txt | head -1)
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Detected version: $VERSION"
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential wget \
+            libx11-dev libxft-dev libxrender-dev \
+            libxcomposite-dev libxdamage-dev libxfixes-dev \
+            libxext-dev libxinerama-dev \
+            libjpeg-dev libgif-dev libpng-dev \
+            desktop-file-utils
+
+      - name: Build skippy-xd binary
+        run: make
+
+      - name: Create AppDir structure
+        run: |
+          mkdir -p \
+            skippy-xd.AppDir/usr/bin \
+            skippy-xd.AppDir/usr/share/applications \
+            skippy-xd.AppDir/usr/share/icons/hicolor/256x256/apps \
+            skippy-xd.AppDir/usr/share/man/man1 \
+            skippy-xd.AppDir/usr/share/metainfo \
+            skippy-xd.AppDir/etc/xdg
+
+      - name: Install binary and files into AppDir
+        run: |
+          mkdir -p skippy-xd.AppDir/usr/share/man/man1
+          make install \
+            DESTDIR=$(pwd)/skippy-xd.AppDir \
+            PREFIX=/usr \
+            MANDIR=/usr/share/man/man1
+
+      - name: Create AppRun
+        run: |
+          cat > skippy-xd.AppDir/AppRun << 'APPRUN'
+          #!/bin/bash
+          HERE="$(dirname "$(readlink -f "${0}")")"
+          export PATH="${HERE}/usr/bin:${PATH}"
+          export LD_LIBRARY_PATH="${HERE}/usr/lib:${LD_LIBRARY_PATH}"
+          export XDG_CONFIG_DIRS="${HERE}/etc/xdg:${XDG_CONFIG_DIRS}"
+          export XDG_DATA_DIRS="${HERE}/usr/share:${XDG_DATA_DIRS}"
+
+          if [ "$1" = "--help-man" ]; then
+              for MANPAGE in \
+                  "${HERE}/usr/share/man/man1/skippy-xd.1.gz" \
+                  "${HERE}/usr/share/man/man1/skippy-xd.1"; do
+                  if [ -f "$MANPAGE" ]; then
+                      if [[ "$MANPAGE" == *.gz ]]; then
+                          zcat "$MANPAGE" | man -l -
+                      else
+                          man -l "$MANPAGE"
+                      fi
+                      exit $?
+                  fi
+              done
+              echo "Error: man page not found"
+              exit 1
+          fi
+
+          exec "${HERE}/usr/bin/skippy-xd" "$@"
+          APPRUN
+          chmod +x skippy-xd.AppDir/AppRun
+
+      - name: Create desktop file
+        run: |
+          cat > skippy-xd.AppDir/usr/share/applications/skippy-xd.desktop << 'EOF'
+          [Desktop Entry]
+          Type=Application
+          Name=Skippy-XD
+          GenericName=Window Switcher
+          Comment=Expose-style window switcher daemon for X11
+          Exec=skippy-xd --start-daemon
+          Icon=skippy-xd
+          Terminal=false
+          Categories=Utility;
+          NoDisplay=true
+          EOF
+          cp skippy-xd.AppDir/usr/share/applications/skippy-xd.desktop \
+             skippy-xd.AppDir/skippy-xd.desktop
+
+      - name: Generate icon
+        run: |
+          python3 << 'PYEOF'
+          import struct, zlib
+
+          def write_png(filename, size=256):
+              margin = size // 8
+              thickness = max(size // 12, 3)
+              fg = (160, 160, 160)
+              bg = (30, 30, 30)
+              raw_rows = []
+              for y in range(size):
+                  row = bytearray([0])
+                  for x in range(size):
+                      cx, cy = size // 2, size // 2
+                      dx = abs(x - y)
+                      dy = abs(x - (size - 1 - y))
+                      in_margin = margin <= x <= size-margin and margin <= y <= size-margin
+                      on_diag = in_margin and (dx < thickness or dy < thickness)
+                      dist = ((x-cx)**2 + (y-cy)**2) ** 0.5
+                      r = size // 2 - margin // 2
+                      on_circle = abs(dist - r) < thickness
+                      row += bytes(fg if (on_diag or on_circle) else bg)
+                  raw_rows.append(bytes(row))
+              compressed = zlib.compress(b''.join(raw_rows), 9)
+              def mk_chunk(tag, data):
+                  crc = zlib.crc32(tag + data) & 0xffffffff
+                  return struct.pack('>I', len(data)) + tag + data + struct.pack('>I', crc)
+              with open(filename, 'wb') as f:
+                  f.write(b'\x89PNG\r\n\x1a\n')
+                  f.write(mk_chunk(b'IHDR', struct.pack('>IIBBBBB', size, size, 8, 2, 0, 0, 0)))
+                  f.write(mk_chunk(b'IDAT', compressed))
+                  f.write(mk_chunk(b'IEND', b''))
+
+          write_png('skippy-xd.AppDir/skippy-xd.png')
+          write_png('skippy-xd.AppDir/usr/share/icons/hicolor/256x256/apps/skippy-xd.png')
+          print("Icon generated OK")
+          PYEOF
+
+      - name: Create AppStream metainfo
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          DATE=$(date +%Y-%m-%d)
+          cat > skippy-xd.AppDir/usr/share/metainfo/io.github.felixfung.skippy-xd.appdata.xml << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <component type="console-application">
+            <id>io.github.felixfung.skippy-xd</id>
+            <name>Skippy-XD</name>
+            <summary>Exposé-style window switcher daemon for X11</summary>
+            <metadata_license>FSFAP</metadata_license>
+            <project_license>GPL-2.0-or-later</project_license>
+            <description>
+              <p>Skippy-XD is a full-screen Exposé-like task switcher for X11.</p>
+            </description>
+            <url type="homepage">https://github.com/felixfung/skippy-xd</url>
+            <releases>
+              <release version="${VERSION}" date="${DATE}"/>
+            </releases>
+            <provides>
+              <binary>skippy-xd</binary>
+            </provides>
+            <content_rating type="oars-1.1"/>
+          </component>
+          EOF
+
+      - name: Download appimagetool
+        run: |
+          wget -q -O appimagetool \
+            https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool
+
+      - name: Build AppImage
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          ARCH=x86_64 ./appimagetool --appimage-extract-and-run \
+            skippy-xd.AppDir \
+            Skippy-xd-${VERSION}-x86_64.AppImage
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: skippy-xd-${{ steps.version.outputs.version }}-appimage
+          path: Skippy-xd-*.AppImage
+          if-no-files-found: error
+
+  release:
+    needs: build-appimage
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: appimages/
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: appimages/**/*.AppImage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

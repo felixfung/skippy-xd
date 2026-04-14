@@ -1,0 +1,88 @@
+name: Build Debian Package
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-deb:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, i386]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            VERSION=$(grep -oP '\d+\.\d+\.\d+' version.txt | head -1)
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Detected version: $VERSION"
+
+      - name: Generate debian/changelog
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          DATE=$(date -R)
+          cat > debian/changelog <<EOF
+          skippy-xd ($VERSION-1) unstable; urgency=medium
+
+            * Release $VERSION
+
+           -- musqz <musqz@github>  $DATE
+          EOF
+
+      - name: Build .deb package
+        uses: jtdor/build-deb-action@v1
+        with:
+          host-arch: ${{ matrix.arch }}
+          buildpackage-opts: "--build=binary -us -uc"
+          extra-build-deps: >-
+            libx11-dev
+            libxft-dev
+            libxrender-dev
+            libxcomposite-dev
+            libxdamage-dev
+            libxfixes-dev
+            libxext-dev
+            libjpeg-dev
+            libgif-dev
+            libpng-dev
+            libxinerama-dev
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: skippy-xd-${{ steps.version.outputs.version }}-${{ matrix.arch }}
+          path: debian/artifacts/*.deb
+          if-no-files-found: error
+
+  release:
+    needs: build-deb
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: debs/
+
+      - name: List downloaded files
+        run: find debs/ -name "*.deb"
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: debs/**/*.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

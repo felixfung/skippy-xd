@@ -1,0 +1,94 @@
+name: Build RPM Package
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-rpm:
+    runs-on: ubuntu-latest
+    container: fedora:latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        run: |
+          # Strip tag prefix and any suffix like -rpm3, keeping only x.y.z
+          RAW="${GITHUB_REF#refs/tags/v}"
+          VERSION=$(echo "$RAW" | grep -oP '^\d+\.\d+\.\d+')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Detected version: $VERSION"
+
+      - name: Install build dependencies
+        run: |
+          dnf install -y \
+            rpm-build make gcc \
+            libX11-devel libXft-devel libXrender-devel \
+            libXcomposite-devel libXdamage-devel libXfixes-devel \
+            libXext-devel libXinerama-devel \
+            libjpeg-turbo-devel giflib-devel libpng-devel
+
+      - name: Set up rpmbuild tree
+        run: |
+          mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+
+      - name: Create source tarball
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          mkdir -p /tmp/skippy-xd-$VERSION
+          cp -r . /tmp/skippy-xd-$VERSION/
+          tar -czf ~/rpmbuild/SOURCES/skippy-xd-$VERSION.tar.gz \
+            -C /tmp skippy-xd-$VERSION/
+
+      - name: Prepare spec file
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          DATE=$(date '+%a %b %d %Y')
+          sed \
+            -e "s/VERSION_PLACEHOLDER/$VERSION/g" \
+            -e "s/\$(date '+%a %b %d %Y')/$DATE/g" \
+            Packaging/RPM/skippy-xd.spec > ~/rpmbuild/SPECS/skippy-xd.spec
+
+      - name: Build RPM
+        run: |
+          rpmbuild -bb ~/rpmbuild/SPECS/skippy-xd.spec
+
+      - name: Find built RPM
+        id: find_rpm
+        run: |
+          RPM=$(find ~/rpmbuild/RPMS -name "*.rpm" | grep -v debug | head -1)
+          echo "rpm_path=$RPM" >> $GITHUB_OUTPUT
+          echo "Found: $RPM"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: skippy-xd-${{ steps.version.outputs.version }}-fedora
+          path: ${{ steps.find_rpm.outputs.rpm_path }}
+          if-no-files-found: error
+
+  release:
+    needs: build-rpm
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: rpms/
+
+      - name: List downloaded files
+        run: find rpms/ -name "*.rpm"
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: rpms/**/*.rpm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

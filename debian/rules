@@ -1,0 +1,13 @@
+#!/usr/bin/make -f
+%:
+	dh $@
+
+override_dh_auto_build:
+	$(MAKE)
+
+override_dh_auto_install:
+	mkdir -p $(CURDIR)/debian/skippy-xd/usr/share/man/man1
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/skippy-xd PREFIX=/usr MANDIR=/usr/share/man/man1
+
+override_dh_auto_clean:
+	$(MAKE) clean || true
