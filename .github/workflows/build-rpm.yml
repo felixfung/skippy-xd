@@ -50,9 +50,11 @@ jobs:
       - name: Prepare spec file
         run: |
           VERSION=${{ steps.version.outputs.version }}
+          # Strip any suffix like -test, -rc1, etc. (RPM doesn't allow hyphens in Version)
+          RPM_VERSION=$(echo "$VERSION" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
           DATE=$(date '+%a %b %d %Y')
           sed \
-            -e "s/VERSION_PLACEHOLDER/$VERSION/g" \
+            -e "s/VERSION_PLACEHOLDER/$RPM_VERSION/g" \
             -e "s/\$(date '+%a %b %d %Y')/$DATE/g" \
             Packaging/RPM/skippy-xd.spec > ~/rpmbuild/SPECS/skippy-xd.spec
 
