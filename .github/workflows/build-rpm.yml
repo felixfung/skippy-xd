@@ -18,9 +18,11 @@ jobs:
       - name: Extract version
         id: version
         run: |
-          # Strip tag prefix and any suffix like -rpm3, keeping only x.y.z
-          RAW="${GITHUB_REF#refs/tags/v}"
-          VERSION=$(echo "$RAW" | grep -oP '^\d+\.\d+\.\d+')
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            VERSION=$(sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+).*/\1/' version.txt | head -1)
+          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Detected version: $VERSION"
 
