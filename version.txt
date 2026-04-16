@@ -1,1 +1,1 @@
-v0.10.6 (2026.1.4) - 'Brainrot 67' Edition
+v0.10.6-testing (2026.1.4) - 'Brainrot 67' Edition
