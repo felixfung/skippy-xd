@@ -18,9 +18,9 @@ jobs:
         id: version
         run: |
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            VERSION=$(echo "${GITHUB_REF#refs/tags/v}" | grep -oP '^\d+\.\d+\.\d+')
+            VERSION="${GITHUB_REF#refs/tags/v}"
           else
-            VERSION=$(grep -oP '\d+\.\d+\.\d+' version.txt | head -1)
+            VERSION=$(sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+).*/\1/' version.txt | head -1)
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Detected version: $VERSION"
