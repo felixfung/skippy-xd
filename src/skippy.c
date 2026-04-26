@@ -2545,7 +2545,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 					if (optarg[i] != '-' && optarg[i] != ',' && optarg[i] != '!'
 							&& !('0'<=optarg[i] && optarg[i]<='9')) {
 						printfef(true,
-							"(): --desktop argument accepts only numerals and comma");
+							"(): --desktop argument accepts only numerals, comma, or exclaimation");
 						exit(1);
 					}
 
