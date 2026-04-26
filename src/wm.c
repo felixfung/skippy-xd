@@ -901,7 +901,7 @@ wm_validate_window(session_t *ps, Window wid) {
 		if (hints){
 			XGetClassHint(ps->dpy, wid, hints);
 			bool regmatch_class = match_expr(ps->o.wm_class, hints->res_class);
-			bool regmatch_name = match_expr(ps->o.wm_class, hints->res_class);
+			bool regmatch_name = match_expr(ps->o.wm_class, hints->res_name);
 
 			if (!regmatch_class && !regmatch_name)
 				return false;
