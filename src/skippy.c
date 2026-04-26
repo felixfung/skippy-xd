@@ -710,7 +710,7 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 	char command[BUF_LEN*2];
 	char nparams = ps->o.multiselect
 		+ (ps->o.wm_class != NULL) + (ps->o.wm_title != NULL)
-		+ (ps->o.wm_status_count > 0)
+		+ (ps->o.wm_status != NULL)
 		+ (ps->o.desktops != NULL)
 		+ (ps->o.pivotkey != 0);
 	if (ps->o.config_reload_path || ps->o.config_reload)
@@ -766,10 +766,10 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 	}
 
 	if (ps->o.wm_status) {
-		cmd_len += 1+1+ps->o.wm_status_count+1;
-		char status[1+1+ps->o.wm_status_count+1];
+		cmd_len += 1+1+strlen(ps->o.wm_status)+1;
+		char status[1+1+strlen(ps->o.wm_status)+1];
 		sprintf(status, "%c%c%s",
-				PIPEPRM_WM_STATUS, (char)ps->o.wm_status_count, ps->o.wm_status_str);
+				PIPEPRM_WM_STATUS, (char)strlen(ps->o.wm_status), ps->o.wm_status);
 		strcat(command, status);
 	}
 
@@ -2004,11 +2004,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 							ps->o.wm_title = NULL;
 						}
 						if (ps->o.wm_status) {
-							ps->o.wm_status_count = 0;
 							free(ps->o.wm_status);
 							ps->o.wm_status = NULL;
-							free(ps->o.wm_status_str);
-							ps->o.wm_status_str = NULL;
 						}
 						if (ps->o.desktops) {
 							free(ps->o.desktops);
@@ -2047,15 +2044,9 @@ mainloop(session_t *ps, bool activate_on_start) {
 							}
 
 							if (param[i] & PIPEPRM_WM_STATUS) {
-								if (ps->o.wm_status) {
+								if (ps->o.wm_status)
 									free(ps->o.wm_status);
-									free(ps->o.wm_status_str);
-								}
-								ps->o.wm_status_str = mstrdup(str[i]);
-								ps->o.wm_status_count = strlen(ps->o.wm_status_str);
-								ps->o.wm_status = malloc(ps->o.wm_status_count * sizeof(int));
-								for (int j=0; j<ps->o.wm_status_count; j++)
-									ps->o.wm_status[j] = ps->o.wm_status_str[j];
+								ps->o.wm_status = mstrdup(str[i]);
 							}
 
 							if (param[i] & PIPEPRM_DESKTOPS) {
@@ -2498,12 +2489,11 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 					ps->o.wm_class = mstrdup(optarg);
 				else {
 					char* newclass = malloc(
-							(strlen(ps->o.wm_class) + strlen(optarg) + 3)*sizeof(char));
-					newclass[0] = '('; newclass[1] = '\0';
+							(strlen(ps->o.wm_class) + strlen(optarg) + 2)*sizeof(char));
+					newclass[0] = '\0';
 					strcat(newclass, ps->o.wm_class);
 					strcat(newclass, ",");
 					strcat(newclass, optarg);
-					strcat(newclass, ")");
 					free(ps->o.wm_class);
 					ps->o.wm_class = newclass;
 				}
@@ -2514,12 +2504,11 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 					ps->o.wm_title = mstrdup(optarg);
 				else {
 					char* newtitle = malloc(
-							(strlen(ps->o.wm_title) + strlen(optarg) + 3)*sizeof(char));
-					newtitle[0] = '('; newtitle[1] = '\0';
+							(strlen(ps->o.wm_title) + strlen(optarg) + 2)*sizeof(char));
+					newtitle[0] = '\0';
 					strcat(newtitle, ps->o.wm_title);
 					strcat(newtitle, ",");
 					strcat(newtitle, optarg);
-					strcat(newtitle, ")");
 					free(ps->o.wm_title);
 					ps->o.wm_title = newtitle;
 				}
@@ -2530,47 +2519,33 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 				int anchor = 0;
 				for (int i=0; i<strlen(optarg) + 1; i++)
 					if (optarg[i] == ',' || optarg[i] == '\0') {
+						if (optarg[anchor] == '!')
+							anchor++;
 						char *status = malloc(i - anchor);
 						for (int j=anchor; j<i; j++)
 							status[j-anchor] = optarg[j];
 						status[i-anchor] = '\0';
 						anchor = i + 1;
 
-						int wm_status = wm_get_status(status);
-						if (wm_status == 0) {
+						int temp = wm_get_status(status);
+						if (temp == 0) {
 							printfef(true,
 								"(): window status %s not recognized",
 								status);
 							exit(1);
 						}
 						free(status);
-
-						int count = ps->o.wm_status_count;
-
-						int *newptr = malloc(count+1);
-						for (int j=0; j<count; j++)
-							newptr[j] = ps->o.wm_status[j];
-						newptr[count] = wm_status;
-
-						ps->o.wm_status_count++;
-						free(ps->o.wm_status);
-
-						ps->o.wm_status = newptr;
 					}
 
-				ps->o.wm_status_str = malloc(ps->o.wm_status_count+1);
-				for (int i=0; i<ps->o.wm_status_count; i++)
-					ps->o.wm_status_str[i] = ps->o.wm_status[i];
-				ps->o.wm_status_str[ps->o.wm_status_count] = '\0';
+				ps->o.wm_status = strdup(optarg);
 			}
-
 				break;
 			case OPT_DESKTOP:
 				for (int i=0; i<strlen(optarg); i++)
-					if (optarg[i] != '-' && optarg[i] != ','
+					if (optarg[i] != '-' && optarg[i] != ',' && optarg[i] != '!'
 							&& !('0'<=optarg[i] && optarg[i]<='9')) {
 						printfef(true,
-							"(): --desktop argument accepts only numerals and comma");
+							"(): --desktop argument accepts only numerals, comma, or exclaimation");
 						exit(1);
 					}
 
@@ -3146,10 +3121,8 @@ main_end:
 			free(ps->o.wm_class);
 		if (ps->o.wm_title)
 			free(ps->o.wm_title);
-		if (ps->o.wm_status_count > 0)
+		if (ps->o.wm_status)
 			free(ps->o.wm_status);
-		if (ps->o.wm_status_count > 0)
-			free(ps->o.wm_status_str);
 		if (ps->o.desktops)
 			free(ps->o.desktops);
 

@@ -81,25 +81,53 @@ clientwin_filter_func(dlist *l, void *data) {
 	}
 	else {
 		bool filter_matched = false;
-		if (w_desktop == -1)
-			filtered_in = true; // always show sticky windows
+		bool matched_any_rule = false;
+		bool has_positive_rule = false;
 
+		// Sticky windows always shown
+		if (w_desktop == (CARD32) -1)
+			return wm_validate_window(mw->ps, cw->wid_client);
+
+		const char *str = ps->o.desktops;
+		int len = strlen(str);
 		int anchor = 0;
-		for (int i=0; i<strlen(ps->o.desktops) + 1 && !filter_matched; i++)
-			if (ps->o.desktops[i] == ',' || ps->o.desktops[i] == '\0') {
-				char *buffer = malloc(i - anchor);
-				memcpy(buffer, ps->o.desktops+anchor, i - anchor);
+
+		for (int i = 0; i <= len; i++) {
+			if (str[i] == ',' || str[i] == '\0') {
+				int token_len = i - anchor;
+				bool negate = false;
+				int start = anchor;
+
+				if (str[start] == '!') {
+					negate = true;
+					start++;
+					token_len--;
+				}
+				else
+					has_positive_rule = true;
+
+				char buffer[32];
+				if (token_len >= (int)sizeof(buffer))
+					token_len = sizeof(buffer) - 1;
+
+				memcpy(buffer, str + start, token_len);
+				buffer[token_len] = '\0';
+
 				int desktop = atoi(buffer);
 
-				if (desktop == -1)
-					filter_matched = true;
-				else
-					filter_matched = w_desktop == desktop;
+				bool rule_matches =
+					(desktop == -1) ||
+					(w_desktop == (CARD32)desktop);
 
+				if (rule_matches) {
+					matched_any_rule = true;
+					filter_matched = !negate;
+				}
 				anchor = i + 1;
-				free(buffer);
 			}
-		filtered_in = filter_matched;
+		}
+
+		filtered_in = matched_any_rule? filter_matched: !has_positive_rule;
 	}
 
 	if (filtered_in)
