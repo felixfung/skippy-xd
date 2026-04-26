@@ -2489,12 +2489,11 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 					ps->o.wm_class = mstrdup(optarg);
 				else {
 					char* newclass = malloc(
-							(strlen(ps->o.wm_class) + strlen(optarg) + 3)*sizeof(char));
-					newclass[0] = '('; newclass[1] = '\0';
+							(strlen(ps->o.wm_class) + strlen(optarg) + 2)*sizeof(char));
+					newclass[0] = '\0';
 					strcat(newclass, ps->o.wm_class);
 					strcat(newclass, ",");
 					strcat(newclass, optarg);
-					strcat(newclass, ")");
 					free(ps->o.wm_class);
 					ps->o.wm_class = newclass;
 				}
@@ -2505,12 +2504,11 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 					ps->o.wm_title = mstrdup(optarg);
 				else {
 					char* newtitle = malloc(
-							(strlen(ps->o.wm_title) + strlen(optarg) + 3)*sizeof(char));
-					newtitle[0] = '('; newtitle[1] = '\0';
+							(strlen(ps->o.wm_title) + strlen(optarg) + 2)*sizeof(char));
+					newtitle[0] = '\0';
 					strcat(newtitle, ps->o.wm_title);
 					strcat(newtitle, ",");
 					strcat(newtitle, optarg);
-					strcat(newtitle, ")");
 					free(ps->o.wm_title);
 					ps->o.wm_title = newtitle;
 				}
