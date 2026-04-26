@@ -20,7 +20,7 @@ jobs:
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
             VERSION="${GITHUB_REF#refs/tags/v}"
           else
-            VERSION=$(sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+).*/\1/' version.txt | head -1)
+            VERSION=$(sed -nE 's/^v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' version.txt | head -1)
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Detected version: $VERSION"
@@ -146,7 +146,7 @@ jobs:
 
       - name: Create AppStream metainfo
         run: |
-          VERSION=${{ steps.version.outputs.version }}
+          VERSION="${{ steps.version.outputs.version }}"
           DATE=$(date +%Y-%m-%d)
           cat > skippy-xd.AppDir/usr/share/metainfo/io.github.felixfung.skippy-xd.appdata.xml << EOF
           <?xml version="1.0" encoding="UTF-8"?>
@@ -178,7 +178,7 @@ jobs:
 
       - name: Build AppImage
         run: |
-          VERSION=${{ steps.version.outputs.version }}
+          VERSION="${{ steps.version.outputs.version }}"
           ARCH=x86_64 ./appimagetool --appimage-extract-and-run \
             skippy-xd.AppDir \
             Skippy-xd-${VERSION}-x86_64.AppImage

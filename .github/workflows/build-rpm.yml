@@ -21,7 +21,7 @@ jobs:
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
             VERSION="${GITHUB_REF#refs/tags/v}"
           else
-            VERSION=$(sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+).*/\1/' version.txt | head -1)
+            VERSION=$(sed -nE 's/^v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' version.txt | head -1)
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Detected version: $VERSION"
@@ -41,7 +41,7 @@ jobs:
 
       - name: Create source tarball
         run: |
-          VERSION=${{ steps.version.outputs.version }}
+          VERSION="${{ steps.version.outputs.version }}"
           RPM_VERSION=$(echo "$VERSION" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
           mkdir -p /tmp/skippy-xd-$RPM_VERSION
           cp -r . /tmp/skippy-xd-$RPM_VERSION/
@@ -50,7 +50,7 @@ jobs:
 
       - name: Prepare spec file
         run: |
-          VERSION=${{ steps.version.outputs.version }}
+          VERSION="${{ steps.version.outputs.version }}"
           # Strip any suffix like -test, -rc1, etc. (RPM doesn't allow hyphens in Version)
           RPM_VERSION=$(echo "$VERSION" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
           DATE=$(date '+%a %b %d %Y')
