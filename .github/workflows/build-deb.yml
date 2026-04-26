@@ -29,6 +29,9 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Detected version: $VERSION"
 
+      - name: Materialize debian packaging
+        run: cp -a Packaging/Debian debian
+
       - name: Generate debian/changelog
         run: |
           VERSION="${{ steps.version.outputs.version }}"
