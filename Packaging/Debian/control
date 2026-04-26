@@ -1,11 +1,28 @@
-Package: skippy-xd
-Version: 0.5-1
-Section: base
+Source: skippy-xd
+Section: x11
 Priority: optional
-Architecture: amd64
-Depends: libxcomposite1 (>= 1:0.4.3-2), libxrender1 (>= 1:0.9.6-2), libxfixes3 (>= 1:5.0-4), libxdamage1 (>= 1:1.1.3-2), libxft2 (>= 2.2.0-3ubuntu1)
-Maintainer: Nick Watts <nick@resplect.com>
-Installed-Size: 166
-Homepage: http://www.resplect.com
-Description: Skippy-XD
- Standalone composited window picker (displays all your windows at once, with live previews).
+Maintainer: musqz <musqz@github>
+Build-Depends:
+ debhelper (>= 13),
+ libx11-dev,
+ libxft-dev,
+ libxrender-dev,
+ libxcomposite-dev,
+ libxdamage-dev,
+ libxfixes-dev,
+ libxext-dev,
+ libimlib2-dev,
+ libjpeg-dev,
+ libgif-dev,
+ libpng-dev,
+ libxinerama-dev
+Standards-Version: 4.6.0
+Homepage: https://github.com/musqz/skippy-xd
+
+Package: skippy-xd
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Full-screen window switcher for X11
+ Skippy-XD is a full-screen task switcher for X11 with live thumbnails
+ of all open windows, similar to the Expose feature in macOS.
+ It is window-manager agnostic and works with any EWMH-compliant WM.
