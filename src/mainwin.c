@@ -92,6 +92,9 @@ mainwin_create(session_t *ps) {
 		mw->visual = DefaultVisual(dpy, ps->screen);
 	}
 
+	mw->colormap = XCreateColormap(dpy, ps->root, mw->visual, AllocNone);
+	mw->format = XRenderFindVisualFormat(dpy, mw->visual);
+
 	mw = mainwin_reload(ps, mw);
 	if (!mw)
 		goto mainwin_create_err;
@@ -175,9 +178,6 @@ mainwin_reload(session_t *ps, MainWin *mw) {
 	check_keybindings_conflict(ps->o.config_path, "keysNext", mw->keysyms_Next, "keysCancel", mw->keysyms_Cancel);
 	check_keybindings_conflict(ps->o.config_path, "keysNext", mw->keysyms_Next, "keysSelect", mw->keysyms_Select);
 	check_keybindings_conflict(ps->o.config_path, "keysCancel", mw->keysyms_Cancel, "keysSelect", mw->keysyms_Select);
-
-	mw->colormap = XCreateColormap(dpy, ps->root, mw->visual, AllocNone);
-	mw->format = XRenderFindVisualFormat(dpy, mw->visual);
 
 	{
 		unsigned short alpha = alphaconv(ps->o.highlight_tintOpacity);
@@ -421,18 +421,27 @@ mainwin_destroy(MainWin *mw) {
 	dlist_free(mw->clientondesktop);
 	dlist_free(mw->panels);
 
+	if(mw->colormap != None)
+		XFreeColormap(ps->dpy, mw->colormap);
+
 	if(mw->background != None)
 		XRenderFreePicture(ps->dpy, mw->background);
-	
+
 	if(mw->bg_pixmap != None)
 		XFreePixmap(ps->dpy, mw->bg_pixmap);
-	
+
 	if(mw->normalPicture != None)
 		XRenderFreePicture(ps->dpy, mw->normalPicture);
-	
+
+	if(mw->shadowPicture != None)
+		XRenderFreePicture(ps->dpy, mw->shadowPicture);
+
 	if(mw->normalPixmap != None)
 		XFreePixmap(ps->dpy, mw->normalPixmap);
-	
+
+	if(mw->shadowPixmap != None)
+		XFreePixmap(ps->dpy, mw->shadowPixmap);
+
 	XDestroyWindow(ps->dpy, mw->window);
 	
 #ifdef CFG_XINERAMA
