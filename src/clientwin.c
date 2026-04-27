@@ -419,7 +419,7 @@ clientwin_destroy(ClientWin *cw, bool destroyed) {
 	MainWin *mw = cw->mainwin;
 	session_t * const ps = mw->ps;
 
-	if (ps->o.pseudoTrans)
+	if (ps->o.pseudoTrans || cw->mode != CLIDISP_DESKTOP)
 		free_picture(ps, &cw->origin);
 	free_picture(ps, &cw->destination);
 	free_picture(ps, &cw->shadow);
