@@ -433,8 +433,14 @@ mainwin_destroy(MainWin *mw) {
 	if(mw->normalPicture != None)
 		XRenderFreePicture(ps->dpy, mw->normalPicture);
 
+	if(mw->shadowPicture != None)
+		XRenderFreePicture(ps->dpy, mw->shadowPicture);
+
 	if(mw->normalPixmap != None)
 		XFreePixmap(ps->dpy, mw->normalPixmap);
+
+	if(mw->shadowPixmap != None)
+		XFreePixmap(ps->dpy, mw->shadowPixmap);
 
 	XDestroyWindow(ps->dpy, mw->window);
 	
