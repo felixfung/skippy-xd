@@ -45,6 +45,7 @@ struct _clientwin_t {
 	pictw_t *icon_pict_filler;
 
 	SkippyWindow mini;
+	int pixmap_width, pixmap_height;
 
 	Pixmap pixmap;
 	Picture origin, destination, shadow;

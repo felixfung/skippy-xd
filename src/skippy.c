@@ -1279,7 +1279,6 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 	foreach_dlist(mw->clients) {
 		ClientWin *cw = iter->data;
 		clientwin_update3(cw);
-		clientwin_update2(cw);
 		cw->paneltype = wm_identify_panel(mw->ps, cw->wid_client);
 	}
 
@@ -1294,6 +1293,7 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 		cw->src.y -= mw->y;
 		cw->x *= mw->multiplier;
 		cw->y *= mw->multiplier;
+		clientwin_update2(cw);
 	}
 
 	foreach_dlist(mw->panels) {
