@@ -217,7 +217,7 @@ typedef struct {
 	bool switchCycleDesktops;
 	bool exposeCycleDesktops;
 	int distance;
-	bool allowUpscale;
+	bool upscaleWindows;
 
 	int animationDuration;;
 	int animationRefresh;;
@@ -307,7 +307,7 @@ typedef struct {
 	.switchCycleDesktops = false, \
 	.exposeCycleDesktops = false, \
 	.distance = 50, \
-	.allowUpscale = false, \
+	.upscaleWindows = false, \
 \
 	.animationDuration = 200, \
 	.animationRefresh = 60, \
