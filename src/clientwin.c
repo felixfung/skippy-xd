@@ -359,10 +359,13 @@ clientwin_update2_desktop(session_t *ps, MainWin *mw, ClientWin *cw) {
 
 static inline bool
 clientwin_update2_filled(session_t *ps, MainWin *mw, ClientWin *cw) {
+	float scale = cw->paneltype == WINTYPE_PANEL
+			   || cw->paneltype == WINTYPE_DESKTOP
+		? 1.0f : cw->mainwin->multiplier;
 	int width = cw->mini.width > 0 ? cw->mini.width
-				: cw->src.width * cw->mainwin->multiplier;
+				: cw->src.width * scale;
 	int height = cw->mini.height > 0 ? cw->mini.height
-				: cw->src.height * cw->mainwin->multiplier;
+				: cw->src.height * scale;
 
 	if (cw->pict_filled)
 		free_pictw(ps, &cw->pict_filled);
@@ -377,10 +380,13 @@ clientwin_update2_filled(session_t *ps, MainWin *mw, ClientWin *cw) {
 
 static inline bool
 clientwin_update2_icon(session_t *ps, MainWin *mw, ClientWin *cw) {
+	float scale = cw->paneltype == WINTYPE_PANEL
+			   || cw->paneltype == WINTYPE_DESKTOP
+		? 1.0f : cw->mainwin->multiplier;
 	int width = cw->mini.width > 0 ? cw->mini.width
-				: cw->src.width * cw->mainwin->multiplier;
+				: cw->src.width * scale;
 	int height = cw->mini.height > 0 ? cw->mini.height
-				: cw->src.height * cw->mainwin->multiplier;
+				: cw->src.height * scale;
 
 	if (cw->icon_pict_filled)
 		free_pictw(ps, &cw->icon_pict_filled);

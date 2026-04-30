@@ -1280,6 +1280,8 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 		ClientWin *cw = iter->data;
 		clientwin_update3(cw);
 		cw->paneltype = wm_identify_panel(mw->ps, cw->wid_client);
+		if (cw->paneltype == WINTYPE_PANEL || cw->paneltype == WINTYPE_DESKTOP)
+			clientwin_update2(cw);
 	}
 
 	if (layout == LAYOUTMODE_PAGING)
@@ -1293,7 +1295,8 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 		cw->src.y -= mw->y;
 		cw->x *= mw->multiplier;
 		cw->y *= mw->multiplier;
-		clientwin_update2(cw);
+		if (cw->paneltype != WINTYPE_PANEL && cw->paneltype != WINTYPE_DESKTOP)
+			clientwin_update2(cw);
 	}
 
 	foreach_dlist(mw->panels) {
