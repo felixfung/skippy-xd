@@ -751,8 +751,11 @@ clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 	int leftborder = ps->o.leftFrameBorder, topborder = ps->o.topFrameBorder;
 	if (wm_get_fullscreen(ps, cw->wid_client))
 		leftborder = topborder = 0;
+
+	cw->mini.x += leftborder;
+	cw->mini.y += topborder;
 	XMoveResizeWindow(cw->mainwin->ps->dpy, cw->mini.window,
-			cw->mini.x + leftborder, cw->mini.y + topborder,
+			cw->mini.x, cw->mini.y,
 			cw->mini.width, cw->mini.height);
 
 	if (cw->paneltype == WINTYPE_WINDOW)

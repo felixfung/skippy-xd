@@ -1612,8 +1612,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 						{
 							int s_x = iter->x_org * mw->multiplier + cw->x;
 							int s_y = iter->y_org * mw->multiplier + cw->y;
-							int s_w = iter->width * mw->multiplier;
-							int s_h = iter->height * mw->multiplier;
+							int s_w = iter->width * mw->multiplier - ps->o.leftFrameBorder;
+							int s_h = iter->height * mw->multiplier - ps->o.topFrameBorder;
 
 							XRoundedRectComposite(mw->ps,
 									mw->ps->o.from, mw->background,
