@@ -1250,11 +1250,11 @@ desktopwin_map(ClientWin *cw)
 
 	if (ps->o.pseudoTrans)
 	{
-		mw->desktoptransform.matrix[0][2] += cw->x;
-		mw->desktoptransform.matrix[1][2] += cw->y;
+		mw->desktoptransform.matrix[0][2] += cw->mini.x - mw->xoff;
+		mw->desktoptransform.matrix[1][2] += cw->mini.y - mw->yoff;
 		XRenderSetPictureTransform(ps->dpy, cw->origin, &mw->desktoptransform);
-		mw->desktoptransform.matrix[0][2] -= cw->x;
-		mw->desktoptransform.matrix[1][2] -= cw->y;
+		mw->desktoptransform.matrix[0][2] -= cw->mini.x - mw->xoff;
+		mw->desktoptransform.matrix[1][2] -= cw->mini.y - mw->yoff;
 	}
 
 	cw->focused = cw == mw->client_to_focus;
