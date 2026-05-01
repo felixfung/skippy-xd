@@ -209,6 +209,8 @@ typedef struct {
 	char *wm_title;
 	char *wm_status;
 	char *desktops;
+	int horizontalPanelAlignment;
+	int verticalPanelAlignment;
 
 	int switchLayout;
 	int exposeLayout;
@@ -301,6 +303,8 @@ typedef struct {
 	.showOnlyCurrentMonitor = false, \
 	.filterxscreen = true, \
 	.wm_status = NULL, \
+	.horizontalPanelAlignment = 1, \
+	.verticalPanelAlignment = 1, \
 \
 	.switchLayout = LAYOUT_XD, \
 	.exposeLayout = LAYOUT_COSMOS, \

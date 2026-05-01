@@ -953,6 +953,23 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 }
 
 static void
+realignpanel_to_monitor(int *coord, int panel_size,
+		int src_size, int dst_size,
+		enum align alignment) {
+	int offset = 0;
+	if (alignment == ALIGN_MID)
+		offset = (dst_size - src_size) / 2;
+	else if (alignment == ALIGN_RIGHT)
+		offset = dst_size - src_size;
+
+	*coord += offset;
+	if (*coord < 0)
+		*coord = 0;
+	if (*coord + panel_size > dst_size)
+		*coord = MAX(0, dst_size - panel_size);
+}
+
+static void
 calculatePanelBorders(MainWin *mw,
 		int *x1, int *y1, int *x2, int *y2) {
 	if (!mw->ps->o.panel_reserveSpace)
@@ -967,46 +984,67 @@ calculatePanelBorders(MainWin *mw,
 
 	foreach_dlist(mw->panels) {
 		ClientWin *cw = iter->data;
+		int panel_x = cw->src.x;
+		int panel_y = cw->src.y;
+		int panel_w = cw->src.width;
+		int panel_h = cw->src.height;
+		bool horizontal = panel_w >= panel_h;
 		if (cw->paneltype != WINTYPE_PANEL)
 			continue;
 
 #ifdef CFG_XINERAMA
-			int midx = cw->src.x + cw->src.width / 2;
-			int midy = cw->src.y + cw->src.height / 2;
-
 			XineramaScreenInfo *xiter = mw->xin_info;
 			for (int i=0; i<mw->xin_screens; i++)
 			{
-				if(xiter->x_org <= midx && midx < xiter->x_org + xiter->width &&
-				   xiter->y_org <= midy && midy < xiter->y_org + xiter->height)
-				{
-					cw->src.x -= xiter->x_org;
-					cw->src.y -= xiter->y_org;
-				}
+				if(xiter->x_org <= (panel_x + panel_w)/2
+						&& panel_x + panel_w/2 < xiter->x_org + xiter->width &&
+				   xiter->y_org <= (panel_y + panel_h)/2
+						&& (panel_y + panel_h)/2 < xiter->y_org + xiter->height)
+					break;
 				xiter++;
+			}
+
+			if (xiter < mw->xin_info + mw->xin_screens) {
+				bool top_panel = panel_y < xiter->y_org + xiter->height / 2.0;
+				bool left_panel = panel_x < xiter->x_org + xiter->width / 2.0;
+				panel_x -= xiter->x_org;
+				panel_y -= xiter->y_org;
+
+				if (horizontal) {
+					realignpanel_to_monitor(&panel_y, panel_h, xiter->height,
+							mw->height, top_panel ? ALIGN_LEFT : ALIGN_RIGHT);
+					realignpanel_to_monitor(&panel_x, panel_w, xiter->width,
+							mw->width, mw->ps->o.horizontalPanelAlignment);
+				}
+				else {
+					realignpanel_to_monitor(&panel_x, panel_w, xiter->width,
+							mw->width, left_panel ? ALIGN_LEFT : ALIGN_RIGHT);
+					realignpanel_to_monitor(&panel_y, panel_h, xiter->height,
+							mw->height, mw->ps->o.verticalPanelAlignment);
+				}
 			}
 #endif /* CFG_XINERAMA */
 
 		// assumed horizontal panel
-		if (cw->src.width >= cw->src.height) {
+		if (horizontal) {
 			// assumed top panel
-			if (cw->src.y < mw->y + mw->height / 2.0) {
-				*y1 = MAX(*y1, cw->src.y + cw->src.height);
+			if (panel_y < mw->height / 2.0) {
+				*y1 = MAX(*y1, panel_y + panel_h);
 			}
 			// assumed bottom panel
 			else {
-				*y2 = MIN(*y2, cw->src.y);
+				*y2 = MIN(*y2, panel_y);
 			}
 		}
 		// assumed vertical panel
 		else {
 			// assumed left panel
-			if (cw->src.x < mw->x + mw->width / 2.0) {
-				*x1 = MAX(*x1, cw->src.x + cw->src.width);
+			if (panel_x < mw->width / 2.0) {
+				*x1 = MAX(*x1, panel_x + panel_w);
 			}
 			// assumed right panel
 			else {
-				*x2 = MIN(*x2, cw->src.x);
+				*x2 = MIN(*x2, panel_x);
 			}
 		}
 	}
@@ -2688,6 +2726,18 @@ load_config_file(session_t *ps)
 
     config_get_bool_wrap(config, "multimonitor", "showOnlyCurrentMonitor", &ps->o.showOnlyCurrentMonitor);
     config_get_bool_wrap(config, "multimonitor", "showOnlyCurrentScreen", &ps->o.filterxscreen);
+	{
+		const char *s = config_get(config, "multimonitor", "horizontalPanelAlignment", NULL);
+		enum align align;
+		if (s && parse_align(ps, s, &align))
+			ps->o.horizontalPanelAlignment = align;
+	}
+	{
+		const char *s = config_get(config, "multimonitor", "verticalPanelAlignment", NULL);
+		enum align align;
+		if (s && parse_alignv(ps, s, &align))
+			ps->o.verticalPanelAlignment = align;
+	}
 
 	{
 		const char *s = config_get(config, "layout", "switchLayout", NULL);
