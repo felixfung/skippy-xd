@@ -1250,11 +1250,11 @@ desktopwin_map(ClientWin *cw)
 
 	if (ps->o.pseudoTrans)
 	{
-		mw->desktoptransform.matrix[0][2] += cw->x;
-		mw->desktoptransform.matrix[1][2] += cw->y;
+		mw->desktoptransform.matrix[0][2] += cw->mini.x - mw->xoff;
+		mw->desktoptransform.matrix[1][2] += cw->mini.y - mw->yoff;
 		XRenderSetPictureTransform(ps->dpy, cw->origin, &mw->desktoptransform);
-		mw->desktoptransform.matrix[0][2] -= cw->x;
-		mw->desktoptransform.matrix[1][2] -= cw->y;
+		mw->desktoptransform.matrix[0][2] -= cw->mini.x - mw->xoff;
+		mw->desktoptransform.matrix[1][2] -= cw->mini.y - mw->yoff;
 	}
 
 	cw->focused = cw == mw->client_to_focus;
@@ -1615,13 +1615,15 @@ mainloop(session_t *ps, bool activate_on_start) {
 						{
 							int s_x = iter->x_org * mw->multiplier + cw->x;
 							int s_y = iter->y_org * mw->multiplier + cw->y;
-							int s_w = iter->width * mw->multiplier;
-							int s_h = iter->height * mw->multiplier;
+							int s_w = iter->width * mw->multiplier - ps->o.leftFrameBorder;
+							int s_h = iter->height * mw->multiplier - ps->o.topFrameBorder;
 
 							XRoundedRectComposite(mw->ps,
 									mw->ps->o.from, mw->background,
-									s_x + mw->xoff + mw->x, s_y + mw->yoff + mw->y,
-									s_x + mw->xoff, s_y + mw->yoff,
+									s_x + mw->xoff + mw->x + ps->o.leftFrameBorder,
+									s_y + mw->yoff + mw->y + ps->o.topFrameBorder,
+									s_x + mw->xoff + ps->o.leftFrameBorder,
+									s_y + mw->yoff + ps->o.topFrameBorder,
 									s_w,
 									s_h,
 									ps->o.cornerRadius * mw->multiplier);
@@ -1630,8 +1632,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 #else
 						XRoundedRectComposite(mw->ps,
 								mw->ps->o.from, mw->background,
-								cw->x + mw->xoff + mw->x, cw->y + mw->yoff + mw->y,
-								cw->x + mw->xoff, cw->y + mw->yoff,
+								cw->x + mw->xoff + mw->x + ps->o.leftFrameBorder,
+								cw->y + mw->yoff + mw->y + ps->o.topFrameBorder,
+								cw->x + mw->xoff + ps->o.leftFrameBorder,
+								cw->y + mw->yoff + ps->o.topFrameBorder,
 								cw->src.width * mw->multiplier,
 								cw->src.height * mw->multiplier,
 								ps->o.cornerRadius * mw->multiplier);
@@ -2756,7 +2760,9 @@ load_config_file(session_t *ps)
 	config_get_bool_wrap(config, "appearance", "preservePages", &ps->o.preservePages);
     config_get_bool_wrap(config, "bindings", "moveMouse", &ps->o.moveMouse);
     config_get_bool_wrap(config, "appearance", "includeFrame", &ps->o.includeFrame);
-	config_get_int_wrap(config, "appearance", "cornerRadius", &ps->o.cornerRadius, 0, INT_MAX);
+	config_get_int_wrap(config, "appearance", "leftFrameBorder", &ps->o.leftFrameBorder, 0, 100);
+	config_get_int_wrap(config, "appearance", "topFrameBorder", &ps->o.topFrameBorder, 0, 100);
+	config_get_int_wrap(config, "appearance", "cornerRadius", &ps->o.cornerRadius, 0, 100);
     {
         static client_disp_mode_t DEF_CLIDISPM[] = {
             CLIDISP_THUMBNAIL, CLIDISP_ZOMBIE, CLIDISP_ICON, CLIDISP_FILLED, CLIDISP_NONE

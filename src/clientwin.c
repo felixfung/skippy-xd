@@ -541,12 +541,18 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 			foreach_dlist (mw->dminis) {
 				ClientWin *dwin = (ClientWin *) iter->data;
 
+				int leftborder = 0, topborder = 0;
+				if (wm_get_fullscreen(ps, cw->wid_client)) {
+					leftborder = ps->o.leftFrameBorder;
+					topborder = ps->o.topFrameBorder;
+				}
+
 #ifdef CFG_XINERAMA
 				XineramaScreenInfo *iter = mw->xin_info;
 				for (int i = 0; i < mw->xin_screens; ++i)
 				{
-					int x = dwin->x + iter->x_org + mw->xoff - cw->src.x + mw->x;
-					int y = dwin->y + iter->y_org + mw->yoff - cw->src.y + mw->y;
+					int x = dwin->x + iter->x_org + mw->xoff - cw->src.x + mw->x + leftborder;
+					int y = dwin->y + iter->y_org + mw->yoff - cw->src.y + mw->y + topborder;
 					int width = iter->width * mw->multiplier;
 					int height = iter->height * mw->multiplier;
 
@@ -557,8 +563,8 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 					iter++;
 				}
 #else
-				int x = dwin->x + mw->xoff - cw->src.x + mw->x;
-				int y = dwin->y + mw->yoff - cw->src.y + mw->y;
+				int x = dwin->x + mw->xoff - cw->src.x + mw->x + leftborder;
+				int y = dwin->y + mw->yoff - cw->src.y + mw->y + topborder;
 				int width = dwin->src.width * mw->multiplier;
 				int height = dwin->src.height * mw->multiplier;
 
@@ -772,8 +778,15 @@ clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 	cw->mini.width = cw->src.width * f;
 	cw->mini.height = cw->src.height * f;
 
+	int leftborder = ps->o.leftFrameBorder, topborder = ps->o.topFrameBorder;
+	if (wm_get_fullscreen(ps, cw->wid_client))
+		leftborder = topborder = 0;
+
+	cw->mini.x += leftborder;
+	cw->mini.y += topborder;
 	XMoveResizeWindow(cw->mainwin->ps->dpy, cw->mini.window,
-			cw->mini.x, cw->mini.y, cw->mini.width, cw->mini.height);
+			cw->mini.x, cw->mini.y,
+			cw->mini.width, cw->mini.height);
 
 	if (cw->paneltype == WINTYPE_WINDOW)
 		clientwin_round_corners(cw);
