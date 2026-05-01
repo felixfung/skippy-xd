@@ -73,8 +73,8 @@ exposeCycleDesktops = false
 # Relative minimal pixel distance between windows
 distance = 50
 
-# Whether to show the window bigger than its original size
-allowUpscale = false
+# Fill screen by upscaling windows
+upscaleWindows = false
 
 [appearance]
 

@@ -1019,7 +1019,7 @@ calculatePanelBorders(MainWin *mw,
 
 static void
 init_multiplier(MainWin *mw, unsigned int newwidth, unsigned int newheight,
-		bool allowUpscale, int gap)
+		bool upscaleWindows, int gap)
 {
 	int x1=0, y1=0, x2=0, y2=0;
 	calculatePanelBorders(mw, &x1, &y1, &x2, &y2);
@@ -1032,7 +1032,7 @@ init_multiplier(MainWin *mw, unsigned int newwidth, unsigned int newheight,
 		multiplier = (float) (mw->height - gap * mw->distance
 				- y1 - y2) / newheight;
 
-	if (!allowUpscale)
+	if (!upscaleWindows)
 		multiplier = MIN(multiplier, 1.0f);
 
 	int xoff = (mw->width - x1 - x2 - (float)(newwidth
@@ -1052,7 +1052,7 @@ init_layout(MainWin *mw, enum layoutmode layout, Window leader)
 	if (mw->clientondesktop)
 		layout_run(mw, mw->clientondesktop, &newwidth, &newheight, layout);
 
-	init_multiplier(mw, newwidth, newheight, mw->ps->o.allowUpscale, 2);
+	init_multiplier(mw, newwidth, newheight, mw->ps->o.upscaleWindows, 2);
 	init_focus(mw, layout, leader);
 }
 
@@ -1279,8 +1279,9 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 	foreach_dlist(mw->clients) {
 		ClientWin *cw = iter->data;
 		clientwin_update3(cw);
-		clientwin_update2(cw);
 		cw->paneltype = wm_identify_panel(mw->ps, cw->wid_client);
+		if (cw->paneltype == WINTYPE_PANEL || cw->paneltype == WINTYPE_DESKTOP)
+			clientwin_update2(cw);
 	}
 
 	if (layout == LAYOUTMODE_PAGING)
@@ -1294,6 +1295,8 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 		cw->src.y -= mw->y;
 		cw->x *= mw->multiplier;
 		cw->y *= mw->multiplier;
+		if (cw->paneltype != WINTYPE_PANEL && cw->paneltype != WINTYPE_DESKTOP)
+			clientwin_update2(cw);
 	}
 
 	foreach_dlist(mw->panels) {
@@ -2727,7 +2730,7 @@ load_config_file(session_t *ps)
     config_get_int_wrap(config, "layout", "switchWaitDuration", &ps->o.switchWaitDuration, 0, 2000);
     config_get_bool_wrap(config, "layout", "switchCycleDuringWait", &ps->o.switchCycleDuringWait);
     config_get_int_wrap(config, "layout", "distance", &ps->o.distance, 5, INT_MAX);
-    config_get_bool_wrap(config, "layout", "allowUpscale", &ps->o.allowUpscale);
+    config_get_bool_wrap(config, "layout", "upscaleWindows", &ps->o.upscaleWindows);
 
     config_get_int_wrap(config, "appearance", "animationDuration", &ps->o.animationDuration, 0, 2000);
     config_get_int_wrap(config, "appearance", "animationRefresh", &ps->o.animationRefresh, 1, 200);
