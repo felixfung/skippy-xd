@@ -95,6 +95,8 @@ int clientwin_cmp_func(dlist *, void*);
 bool clientwin_update(ClientWin *cw);
 bool clientwin_update2(ClientWin *cw);
 bool clientwin_update3(ClientWin *cw);
+bool clientwin_ensure_shadow(ClientWin *cw);
+bool clientwin_update_shadow(ClientWin *cw, const XRectangle *area);
 int clientwin_check_group_leader_func(dlist *l, void *data);
 void clientwin_render(ClientWin *);
 void clientwin_schedule_repair(ClientWin *cw, XRectangle *area);

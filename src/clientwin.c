@@ -26,6 +26,9 @@
 static int
 clientwin_action(ClientWin *cw, enum cliop action);
 
+bool
+clientwin_ensure_shadow(ClientWin *cw);
+
 int
 clientwin_cmp_func(dlist *l, void *data) {
 	ClientWin *cw = (ClientWin *) l->data;
@@ -301,7 +304,8 @@ clientwin_update3(ClientWin *cw) {
 			free_picture(ps, &cw->origin);
 		cw->origin = XRenderCreatePicture(ps->dpy,
 				cw->src.window, cw->src.format, CPSubwindowMode, &pa);
-		XRenderSetPictureFilter(ps->dpy, cw->origin, FilterBest, 0, 0);
+		if (cw->origin)
+			XRenderSetPictureFilter(ps->dpy, cw->origin, FilterBest, 0, 0);
 
 		if (!cw->redirected) {
 			XCompositeRedirectWindow(ps->dpy, cw->src.window,
@@ -309,16 +313,9 @@ clientwin_update3(ClientWin *cw) {
 			cw->redirected = true;
 		}
 
-		if (cw->cpixmap)
-			free_pixmap(ps, &cw->cpixmap);
-		cw->cpixmap = XCompositeNameWindowPixmap(ps->dpy, cw->src.window);
-
-		if (cw->shadow)
-			free_picture(ps, &cw->shadow);
-		cw->shadow = XRenderCreatePicture(ps->dpy,
-			cw->cpixmap, cw->src.format, CPSubwindowMode, &pa);
-		XRenderSetPictureFilter(ps->dpy, cw->shadow, FilterBest, 0, 0);
 	}
+	else if (cw->origin)
+		free_picture(ps, &cw->origin);
 
 	// Get window icon
 	if (cw->icon_pict)
@@ -341,6 +338,73 @@ clientwin_update3(ClientWin *cw) {
 	cw->mode = clientwin_get_disp_mode(ps, cw, isViewable);
 	printfdf(false, "(): (%#010lx): %d", cw->wid_client, cw->mode);
 
+	return true;
+}
+
+bool
+clientwin_ensure_shadow(ClientWin *cw) {
+	session_t *ps = cw->mainwin->ps;
+	XWindowAttributes wattr = { };
+
+	if (cw->cpixmap && cw->shadow)
+		return true;
+	if (!cw->src.format || cw->src.width <= 0 || cw->src.height <= 0)
+		return false;
+
+	XGetWindowAttributes(ps->dpy, cw->src.window, &wattr);
+
+	free_picture(ps, &cw->shadow);
+	free_pixmap(ps, &cw->cpixmap);
+	cw->cpixmap = XCreatePixmap(ps->dpy, cw->src.window,
+			cw->src.width, cw->src.height, wattr.depth);
+	if (!cw->cpixmap)
+		return false;
+
+	cw->shadow = XRenderCreatePicture(ps->dpy,
+			cw->cpixmap, cw->src.format, 0, NULL);
+	if (!cw->shadow) {
+		free_pixmap(ps, &cw->cpixmap);
+		return false;
+	}
+
+	XRenderSetPictureFilter(ps->dpy, cw->shadow, FilterBest, 0, 0);
+	return clientwin_update_shadow(cw, NULL);
+}
+
+bool
+clientwin_update_shadow(ClientWin *cw, const XRectangle *area) {
+	session_t *ps = cw->mainwin->ps;
+	static XRenderPictureAttributes pa = { .subwindow_mode = IncludeInferiors };
+
+	if (!cw->shadow || !cw->cpixmap || !cw->src.format
+			|| cw->src.width <= 0 || cw->src.height <= 0)
+		return false;
+
+	Picture source = XRenderCreatePicture(ps->dpy,
+			cw->src.window, cw->src.format, CPSubwindowMode, &pa);
+	if (!source)
+		return false;
+
+	Picture destination = XRenderCreatePicture(ps->dpy,
+			cw->cpixmap, cw->src.format, 0, NULL);
+	if (!destination) {
+		XRenderFreePicture(ps->dpy, source);
+		return false;
+	}
+
+	int x = 0, y = 0, width = cw->src.width, height = cw->src.height;
+	if (area) {
+		x = area->x;
+		y = area->y;
+		width = area->width;
+		height = area->height;
+	}
+
+	XRenderSetPictureFilter(ps->dpy, source, FilterBest, 0, 0);
+	XRenderComposite(ps->dpy, PictOpSrc, source, None, destination,
+			x, y, 0, 0, x, y, width, height);
+	XRenderFreePicture(ps->dpy, destination);
+	XRenderFreePicture(ps->dpy, source);
 	return true;
 }
 
@@ -799,16 +863,17 @@ clientwin_map(ClientWin *cw) {
 	if (!cw->mode)
 		return;
 
+	if (cw->origin)
+		clientwin_ensure_shadow(cw);
+
+	free_damage(ps, &cw->damage);
 	if (cw->origin) {
-		free_damage(ps, &cw->damage);
 		cw->damage = XDamageCreate(ps->dpy, cw->src.window, XDamageReportDeltaRectangles);
 		if (cw->paneltype == WINTYPE_WINDOW)
 			XRenderSetPictureTransform(ps->dpy, cw->origin, &cw->mainwin->transform);
 	}
 
 	if (cw->shadow) {
-		free_damage(ps, &cw->damage);
-		cw->damage = XDamageCreate(ps->dpy, cw->src.window, XDamageReportDeltaRectangles);
 		if (cw->paneltype == WINTYPE_WINDOW)
 			XRenderSetPictureTransform(ps->dpy, cw->shadow, &cw->mainwin->transform);
 	}

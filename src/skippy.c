@@ -1744,7 +1744,34 @@ mainloop(session_t *ps, bool activate_on_start) {
 					clientwin_update2(cw);
 				}
             }
-			else if (ev.type == CreateNotify || ev.type == MapNotify) {
+			else if (mw && (ev.type == UnmapNotify || ev.type == MapNotify)) {
+				printfdf(false, "(): else if (ev.type == UnmapNotify || ev.type == MapNotify) {");
+				dlist *iter = (wid ? dlist_find(ps->mainwin->clients,
+						clientwin_cmp_func, (void *) wid): NULL);
+				if (!iter)
+					continue;
+
+				ClientWin *cw = (ClientWin *) iter->data;
+				if (!cw->pixmap)
+					continue;
+
+				clientwin_update(cw);
+				clientwin_update3(cw);
+				clientwin_update2(cw);
+
+				if (dlist_find(mw->clientondesktop, clientwin_cmp_func, (void *) wid)) {
+					if (cw->paneltype == WINTYPE_WINDOW) {
+						if (cw->origin)
+							XRenderSetPictureTransform(ps->dpy,
+									cw->origin, &cw->mainwin->transform);
+						if (cw->shadow)
+							XRenderSetPictureTransform(ps->dpy,
+									cw->shadow, &cw->mainwin->transform);
+					}
+					clientwin_render(cw);
+				}
+			}
+			else if (!mw && (ev.type == CreateNotify || ev.type == MapNotify)) {
 				printfdf(false, "(): else if (ev.type == CreateNotify || ev.type == MapNotify) {");
 				count_and_filter_clients(ps->mainwin);
 				dlist *iter = (wid ? dlist_find(ps->mainwin->clients, clientwin_cmp_func, (void *) wid): NULL);
