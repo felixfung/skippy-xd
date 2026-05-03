@@ -52,6 +52,8 @@ mainwin_render_tint_border(ClientWin *cw, XRenderColor *tint, int border)
 
 	if (!tint || !tint->alpha || border <= 0)
 		return;
+	if (!cw->mapped)
+		return;
 
 	if (cw->paneltype != WINTYPE_WINDOW && cw->paneltype != WINTYPE_DESKTOP)
 		return;
@@ -956,6 +958,7 @@ clientwin_map(ClientWin *cw) {
 
 	XMapWindow(ps->dpy, cw->mini.window);
 	XRaiseWindow(ps->dpy, cw->mini.window);
+	cw->mapped = true;
 
 	if (ps->o.tooltip_show && ps->o.mode != PROGMODE_PAGING
 			&& cw->paneltype == WINTYPE_WINDOW)
@@ -974,6 +977,7 @@ clientwin_unmap(ClientWin *cw) {
 
 	XUnmapWindow(ps->dpy, cw->mini.window);
 	XSetWindowBackgroundPixmap(ps->dpy, cw->mini.window, None);
+	cw->mapped = false;
 
 	cw->focused = false;
 

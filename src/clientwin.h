@@ -55,6 +55,7 @@ struct _clientwin_t {
 	bool focused;
 	bool multiselect;
 	bool damaged;
+	bool mapped;
 
 	bool zombie;
 	wintype_t paneltype;

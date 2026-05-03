@@ -1263,6 +1263,7 @@ desktopwin_map(ClientWin *cw)
 
 	XMapWindow(ps->dpy, cw->mini.window);
 	XRaiseWindow(ps->dpy, cw->mini.window);
+	cw->mapped = true;
 
 	if (ps->o.tooltip_show)
 		clientwin_tooltip(cw);
