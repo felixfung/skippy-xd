@@ -2836,12 +2836,18 @@ load_config_file(session_t *ps)
 			return RET_BADARG;
 	}
 
-    config_get_int_wrap(config, "livepreview", "opacity", &ps->o.normal_opacity, 0, 256);
+	config_get_int_wrap(config, "livepreview", "opacity", &ps->o.normal_opacity, 0, 256);
 	ps->o.highlight_tint = mstrdup(config_get(config, "highlight", "tint", "#FFFFFF"));
-    config_get_int_wrap(config, "highlight", "tintOpacity", &ps->o.highlight_tintOpacity, 0, 256);
-    config_get_int_wrap(config, "filler", "opacity", &ps->o.shadow_opacity, 0, 256);
+	config_get_int_wrap(config, "highlight", "tintOpacity", &ps->o.highlight_tintOpacity, 0, 256);
+	config_get_bool_wrap(config, "highlight", "tintWindow", &ps->o.highlight_tintWindow);
+	config_get_int_wrap(config, "highlight", "tintBorder", &ps->o.highlight_tintBorder, 0, 256);
+	config_get_int_wrap(config, "filler", "opacity", &ps->o.shadow_opacity, 0, 256);
 	ps->o.multiselect_tint = mstrdup(config_get(config, "multiselect", "tint", "#66B6F6"));
-    config_get_int_wrap(config, "multiselect", "tintOpacity", &ps->o.multiselect_tintOpacity, 0, 256);
+	config_get_int_wrap(config, "multiselect", "tintOpacity", &ps->o.multiselect_tintOpacity, 0, 256);
+	config_get_bool_wrap(config, "multiselect", "tintWindow", &ps->o.multiselect_tintWindow);
+	config_get_int_wrap(config, "multiselect", "tintBorder", &ps->o.multiselect_tintBorder, 0, 256);
+
+printfdf(true, "(): %d %d %d %d", ps->o.highlight_tintWindow, ps->o.highlight_tintBorder, ps->o.multiselect_tintWindow, ps->o.multiselect_tintBorder);
 
     config_get_bool_wrap(config, "panel", "show", &ps->o.panel_show);
     config_get_bool_wrap(config, "panel", "backgroundTinting", &ps->o.panel_tinting);
@@ -3102,8 +3108,10 @@ main_end:
 			free(ps->o.pipePath2);
 			free(ps->o.clientDisplayModes);
 			free(ps->o.highlight_tint);
+			free(ps->o.multiselect_tint);
 			free(ps->o.tooltip_border);
 			free(ps->o.tooltip_background);
+			free(ps->o.tooltip_backgroundHighlight);
 			free(ps->o.tooltip_text);
 			free(ps->o.tooltip_textOutline);
 			free(ps->o.tooltip_font);

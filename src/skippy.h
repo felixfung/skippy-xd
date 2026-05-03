@@ -242,9 +242,13 @@ typedef struct {
 	int normal_opacity;
 	char *highlight_tint;
 	int highlight_tintOpacity;
+	bool highlight_tintWindow;
+	int highlight_tintBorder;
 	int shadow_opacity;
 	char *multiselect_tint;
 	int multiselect_tintOpacity;
+	bool multiselect_tintWindow;
+	int multiselect_tintBorder;
 
 	bool panel_show;
 	bool panel_tinting;
@@ -330,9 +334,13 @@ typedef struct {
 	.normal_opacity = 255, \
 	.highlight_tint = NULL, \
 	.highlight_tintOpacity = 128, \
+	.highlight_tintWindow = true, \
+	.highlight_tintBorder = 0, \
 	.shadow_opacity = 160, \
 	.multiselect_tint = NULL, \
 	.multiselect_tintOpacity = 196, \
+	.multiselect_tintWindow = true, \
+	.multiselect_tintBorder = 0, \
 \
 	.panel_show = true, \
 	.panel_tinting = true, \
