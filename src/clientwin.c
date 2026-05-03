@@ -75,13 +75,14 @@ mainwin_render_tint_border(ClientWin *cw, XRenderColor *tint, int border)
 
 	gcv.foreground = 0xFF;
 	XChangeGC(ps->dpy, gc, GCForeground, &gcv);
-	rounded_rect_fill(ps, pm, gc, 0, 0, w, h, ps->o.cornerRadius * mw->multiplier + border);
+	rounded_rect_fill(ps, pm, gc, 0, 0, w, h,
+			ps->o.cornerRadius > 0 ? ps->o.cornerRadius + border : 0);
 
 	if (cw->mini.width > 0 && cw->mini.height > 0) {
 		gcv.foreground = 0;
 		XChangeGC(ps->dpy, gc, GCForeground, &gcv);
 		rounded_rect_fill(ps, pm, gc, border, border, cw->mini.width, cw->mini.height,
-				ps->o.cornerRadius * mw->multiplier);
+				ps->o.cornerRadius);
 	}
 
 	XFreeGC(ps->dpy, gc);
