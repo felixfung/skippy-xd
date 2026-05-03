@@ -2847,8 +2847,6 @@ load_config_file(session_t *ps)
 	config_get_bool_wrap(config, "multiselect", "tintWindow", &ps->o.multiselect_tintWindow);
 	config_get_int_wrap(config, "multiselect", "tintBorder", &ps->o.multiselect_tintBorder, 0, 256);
 
-printfdf(true, "(): %d %d %d %d", ps->o.highlight_tintWindow, ps->o.highlight_tintBorder, ps->o.multiselect_tintWindow, ps->o.multiselect_tintBorder);
-
     config_get_bool_wrap(config, "panel", "show", &ps->o.panel_show);
     config_get_bool_wrap(config, "panel", "backgroundTinting", &ps->o.panel_tinting);
     config_get_bool_wrap(config, "panel", "reserveSpace", &ps->o.panel_reserveSpace);
