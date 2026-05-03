@@ -50,7 +50,10 @@ mainwin_render_tint_border(ClientWin *cw, XRenderColor *tint, int border)
 	MainWin *mw = cw->mainwin;
 	session_t *ps = mw->ps;
 
-	if (!tint || !tint->alpha || border <= 0 || cw->paneltype != WINTYPE_WINDOW)
+	if (!tint || !tint->alpha || border <= 0)
+		return;
+
+	if (cw->paneltype != WINTYPE_WINDOW && cw->paneltype != WINTYPE_DESKTOP)
 		return;
 
 	int x = cw->mini.x - border;
@@ -110,6 +113,23 @@ mainwin_render_all_tint_borders(MainWin *mw)
 	XRenderFreePicture(ps->dpy, dst);
 
 	foreach_dlist (mw->clients) {
+		ClientWin *iter_cw = (ClientWin *) iter->data;
+
+		if (iter_cw->focused) {
+			if (ps->o.multiselect)
+				mainwin_render_tint_border(iter_cw, &mw->multiselectTint,
+						ps->o.multiselect_tintBorder);
+			else
+				mainwin_render_tint_border(iter_cw, &mw->highlightTint,
+						ps->o.highlight_tintBorder);
+		}
+
+		if (iter_cw->multiselect)
+			mainwin_render_tint_border(iter_cw, &mw->highlightTint,
+					ps->o.highlight_tintBorder);
+	}
+
+	foreach_dlist (mw->dminis) {
 		ClientWin *iter_cw = (ClientWin *) iter->data;
 
 		if (iter_cw->focused) {
