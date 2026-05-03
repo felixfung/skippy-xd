@@ -335,12 +335,12 @@ typedef struct {
 	.highlight_tint = NULL, \
 	.highlight_tintOpacity = 128, \
 	.highlight_tintWindow = true, \
-	.highlight_tintBorder = 0, \
+	.highlight_tintBorder = 5, \
 	.shadow_opacity = 160, \
 	.multiselect_tint = NULL, \
 	.multiselect_tintOpacity = 196, \
 	.multiselect_tintWindow = true, \
-	.multiselect_tintBorder = 0, \
+	.multiselect_tintBorder = 5, \
 \
 	.panel_show = true, \
 	.panel_tinting = true, \

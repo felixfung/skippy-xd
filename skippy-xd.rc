@@ -127,14 +127,14 @@ iconSize = 48
 tint = #FFFFFF
 tintOpacity = 128
 tintWindow = true
-tintBorder = 0
+tintBorder = 5
 
 # Highlighted in multi-select mode
 [multiselect]
 tint = #66B6F6
 tintOpacity = 196
 tintWindow = true
-tintBorder = 0
+tintBorder = 5
 
 # Windows of type _NET_WM_WINDOW_TYPE_DOCK
 [panel]
