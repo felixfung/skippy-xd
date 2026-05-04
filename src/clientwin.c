@@ -19,137 +19,6 @@
 
 #include "skippy.h"
 
-static void
-rounded_rect_fill(session_t *ps, Drawable drawable, GC gc,
-		int x, int y, int w, int h, int radius)
-{
-	int clamped_radius = radius;
-	int max_radius = MIN(w / 2, h / 2);
-	if (clamped_radius > max_radius)
-		clamped_radius = max_radius;
-
-	if (clamped_radius <= 0) {
-		XFillRectangle(ps->dpy, drawable, gc, x, y, w, h);
-		return;
-	}
-
-	int dia = clamped_radius * 2;
-	XFillArc(ps->dpy, drawable, gc, x, y, dia, dia, 90 * 64, 90 * 64);
-	XFillArc(ps->dpy, drawable, gc, x + w - dia, y, dia, dia, 0, 90 * 64);
-	XFillArc(ps->dpy, drawable, gc, x + w - dia, y + h - dia, dia, dia, 270 * 64, 90 * 64);
-	XFillArc(ps->dpy, drawable, gc, x, y + h - dia, dia, dia, 180 * 64, 90 * 64);
-	XFillRectangle(ps->dpy, drawable, gc, x + clamped_radius, y, w - 2 * clamped_radius, clamped_radius);
-	XFillRectangle(ps->dpy, drawable, gc, x + clamped_radius, y + h - clamped_radius,
-			w - 2 * clamped_radius, clamped_radius);
-	XFillRectangle(ps->dpy, drawable, gc, x, y + clamped_radius, w, h - 2 * clamped_radius);
-}
-
-static void
-mainwin_render_tint_border(ClientWin *cw, XRenderColor *tint, int border)
-{
-	MainWin *mw = cw->mainwin;
-	session_t *ps = mw->ps;
-
-	if (!tint || !tint->alpha || border <= 0)
-		return;
-	if (!cw->mapped)
-		return;
-
-	if (cw->paneltype != WINTYPE_WINDOW && cw->paneltype != WINTYPE_DESKTOP)
-		return;
-
-	int x = cw->mini.x - border;
-	int y = cw->mini.y - border;
-	if (!ps->o.pseudoTrans) {
-		x -= mw->x;
-		y -= mw->y;
-	}
-
-	int w = cw->mini.width + border * 2;
-	int h = cw->mini.height + border * 2;
-	if (w <= 0 || h <= 0)
-		return;
-
-	Pixmap pm = XCreatePixmap(ps->dpy, mw->window, w, h, 8);
-	XGCValues gcv = { .foreground = 0 };
-	GC gc = XCreateGC(ps->dpy, pm, GCForeground, &gcv);
-	XFillRectangle(ps->dpy, pm, gc, 0, 0, w, h);
-
-	gcv.foreground = 0xFF;
-	XChangeGC(ps->dpy, gc, GCForeground, &gcv);
-	rounded_rect_fill(ps, pm, gc, 0, 0, w, h,
-			ps->o.cornerRadius > 0 ? ps->o.cornerRadius + border : 0);
-
-	if (cw->mini.width > 0 && cw->mini.height > 0) {
-		gcv.foreground = 0;
-		XChangeGC(ps->dpy, gc, GCForeground, &gcv);
-		rounded_rect_fill(ps, pm, gc, border, border, cw->mini.width, cw->mini.height,
-				ps->o.cornerRadius);
-	}
-
-	XFreeGC(ps->dpy, gc);
-
-	Picture mask = XRenderCreatePicture(ps->dpy, pm,
-			XRenderFindStandardFormat(ps->dpy, PictStandardA8), 0, NULL);
-	Picture src = XRenderCreateSolidFill(ps->dpy, tint);
-	Picture dst = XRenderCreatePicture(ps->dpy, mw->window, mw->format, 0, NULL);
-
-	XRenderComposite(ps->dpy, PictOpOver, src, mask, dst, 0, 0, 0, 0, x, y, w, h);
-
-	XRenderFreePicture(ps->dpy, dst);
-	XRenderFreePicture(ps->dpy, src);
-	XRenderFreePicture(ps->dpy, mask);
-	XFreePixmap(ps->dpy, pm);
-}
-
-static void
-mainwin_render_all_tint_borders(MainWin *mw)
-{
-	session_t *ps = mw->ps;
-	if (ps->o.highlight_tintBorder <= 0 && ps->o.multiselect_tintBorder <= 0)
-		return;
-
-	Picture dst = XRenderCreatePicture(ps->dpy, mw->window, mw->format, 0, NULL);
-
-	XRenderComposite(ps->dpy, PictOpSrc, mw->background, None, dst,
-			0, 0, 0, 0, 0, 0, mw->width, mw->height);
-	XRenderFreePicture(ps->dpy, dst);
-
-	foreach_dlist (mw->clients) {
-		ClientWin *iter_cw = (ClientWin *) iter->data;
-
-		if (iter_cw->focused) {
-			if (ps->o.multiselect)
-				mainwin_render_tint_border(iter_cw, &mw->multiselectTint,
-						ps->o.multiselect_tintBorder);
-			else
-				mainwin_render_tint_border(iter_cw, &mw->highlightTint,
-						ps->o.highlight_tintBorder);
-		}
-
-		if (iter_cw->multiselect)
-			mainwin_render_tint_border(iter_cw, &mw->highlightTint,
-					ps->o.highlight_tintBorder);
-	}
-
-	foreach_dlist (mw->dminis) {
-		ClientWin *iter_cw = (ClientWin *) iter->data;
-
-		if (iter_cw->focused) {
-			if (ps->o.multiselect)
-				mainwin_render_tint_border(iter_cw, &mw->multiselectTint,
-						ps->o.multiselect_tintBorder);
-			else
-				mainwin_render_tint_border(iter_cw, &mw->highlightTint,
-						ps->o.highlight_tintBorder);
-		}
-
-		if (iter_cw->multiselect)
-			mainwin_render_tint_border(iter_cw, &mw->highlightTint,
-					ps->o.highlight_tintBorder);
-	}
-}
-
 #define INTERSECTS(x1, y1, w1, h1, x2, y2, w2, h2) \
 	(((x1 >= x2 && x1 < (x2 + w2)) || (x2 >= x1 && x2 < (x1 + w1))) && \
 	 ((y1 >= y2 && y1 < (y2 + h2)) || (y2 >= y1 && y2 < (y1 + h1))))
@@ -776,9 +645,6 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 			tooltip_draw(cw->tooltip, ps->o.multiselect? cw->multiselect: cw->focused);
 	}
 
-	if (!pbound && (ps->o.highlight_tintBorder > 0 || ps->o.multiselect_tintBorder > 0))
-		mainwin_render_all_tint_borders(mw);
-
 	XClearArea(mw->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
 }
 
@@ -1118,6 +984,7 @@ select_clientwindow(ClientWin* cw, enum cliop op) {
 	if (ps->o.multiselect) {
 		cw->mainwin->client_to_focus->multiselect = !cw->mainwin->client_to_focus->multiselect;
 		clientwin_render(cw);
+		mainwin_refresh_borders(cw->mainwin);
 		return 0;
 	}
 	else {
@@ -1236,6 +1103,7 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 			cw->focused = true;
 
 		clientwin_render(cw);
+		mainwin_refresh_borders(cw->mainwin);
 
 		if (debuglog) fputs("\n", stdout);
 		XFlush(ps->dpy);
@@ -1258,6 +1126,7 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 			cw->focused = false;
 
 		clientwin_render(cw);
+		mainwin_refresh_borders(cw->mainwin);
 
 		if (debuglog) fputs("\n", stdout);
 		XFlush(ps->dpy);

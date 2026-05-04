@@ -45,6 +45,7 @@ focus_miniw_dir(ClientWin *cw, match_func match, dist_func func) {
 
 	cw->focused = false;
 	clientwin_render(cw);
+	mainwin_refresh_borders(cw->mainwin);
 	XFlush(ps->dpy);
 
 	focus_miniw(ps, candidate);

@@ -1582,6 +1582,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 				anime(ps->mainwin, ps->mainwin->clients,
 					((float)timeslice)/(float)ps->o.animationDuration);
+				mainwin_refresh_borders(mw);
 				last_animated = last_rendered = time_in_millis();
 
 				if (layout == LAYOUTMODE_SWITCH
@@ -1646,14 +1647,18 @@ mainloop(session_t *ps, bool activate_on_start) {
 				}
 
 				anime(ps->mainwin, ps->mainwin->clients, 1);
+				mainwin_refresh_borders(mw);
 				animating = false;
 				last_animated = last_rendered = time_in_millis();
 
 				if (layout == LAYOUTMODE_PAGING) {
+					if (ps->o.pseudoTrans)
+						mainwin_restore_background(mw);
 					foreach_dlist (mw->dminis) {
 						clientwin_update2(iter->data);
 						desktopwin_map(((ClientWin *) iter->data));
 					}
+					mainwin_refresh_borders(mw);
 				}
 
 				XFlush(ps->dpy);
@@ -1880,6 +1885,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					XSetInputFocus(ps->dpy, mw->window, RevertToParent, CurrentTime);
 					mw->client_to_focus->focused = true;
 					clientwin_render(mw->client_to_focus);
+					mainwin_refresh_borders(mw);
 				}
 			}
 			else {
@@ -1906,6 +1912,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 			}
 
 			if (layout == LAYOUTMODE_PAGING) {
+				if (ps->o.pseudoTrans)
+					mainwin_restore_background(mw);
 				foreach_dlist (mw->dminis) {
 					ClientWin *cw = (ClientWin *) iter->data;
 					// with pseudo-transparency,
