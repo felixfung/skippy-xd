@@ -451,10 +451,12 @@ mainwin_refresh_borders(MainWin *mw)
 
 	mainwin_restore_background(mw);
 
-	foreach_dlist (mw->panels) {
-		ClientWin *cover = iter->data;
-		if (cover->mapped && cover->destination)
-			clientwin_render(cover);
+	if (ps->o.pseudoTrans) {
+		foreach_dlist (mw->panels) {
+			ClientWin *cover = iter->data;
+			if (cover->mapped && cover->destination)
+				clientwin_render(cover);
+		}
 	}
 
 	foreach_dlist (mw->clients)
@@ -463,10 +465,12 @@ mainwin_refresh_borders(MainWin *mw)
 	foreach_dlist (mw->dminis)
 		mainwin_render_cw_borders(mw, iter->data);
 
-	foreach_dlist (mw->panels) {
-		ClientWin *cover = iter->data;
-		if (cover->mapped && cover->destination)
-			XClearArea(ps->dpy, cover->mini.window, 0, 0, 0, 0, False);
+	if (ps->o.pseudoTrans) {
+		foreach_dlist (mw->panels) {
+			ClientWin *cover = iter->data;
+			if (cover->mapped && cover->destination)
+				XClearArea(ps->dpy, cover->mini.window, 0, 0, 0, 0, False);
+		}
 	}
 }
 
