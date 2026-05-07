@@ -20,9 +20,28 @@
 #include "skippy.h"
 
 static void
-mainwin_render_tint_border(MainWin *mw, ClientWin *cw, XRenderColor *tint, int border)
+mainwin_render_tint_border(ClientWin *cw)
 {
+	MainWin *mw = cw->mainwin;
 	session_t *ps = mw->ps;
+	XRenderColor *tint = NULL;
+	int border = 0;
+
+	if (cw->focused) {
+		if (ps->o.multiselect) {
+			tint = &mw->multiselectTint;
+			border = ps->o.multiselect_tintBorder;
+		}
+		else {
+			tint = &mw->highlightTint;
+			border = ps->o.highlight_tintBorder;
+		}
+	}
+
+	if (cw->multiselect) {
+		tint = &mw->highlightTint;
+		border = ps->o.highlight_tintBorder;
+	}
 
 	if (!tint || !tint->alpha || border <= 0 || !cw->mapped)
 		return;
@@ -114,22 +133,6 @@ mainwin_render_tint_border(MainWin *mw, ClientWin *cw, XRenderColor *tint, int b
 	XRenderFreePicture(ps->dpy, src);
 	XRenderFreePicture(ps->dpy, mask);
 	XFreePixmap(ps->dpy, pm);
-}
-
-static void
-mainwin_render_cw_borders(MainWin *mw, ClientWin *cw)
-{
-	session_t *ps = mw->ps;
-
-	if (cw->focused) {
-		if (ps->o.multiselect)
-			mainwin_render_tint_border(mw, cw, &mw->multiselectTint, ps->o.multiselect_tintBorder);
-		else
-			mainwin_render_tint_border(mw, cw, &mw->highlightTint, ps->o.highlight_tintBorder);
-	}
-
-	if (cw->multiselect)
-		mainwin_render_tint_border(mw, cw, &mw->highlightTint, ps->o.highlight_tintBorder);
 }
 
 /* from 'uncover': */
@@ -460,10 +463,10 @@ mainwin_render_borders(MainWin *mw)
 	}
 
 	foreach_dlist (mw->clients)
-		mainwin_render_cw_borders(mw, iter->data);
+		mainwin_render_tint_border(iter->data);
 
 	foreach_dlist (mw->dminis)
-		mainwin_render_cw_borders(mw, iter->data);
+		mainwin_render_tint_border(iter->data);
 
 	if (ps->o.pseudoTrans) {
 		foreach_dlist (mw->panels) {
