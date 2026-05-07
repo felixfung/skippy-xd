@@ -1436,6 +1436,15 @@ void XRoundedRectComposite(session_t *ps,
 		int w, int h,
 		int radius);
 
+void XRenderTintBorder(session_t *ps,
+		Drawable drawable,
+		Picture dst,
+		XRenderColor *tint,
+		int x, int y,
+		int inner_w, int inner_h,
+		int border,
+		int radius);
+
 extern session_t *ps_g;
 
 int load_config_file(session_t *ps);
