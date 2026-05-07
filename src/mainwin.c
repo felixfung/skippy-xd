@@ -99,10 +99,17 @@ mainwin_render_tint_border(ClientWin *cw, XRenderColor *tint, int border)
 		if (!cover->mapped || !cover->destination)
 			continue;
 
-		int cover_x = cover->mini.x - (ps->o.pseudoTrans ? 0 : mw->x);
-		int cover_y = cover->mini.y - (ps->o.pseudoTrans ? 0 : mw->y);
-		int local_x = x - cover_x;
-		int local_y = y - cover_y;
+		int local_x = 0, local_y = 0;
+		if (cover->paneltype == WINTYPE_DESKTOP) {
+			local_x = x - cover->src.x + mw->x;
+			local_y = y - cover->src.y + mw->y;
+		}
+		else {
+			int cover_x = cover->mini.x - (ps->o.pseudoTrans ? 0 : mw->x);
+			int cover_y = cover->mini.y - (ps->o.pseudoTrans ? 0 : mw->y);
+			local_x = x - cover_x;
+			local_y = y - cover_y;
+		}
 
 		if (local_x >= cover->mini.width || local_y >= cover->mini.height
 				|| local_x + w <= 0 || local_y + h <= 0)
