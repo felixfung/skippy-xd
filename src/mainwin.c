@@ -471,12 +471,13 @@ mainwin_render_borders(MainWin *mw)
 
 	mainwin_restore_background(mw);
 
-	if (ps->o.pseudoTrans) {
-		foreach_dlist (mw->panels) {
-			ClientWin *cover = iter->data;
-			if (cover->mapped && cover->destination)
-				clientwin_render(cover);
-		}
+	foreach_dlist (mw->panels) {
+		ClientWin *cover = iter->data;
+		if (!cover->mapped || !cover->destination)
+			continue;
+		if (!ps->o.pseudoTrans && cover->paneltype != WINTYPE_DESKTOP)
+			continue;
+		clientwin_render(cover);
 	}
 
 	foreach_dlist (mw->clients) {
