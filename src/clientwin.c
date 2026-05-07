@@ -598,7 +598,7 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 			if (j == 0 && cw->focused) {
 				if (ps->o.multiselect) {
 					tint = &mw->multiselectTint;
-					tint_window = ps->o.multiselect_tintWindow;
+					tint_window = ps->o.highlight_tintWindow;
 				}
 				else {
 					tint = &mw->highlightTint;

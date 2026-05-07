@@ -133,8 +133,6 @@ tintBorder = 5
 [multiselect]
 tint = #66B6F6
 tintOpacity = 196
-tintWindow = true
-tintBorder = 5
 
 # Windows of type _NET_WM_WINDOW_TYPE_DOCK
 [panel]

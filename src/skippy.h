@@ -247,8 +247,6 @@ typedef struct {
 	int shadow_opacity;
 	char *multiselect_tint;
 	int multiselect_tintOpacity;
-	bool multiselect_tintWindow;
-	int multiselect_tintBorder;
 
 	bool panel_show;
 	bool panel_tinting;
@@ -339,8 +337,6 @@ typedef struct {
 	.shadow_opacity = 160, \
 	.multiselect_tint = NULL, \
 	.multiselect_tintOpacity = 196, \
-	.multiselect_tintWindow = true, \
-	.multiselect_tintBorder = 5, \
 \
 	.panel_show = true, \
 	.panel_tinting = true, \
