@@ -609,8 +609,8 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 				XineramaScreenInfo *iter = mw->xin_info;
 				for (int i = 0; i < mw->xin_screens; ++i)
 				{
-					int x = dwin->x + iter->x_org + mw->xoff - cw->src.x + mw->x + leftborder;
-					int y = dwin->y + iter->y_org + mw->yoff - cw->src.y + mw->y + topborder;
+					int x = dwin->mini.x + iter->x_org - cw->mini.x + leftborder;
+					int y = dwin->mini.y + iter->y_org - cw->mini.y + topborder;
 					int width = iter->width * mw->multiplier;
 					int height = iter->height * mw->multiplier;
 
@@ -621,8 +621,8 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 					iter++;
 				}
 #else
-				int x = dwin->x + mw->xoff - cw->src.x + mw->x + leftborder;
-				int y = dwin->y + mw->yoff - cw->src.y + mw->y + topborder;
+				int x = dwin->mini.x - cw->mini.x + leftborder;
+				int y = dwin->mini.y - cw->mini.y + topborder;
 				int width = dwin->src.width * mw->multiplier;
 				int height = dwin->src.height * mw->multiplier;
 
