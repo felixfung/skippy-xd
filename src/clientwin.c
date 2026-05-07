@@ -984,7 +984,7 @@ select_clientwindow(ClientWin* cw, enum cliop op) {
 	if (ps->o.multiselect) {
 		cw->mainwin->client_to_focus->multiselect = !cw->mainwin->client_to_focus->multiselect;
 		clientwin_render(cw);
-		mainwin_refresh_borders(cw->mainwin);
+		mainwin_render_borders(cw->mainwin);
 		return 0;
 	}
 	else {
@@ -1103,7 +1103,7 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 			cw->focused = true;
 
 		clientwin_render(cw);
-		mainwin_refresh_borders(cw->mainwin);
+		mainwin_render_borders(cw->mainwin);
 
 		if (debuglog) fputs("\n", stdout);
 		XFlush(ps->dpy);
@@ -1126,7 +1126,7 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 			cw->focused = false;
 
 		clientwin_render(cw);
-		mainwin_refresh_borders(cw->mainwin);
+		mainwin_render_borders(cw->mainwin);
 
 		if (debuglog) fputs("\n", stdout);
 		XFlush(ps->dpy);

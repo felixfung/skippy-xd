@@ -441,7 +441,7 @@ mainwin_update_background(MainWin *mw) {
 }
 
 void
-mainwin_refresh_borders(MainWin *mw)
+mainwin_render_borders(MainWin *mw)
 {
 	session_t *ps = mw->ps;
 	if (!mw->mapped)

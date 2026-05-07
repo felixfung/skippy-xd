@@ -1268,7 +1268,7 @@ desktopwin_map(ClientWin *cw)
 	cw->mapped = true;
 
 	if (ps->o.pseudoTrans)
-		mainwin_refresh_borders(mw);
+		mainwin_render_borders(mw);
 
 	if (ps->o.tooltip_show)
 		clientwin_tooltip(cw);
@@ -1587,7 +1587,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 				anime(ps->mainwin, ps->mainwin->clients,
 					((float)timeslice)/(float)ps->o.animationDuration);
-				mainwin_refresh_borders(mw);
+				mainwin_render_borders(mw);
 				last_animated = last_rendered = time_in_millis();
 
 				if (layout == LAYOUTMODE_SWITCH
@@ -1652,7 +1652,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				}
 
 				anime(ps->mainwin, ps->mainwin->clients, 1);
-				mainwin_refresh_borders(mw);
+				mainwin_render_borders(mw);
 				animating = false;
 				last_animated = last_rendered = time_in_millis();
 
@@ -1662,7 +1662,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 						desktopwin_map(((ClientWin *) iter->data));
 					}
 					if (!ps->o.pseudoTrans)
-						mainwin_refresh_borders(mw);
+						mainwin_render_borders(mw);
 				}
 
 				XFlush(ps->dpy);
@@ -1889,7 +1889,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					XSetInputFocus(ps->dpy, mw->window, RevertToParent, CurrentTime);
 					mw->client_to_focus->focused = true;
 					clientwin_render(mw->client_to_focus);
-					mainwin_refresh_borders(mw);
+					mainwin_render_borders(mw);
 				}
 			}
 			else {
