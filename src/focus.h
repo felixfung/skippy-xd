@@ -112,7 +112,6 @@ focus_miniw_adv(session_t *ps, ClientWin *cw, bool move_ptr) {
 	ps->mainwin->client_to_focus = cw;
 	ps->mainwin->client_to_focus->focused = 1;
 	clientwin_render(cw);
-	mainwin_refresh_borders(ps->mainwin);
 
 	printfdf(false, "(): ");
 	printfdf(false, "(): client_to_focus = %p", ps->mainwin->client_to_focus);
@@ -153,7 +152,6 @@ static inline void
 focus_miniw_prev(session_t *ps, ClientWin *cw) {
 	cw->focused = false;
 	clientwin_render(cw);
-	mainwin_refresh_borders(ps->mainwin);
 	dlist *cwlist = dlist_first(cw->mainwin->focuslist);
 	dlist *tgt = NULL;
 
