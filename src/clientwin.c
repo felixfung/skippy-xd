@@ -43,6 +43,111 @@ void XRoundedRectTint(session_t *ps,
 
 void clientwin_round_corners(ClientWin *cw);
 
+static void
+clientwin_render_desktop_cover_tint_border(ClientWin *cover, ClientWin *cw,
+		XRenderColor *tint, int border)
+{
+	MainWin *mw = cover->mainwin;
+	session_t *ps = mw->ps;
+
+	if (!tint || !tint->alpha || border <= 0 || !cw->mapped || !cover->destination)
+		return;
+
+	int x = cw->mini.x - border - cover->src.x + mw->x;
+	int y = cw->mini.y - border - cover->src.y + mw->y;
+	int w = cw->mini.width + border * 2;
+	int h = cw->mini.height + border * 2;
+	if (x >= cover->mini.width || y >= cover->mini.height || x + w <= 0 || y + h <= 0)
+		return;
+
+	Pixmap pm = XCreatePixmap(ps->dpy, cover->mini.window, w, h, 8);
+	XGCValues gcv = { .foreground = 0 };
+	GC gc = XCreateGC(ps->dpy, pm, GCForeground, &gcv);
+	XFillRectangle(ps->dpy, pm, gc, 0, 0, w, h);
+
+	gcv.foreground = 0xFF;
+	XChangeGC(ps->dpy, gc, GCForeground, &gcv);
+	if (ps->o.cornerRadius > 0) {
+		int scaled_radius = ps->o.cornerRadius * mw->multiplier;
+		int outer_radius = MIN(scaled_radius + border, MIN(w / 2, h / 2));
+		int inner_radius = MIN(scaled_radius, MIN(cw->mini.width / 2, cw->mini.height / 2));
+		int outer_dia = outer_radius * 2;
+		int inner_dia = inner_radius * 2;
+
+		XFillArc(ps->dpy, pm, gc, 0, 0, outer_dia, outer_dia, 90 * 64, 90 * 64);
+		XFillArc(ps->dpy, pm, gc, w - outer_dia, 0, outer_dia, outer_dia, 0, 90 * 64);
+		XFillArc(ps->dpy, pm, gc, w - outer_dia, h - outer_dia, outer_dia, outer_dia, 270 * 64, 90 * 64);
+		XFillArc(ps->dpy, pm, gc, 0, h - outer_dia, outer_dia, outer_dia, 180 * 64, 90 * 64);
+		XFillRectangle(ps->dpy, pm, gc, outer_radius, 0, w - 2 * outer_radius, outer_radius);
+		XFillRectangle(ps->dpy, pm, gc, outer_radius, h - outer_radius, w - 2 * outer_radius, outer_radius);
+		XFillRectangle(ps->dpy, pm, gc, 0, outer_radius, w, h - 2 * outer_radius);
+
+		gcv.foreground = 0;
+		XChangeGC(ps->dpy, gc, GCForeground, &gcv);
+		XFillArc(ps->dpy, pm, gc, border, border, inner_dia, inner_dia, 90 * 64, 90 * 64);
+		XFillArc(ps->dpy, pm, gc, border + cw->mini.width - inner_dia, border, inner_dia, inner_dia, 0, 90 * 64);
+		XFillArc(ps->dpy, pm, gc, border + cw->mini.width - inner_dia, border + cw->mini.height - inner_dia,
+				inner_dia, inner_dia, 270 * 64, 90 * 64);
+		XFillArc(ps->dpy, pm, gc, border, border + cw->mini.height - inner_dia, inner_dia, inner_dia, 180 * 64, 90 * 64);
+		XFillRectangle(ps->dpy, pm, gc, border + inner_radius, border,
+				cw->mini.width - 2 * inner_radius, inner_radius);
+		XFillRectangle(ps->dpy, pm, gc, border + inner_radius, border + cw->mini.height - inner_radius,
+				cw->mini.width - 2 * inner_radius, inner_radius);
+		XFillRectangle(ps->dpy, pm, gc, border, border + inner_radius,
+				cw->mini.width, cw->mini.height - 2 * inner_radius);
+	}
+	else {
+		XFillRectangle(ps->dpy, pm, gc, 0, 0, w, h);
+		gcv.foreground = 0;
+		XChangeGC(ps->dpy, gc, GCForeground, &gcv);
+		XFillRectangle(ps->dpy, pm, gc, border, border, cw->mini.width, cw->mini.height);
+	}
+
+	XFreeGC(ps->dpy, gc);
+
+	Picture mask = XRenderCreatePicture(ps->dpy, pm,
+			XRenderFindStandardFormat(ps->dpy, PictStandardA8), 0, NULL);
+	Picture src = XRenderCreateSolidFill(ps->dpy, tint);
+	XRenderComposite(ps->dpy, PictOpOver, src, mask, cover->destination,
+			0, 0, 0, 0, x, y, w, h);
+	XRenderFreePicture(ps->dpy, src);
+	XRenderFreePicture(ps->dpy, mask);
+	XFreePixmap(ps->dpy, pm);
+}
+
+static void
+clientwin_render_desktop_cover_tint_borders(ClientWin *cover)
+{
+	MainWin *mw = cover->mainwin;
+	session_t *ps = mw->ps;
+	XRenderColor *focus_tint = ps->o.multiselect?
+			&mw->multiselectTint : &mw->highlightTint;
+	int focus_border = ps->o.highlight_tintBorder;
+
+	if (focus_border <= 0)
+		return;
+
+	foreach_dlist (mw->clients) {
+		ClientWin *cw = iter->data;
+		if (cw->focused)
+			clientwin_render_desktop_cover_tint_border(cover, cw,
+					focus_tint, focus_border);
+		if (cw->multiselect)
+			clientwin_render_desktop_cover_tint_border(cover, cw,
+					&mw->highlightTint, ps->o.highlight_tintBorder);
+	}
+
+	foreach_dlist (mw->dminis) {
+		ClientWin *cw = iter->data;
+		if (cw->focused)
+			clientwin_render_desktop_cover_tint_border(cover, cw,
+					focus_tint, focus_border);
+		if (cw->multiselect)
+			clientwin_render_desktop_cover_tint_border(cover, cw,
+					&mw->highlightTint, ps->o.highlight_tintBorder);
+	}
+}
+
 int
 clientwin_validate_panel(dlist *l, void *data) {
 	ClientWin *cw = l->data;
@@ -535,6 +640,9 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 				 || (cw->paneltype == WINTYPE_DESKTOP && ps->o.desktopTinting)))
 			XRenderComposite(ps->dpy, PictOpOver, ps->o.background->pict, None,
 					cw->destination, s_x, s_y, 0, 0, s_x, s_y, s_w, s_h);
+
+		if (!ps->o.pseudoTrans && cw->paneltype == WINTYPE_DESKTOP)
+			clientwin_render_desktop_cover_tint_borders(cw);
 
 		if (ps->o.mode == PROGMODE_PAGING && cw->paneltype == WINTYPE_DESKTOP
 				&& mw->ps->o.preservePages && ps->o.desktopTinting) {

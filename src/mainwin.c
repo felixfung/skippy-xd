@@ -98,6 +98,8 @@ mainwin_render_tint_border(ClientWin *cw, XRenderColor *tint, int border)
 		ClientWin *cover = iter->data;
 		if (!cover->mapped || !cover->destination)
 			continue;
+		if (!ps->o.pseudoTrans && cover->paneltype == WINTYPE_DESKTOP)
+			continue;
 
 		int local_x = 0, local_y = 0;
 		if (cover->paneltype == WINTYPE_DESKTOP) {
