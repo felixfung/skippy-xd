@@ -333,7 +333,7 @@ typedef struct {
 	.highlight_tint = NULL, \
 	.highlight_tintOpacity = 128, \
 	.highlight_tintWindow = true, \
-	.highlight_tintBorder = 5, \
+	.highlight_tintBorder = 10, \
 	.shadow_opacity = 160, \
 	.multiselect_tint = NULL, \
 	.multiselect_tintOpacity = 196, \

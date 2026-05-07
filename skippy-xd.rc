@@ -127,7 +127,7 @@ iconSize = 48
 tint = #FFFFFF
 tintOpacity = 128
 tintWindow = true
-tintBorder = 5
+tintBorder = 10
 
 # Highlighted in multi-select mode
 [multiselect]
