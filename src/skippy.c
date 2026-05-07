@@ -1233,8 +1233,10 @@ desktopwin_map(ClientWin *cw)
 	free_damage(ps, &cw->damage);
 	free_pixmap(ps, &cw->pixmap);
 
-	if (ps->o.pseudoTrans)
+	if (ps->o.pseudoTrans) {
+		mainwin_restore_background(mw);
 		XUnmapWindow(ps->dpy, cw->mini.window);
+	}
 
 	if (cw->origin)
 		free_picture(ps, &cw->origin);
@@ -1264,6 +1266,9 @@ desktopwin_map(ClientWin *cw)
 	XMapWindow(ps->dpy, cw->mini.window);
 	XRaiseWindow(ps->dpy, cw->mini.window);
 	cw->mapped = true;
+
+	if (ps->o.pseudoTrans)
+		mainwin_refresh_borders(mw);
 
 	if (ps->o.tooltip_show)
 		clientwin_tooltip(cw);
@@ -1652,13 +1657,12 @@ mainloop(session_t *ps, bool activate_on_start) {
 				last_animated = last_rendered = time_in_millis();
 
 				if (layout == LAYOUTMODE_PAGING) {
-					if (ps->o.pseudoTrans)
-						mainwin_restore_background(mw);
 					foreach_dlist (mw->dminis) {
 						clientwin_update2(iter->data);
 						desktopwin_map(((ClientWin *) iter->data));
 					}
-					mainwin_refresh_borders(mw);
+					if (!ps->o.pseudoTrans)
+						mainwin_refresh_borders(mw);
 				}
 
 				XFlush(ps->dpy);
@@ -1912,8 +1916,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 			}
 
 			if (layout == LAYOUTMODE_PAGING) {
-				if (ps->o.pseudoTrans)
-					mainwin_restore_background(mw);
 				foreach_dlist (mw->dminis) {
 					ClientWin *cw = (ClientWin *) iter->data;
 					// with pseudo-transparency,
