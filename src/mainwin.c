@@ -92,6 +92,25 @@ mainwin_render_tint_border(MainWin *mw, ClientWin *cw, XRenderColor *tint, int b
 	Picture dst = XRenderCreatePicture(ps->dpy, mw->window, mw->format, 0, NULL);
 	XRenderComposite(ps->dpy, PictOpOver, src, mask, dst, 0, 0, 0, 0, x, y, w, h);
 	XRenderFreePicture(ps->dpy, dst);
+
+	foreach_dlist (mw->panels) {
+		ClientWin *cover = iter->data;
+		if (!cover->mapped || !cover->destination)
+			continue;
+
+		int cover_x = cover->mini.x - (ps->o.pseudoTrans ? 0 : mw->x);
+		int cover_y = cover->mini.y - (ps->o.pseudoTrans ? 0 : mw->y);
+		int local_x = x - cover_x;
+		int local_y = y - cover_y;
+
+		if (local_x >= cover->mini.width || local_y >= cover->mini.height
+				|| local_x + w <= 0 || local_y + h <= 0)
+			continue;
+
+		XRenderComposite(ps->dpy, PictOpOver, src, mask, cover->destination,
+				0, 0, 0, 0, local_x, local_y, w, h);
+	}
+
 	XRenderFreePicture(ps->dpy, src);
 	XRenderFreePicture(ps->dpy, mask);
 	XFreePixmap(ps->dpy, pm);
@@ -432,11 +451,23 @@ mainwin_refresh_borders(MainWin *mw)
 
 	mainwin_restore_background(mw);
 
+	foreach_dlist (mw->panels) {
+		ClientWin *cover = iter->data;
+		if (cover->mapped && cover->destination)
+			clientwin_render(cover);
+	}
+
 	foreach_dlist (mw->clients)
 		mainwin_render_cw_borders(mw, iter->data);
 
 	foreach_dlist (mw->dminis)
 		mainwin_render_cw_borders(mw, iter->data);
+
+	foreach_dlist (mw->panels) {
+		ClientWin *cover = iter->data;
+		if (cover->mapped && cover->destination)
+			XClearArea(ps->dpy, cover->mini.window, 0, 0, 0, 0, False);
+	}
 }
 
 void
