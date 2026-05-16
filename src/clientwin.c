@@ -53,10 +53,10 @@ clientwin_render_desktop_cover_tint_border(ClientWin *cover, ClientWin *cw,
 	if (!tint || !tint->alpha || border <= 0 || !cw->mapped || !cover->destination)
 		return;
 
-	int x = cw->mini.x - border - cover->src.x + mw->x;
-	int y = cw->mini.y - border - cover->src.y + mw->y;
-	int w = cw->mini.width + border * 2;
-	int h = cw->mini.height + border * 2;
+	int x = cw->mini.x - border - cover->src.x + mw->x - ps->o.leftFrameBorder;
+	int y = cw->mini.y - border - cover->src.y + mw->y - ps->o.topFrameBorder;
+	int w = cw->mini.width + border * 2 - ps->o.leftFrameBorder;
+	int h = cw->mini.height + border * 2 - ps->o.topFrameBorder;
 	if (x >= cover->mini.width || y >= cover->mini.height || x + w <= 0 || y + h <= 0)
 		return;
 
