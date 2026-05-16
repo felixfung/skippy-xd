@@ -60,9 +60,9 @@ clientwin_render_desktop_cover_tint_border(ClientWin *cover, ClientWin *cw,
 	if (x >= cover->mini.width || y >= cover->mini.height || x + w <= 0 || y + h <= 0)
 		return;
 
-	XRenderTintBorder(ps, cover->mini.window, cover->destination, tint, x, y,
-			cw->mini.width, cw->mini.height, border,
-			ps->o.cornerRadius > 0 ? ps->o.cornerRadius * mw->multiplier : 0);
+	XRenderTintBorder(ps, cover->mini.window, cover->destination, tint,
+			x, y, cw->mini.width, cw->mini.height, border,
+			ps->o.cornerRadius * mw->multiplier);
 }
 
 static void

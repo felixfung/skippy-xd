@@ -116,7 +116,7 @@ mainwin_render_tint_border(ClientWin *cw, XRenderColor *tint, int border)
 	Picture dst = XRenderCreatePicture(ps->dpy, mw->window, mw->format, 0, NULL);
 	XRenderTintBorder(ps, mw->window, dst, tint, x, y,
 			cw->mini.width, cw->mini.height, border,
-			ps->o.cornerRadius > 0 ? ps->o.cornerRadius * mw->multiplier : 0);
+			ps->o.cornerRadius * mw->multiplier);
 	XRenderFreePicture(ps->dpy, dst);
 
 	foreach_dlist (mw->panels) {
@@ -142,9 +142,9 @@ mainwin_render_tint_border(ClientWin *cw, XRenderColor *tint, int border)
 				|| local_x + w <= 0 || local_y + h <= 0)
 			continue;
 
-		XRenderTintBorder(ps, cover->mini.window, cover->destination, tint, local_x, local_y,
-				cw->mini.width, cw->mini.height, border,
-				ps->o.cornerRadius > 0 ? ps->o.cornerRadius * mw->multiplier : 0);
+		XRenderTintBorder(ps, cover->mini.window, cover->destination, tint,
+				local_x, local_y, cw->mini.width, cw->mini.height,
+				border, ps->o.cornerRadius * mw->multiplier);
 	}
 }
 
