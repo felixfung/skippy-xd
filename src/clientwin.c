@@ -72,16 +72,15 @@ clientwin_render_desktop_cover_tint_borders(ClientWin *cover)
 	session_t *ps = mw->ps;
 	XRenderColor *focus_tint = ps->o.multiselect?
 			&mw->multiselectTint : &mw->highlightTint;
-	int focus_border = ps->o.highlight_tintBorder;
 
-	if (focus_border <= 0)
+	if (ps->o.highlight_tintBorder <= 0)
 		return;
 
 	foreach_dlist (mw->clients) {
 		ClientWin *cw = iter->data;
 		if (cw->focused)
 			clientwin_render_desktop_cover_tint_border(cover, cw,
-					focus_tint, focus_border);
+					focus_tint, ps->o.highlight_tintBorder);
 		if (cw->multiselect)
 			clientwin_render_desktop_cover_tint_border(cover, cw,
 					&mw->highlightTint, ps->o.highlight_tintBorder);
@@ -91,7 +90,7 @@ clientwin_render_desktop_cover_tint_borders(ClientWin *cover)
 		ClientWin *cw = iter->data;
 		if (cw->focused)
 			clientwin_render_desktop_cover_tint_border(cover, cw,
-					focus_tint, focus_border);
+					focus_tint, ps->o.highlight_tintBorder);
 		if (cw->multiselect)
 			clientwin_render_desktop_cover_tint_border(cover, cw,
 					&mw->highlightTint, ps->o.highlight_tintBorder);
