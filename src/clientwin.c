@@ -43,6 +43,60 @@ void XRoundedRectTint(session_t *ps,
 
 void clientwin_round_corners(ClientWin *cw);
 
+static void
+clientwin_render_desktop_cover_tint_border(ClientWin *cover, ClientWin *cw,
+		XRenderColor *tint, int border)
+{
+	MainWin *mw = cover->mainwin;
+	session_t *ps = mw->ps;
+
+	if (!tint || !tint->alpha || border <= 0 || !cw->mapped || !cover->destination)
+		return;
+
+	int x = cw->mini.x - border - cover->src.x + mw->x - ps->o.leftFrameBorder;
+	int y = cw->mini.y - border - cover->src.y + mw->y - ps->o.topFrameBorder;
+	int w = cw->mini.width + border * 2 - ps->o.leftFrameBorder;
+	int h = cw->mini.height + border * 2 - ps->o.topFrameBorder;
+	if (x >= cover->mini.width || y >= cover->mini.height || x + w <= 0 || y + h <= 0)
+		return;
+
+	XRenderTintBorder(ps, cover->mini.window, cover->destination, tint,
+			x, y, cw->mini.width, cw->mini.height, border,
+			ps->o.cornerRadius * mw->multiplier);
+}
+
+static void
+clientwin_render_desktop_cover_tint_borders(ClientWin *cover)
+{
+	MainWin *mw = cover->mainwin;
+	session_t *ps = mw->ps;
+	XRenderColor *focus_tint = ps->o.multiselect?
+			&mw->multiselectTint : &mw->highlightTint;
+
+	if (ps->o.highlight_tintBorder <= 0)
+		return;
+
+	foreach_dlist (mw->clients) {
+		ClientWin *cw = iter->data;
+		if (cw->focused)
+			clientwin_render_desktop_cover_tint_border(cover, cw,
+					focus_tint, ps->o.highlight_tintBorder);
+		if (cw->multiselect)
+			clientwin_render_desktop_cover_tint_border(cover, cw,
+					&mw->highlightTint, ps->o.highlight_tintBorder);
+	}
+
+	foreach_dlist (mw->dminis) {
+		ClientWin *cw = iter->data;
+		if (cw->focused)
+			clientwin_render_desktop_cover_tint_border(cover, cw,
+					focus_tint, ps->o.highlight_tintBorder);
+		if (cw->multiselect)
+			clientwin_render_desktop_cover_tint_border(cover, cw,
+					&mw->highlightTint, ps->o.highlight_tintBorder);
+	}
+}
+
 int
 clientwin_validate_panel(dlist *l, void *data) {
 	ClientWin *cw = l->data;
@@ -536,6 +590,9 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 			XRenderComposite(ps->dpy, PictOpOver, ps->o.background->pict, None,
 					cw->destination, s_x, s_y, 0, 0, s_x, s_y, s_w, s_h);
 
+		if (!ps->o.pseudoTrans && cw->paneltype == WINTYPE_DESKTOP)
+			clientwin_render_desktop_cover_tint_borders(cw);
+
 		if (ps->o.mode == PROGMODE_PAGING && cw->paneltype == WINTYPE_DESKTOP
 				&& mw->ps->o.preservePages && ps->o.desktopTinting) {
 			foreach_dlist (mw->dminis) {
@@ -551,8 +608,8 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 				XineramaScreenInfo *iter = mw->xin_info;
 				for (int i = 0; i < mw->xin_screens; ++i)
 				{
-					int x = dwin->x + iter->x_org + mw->xoff - cw->src.x + mw->x + leftborder;
-					int y = dwin->y + iter->y_org + mw->yoff - cw->src.y + mw->y + topborder;
+					int x = dwin->mini.x + iter->x_org - cw->mini.x + leftborder;
+					int y = dwin->mini.y + iter->y_org - cw->mini.y + topborder;
 					int width = iter->width * mw->multiplier;
 					int height = iter->height * mw->multiplier;
 
@@ -563,8 +620,8 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 					iter++;
 				}
 #else
-				int x = dwin->x + mw->xoff - cw->src.x + mw->x + leftborder;
-				int y = dwin->y + mw->yoff - cw->src.y + mw->y + topborder;
+				int x = dwin->mini.x - cw->mini.x + leftborder;
+				int y = dwin->mini.y - cw->mini.y + topborder;
 				int width = dwin->src.width * mw->multiplier;
 				int height = dwin->src.height * mw->multiplier;
 
@@ -594,16 +651,23 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 	{
 		for (int j=0; j<2; j++) {
 			XRenderColor *tint = None;
+			bool tint_window = false;
 			if (j == 0 && cw->focused) {
-				if (ps->o.multiselect)
+				if (ps->o.multiselect) {
 					tint = &mw->multiselectTint;
-				else
+					tint_window = ps->o.highlight_tintWindow;
+				}
+				else {
 					tint = &mw->highlightTint;
+					tint_window = ps->o.highlight_tintWindow;
+				}
 			}
-			if (j == 1 && cw->multiselect)
+			if (j == 1 && cw->multiselect) {
 				tint = &mw->highlightTint;
-					
-			if (tint && tint->alpha) {
+				tint_window = ps->o.highlight_tintWindow;
+			}
+
+			if (tint && tint->alpha && tint_window) {
 #ifdef CFG_XINERAMA
 				if (cw->mode == CLIDISP_DESKTOP)
 				{
@@ -817,6 +881,7 @@ clientwin_map(ClientWin *cw) {
 
 	XMapWindow(ps->dpy, cw->mini.window);
 	XRaiseWindow(ps->dpy, cw->mini.window);
+	cw->mapped = true;
 
 	if (ps->o.tooltip_show && ps->o.mode != PROGMODE_PAGING
 			&& cw->paneltype == WINTYPE_WINDOW)
@@ -835,6 +900,7 @@ clientwin_unmap(ClientWin *cw) {
 
 	XUnmapWindow(ps->dpy, cw->mini.window);
 	XSetWindowBackgroundPixmap(ps->dpy, cw->mini.window, None);
+	cw->mapped = false;
 
 	cw->focused = false;
 
@@ -975,6 +1041,7 @@ select_clientwindow(ClientWin* cw, enum cliop op) {
 	if (ps->o.multiselect) {
 		cw->mainwin->client_to_focus->multiselect = !cw->mainwin->client_to_focus->multiselect;
 		clientwin_render(cw);
+		mainwin_render_borders(cw->mainwin);
 		return 0;
 	}
 	else {
@@ -1093,6 +1160,7 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 			cw->focused = true;
 
 		clientwin_render(cw);
+		mainwin_render_borders(cw->mainwin);
 
 		if (debuglog) fputs("\n", stdout);
 		XFlush(ps->dpy);
@@ -1115,6 +1183,7 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 			cw->focused = false;
 
 		clientwin_render(cw);
+		mainwin_render_borders(cw->mainwin);
 
 		if (debuglog) fputs("\n", stdout);
 		XFlush(ps->dpy);

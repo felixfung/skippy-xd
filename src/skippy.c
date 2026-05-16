@@ -1233,8 +1233,10 @@ desktopwin_map(ClientWin *cw)
 	free_damage(ps, &cw->damage);
 	free_pixmap(ps, &cw->pixmap);
 
-	if (ps->o.pseudoTrans)
+	if (ps->o.pseudoTrans) {
+		mainwin_restore_background(mw);
 		XUnmapWindow(ps->dpy, cw->mini.window);
+	}
 
 	if (cw->origin)
 		free_picture(ps, &cw->origin);
@@ -1263,6 +1265,10 @@ desktopwin_map(ClientWin *cw)
 
 	XMapWindow(ps->dpy, cw->mini.window);
 	XRaiseWindow(ps->dpy, cw->mini.window);
+	cw->mapped = true;
+
+	if (ps->o.pseudoTrans)
+		mainwin_render_borders(mw);
 
 	if (ps->o.tooltip_show)
 		clientwin_tooltip(cw);
@@ -1581,6 +1587,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 				anime(ps->mainwin, ps->mainwin->clients,
 					((float)timeslice)/(float)ps->o.animationDuration);
+				mainwin_render_borders(mw);
 				last_animated = last_rendered = time_in_millis();
 
 				if (layout == LAYOUTMODE_SWITCH
@@ -1645,6 +1652,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				}
 
 				anime(ps->mainwin, ps->mainwin->clients, 1);
+				mainwin_render_borders(mw);
 				animating = false;
 				last_animated = last_rendered = time_in_millis();
 
@@ -1653,6 +1661,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 						clientwin_update2(iter->data);
 						desktopwin_map(((ClientWin *) iter->data));
 					}
+					if (!ps->o.pseudoTrans)
+						mainwin_render_borders(mw);
 				}
 
 				XFlush(ps->dpy);
@@ -1879,6 +1889,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					XSetInputFocus(ps->dpy, mw->window, RevertToParent, CurrentTime);
 					mw->client_to_focus->focused = true;
 					clientwin_render(mw->client_to_focus);
+					mainwin_render_borders(mw);
 				}
 			}
 			else {
@@ -2836,12 +2847,14 @@ load_config_file(session_t *ps)
 			return RET_BADARG;
 	}
 
-    config_get_int_wrap(config, "livepreview", "opacity", &ps->o.normal_opacity, 0, 256);
+	config_get_int_wrap(config, "livepreview", "opacity", &ps->o.normal_opacity, 0, 256);
 	ps->o.highlight_tint = mstrdup(config_get(config, "highlight", "tint", "#FFFFFF"));
-    config_get_int_wrap(config, "highlight", "tintOpacity", &ps->o.highlight_tintOpacity, 0, 256);
-    config_get_int_wrap(config, "filler", "opacity", &ps->o.shadow_opacity, 0, 256);
+	config_get_int_wrap(config, "highlight", "tintOpacity", &ps->o.highlight_tintOpacity, 0, 256);
+	config_get_bool_wrap(config, "highlight", "tintWindow", &ps->o.highlight_tintWindow);
+	config_get_int_wrap(config, "highlight", "tintBorder", &ps->o.highlight_tintBorder, 0, 256);
+	config_get_int_wrap(config, "filler", "opacity", &ps->o.shadow_opacity, 0, 256);
 	ps->o.multiselect_tint = mstrdup(config_get(config, "multiselect", "tint", "#66B6F6"));
-    config_get_int_wrap(config, "multiselect", "tintOpacity", &ps->o.multiselect_tintOpacity, 0, 256);
+	config_get_int_wrap(config, "multiselect", "tintOpacity", &ps->o.multiselect_tintOpacity, 0, 256);
 
     config_get_bool_wrap(config, "panel", "show", &ps->o.panel_show);
     config_get_bool_wrap(config, "panel", "backgroundTinting", &ps->o.panel_tinting);
@@ -3102,8 +3115,10 @@ main_end:
 			free(ps->o.pipePath2);
 			free(ps->o.clientDisplayModes);
 			free(ps->o.highlight_tint);
+			free(ps->o.multiselect_tint);
 			free(ps->o.tooltip_border);
 			free(ps->o.tooltip_background);
+			free(ps->o.tooltip_backgroundHighlight);
 			free(ps->o.tooltip_text);
 			free(ps->o.tooltip_textOutline);
 			free(ps->o.tooltip_font);

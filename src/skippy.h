@@ -242,6 +242,8 @@ typedef struct {
 	int normal_opacity;
 	char *highlight_tint;
 	int highlight_tintOpacity;
+	bool highlight_tintWindow;
+	int highlight_tintBorder;
 	int shadow_opacity;
 	char *multiselect_tint;
 	int multiselect_tintOpacity;
@@ -330,6 +332,8 @@ typedef struct {
 	.normal_opacity = 255, \
 	.highlight_tint = NULL, \
 	.highlight_tintOpacity = 128, \
+	.highlight_tintWindow = true, \
+	.highlight_tintBorder = 10, \
 	.shadow_opacity = 160, \
 	.multiselect_tint = NULL, \
 	.multiselect_tintOpacity = 196, \
@@ -1430,6 +1434,15 @@ void XRoundedRectComposite(session_t *ps,
 		int src_x, int src_y,
 		int dst_x, int dst_y,
 		int w, int h,
+		int radius);
+
+void XRenderTintBorder(session_t *ps,
+		Drawable drawable,
+		Picture dst,
+		XRenderColor *tint,
+		int x, int y,
+		int inner_w, int inner_h,
+		int border,
 		int radius);
 
 extern session_t *ps_g;
