@@ -51,6 +51,13 @@ showOnlyCurrentMonitor = false
 # Display only windows on the current XScreen
 showOnlyCurrentScreen = true
 
+# In multi-monitor environment,
+# Panels are displayed on the active monitor
+# Control how horizontal panels are aligned (left/mid/right)
+# And how vertical panels are aligned (top/mid/bottom)
+horizontalPanelAlignment = mid
+verticalPanelAlignment = mid
+
 [layout]
 
 # xd: row-to-row layout
