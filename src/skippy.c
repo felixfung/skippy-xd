@@ -1049,10 +1049,9 @@ transportPanelToActiveMonitor(ClientWin *cw)
 	if (cw->src.width >= cw->src.height) {
 		switch (mw->ps->o.horizontalPanelAlignment) {
 			case ALIGN_LEFT:
-				cw->src.x = 0;
 				break;
 			case ALIGN_RIGHT:
-				cw->src.x = mw->width - cw->src.width;
+				cw->src.x = mw->width - cw->src.width - cw->src.x;
 				break;
 			case ALIGN_MID:
 				cw->src.x = (mw->width - cw->src.width) / 2;
@@ -1062,10 +1061,9 @@ transportPanelToActiveMonitor(ClientWin *cw)
 	else {
 		switch (mw->ps->o.verticalPanelAlignment) {
 			case ALIGN_LEFT:
-				cw->src.y = 0;
 				break;
 			case ALIGN_RIGHT:
-				cw->src.y = mw->height - cw->src.height;
+				cw->src.y = mw->height - cw->src.height - cw->src.y;
 				break;
 			case ALIGN_MID:
 				cw->src.y = (mw->height - cw->src.height) / 2;
