@@ -1383,7 +1383,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 	long first_animated = 0L;
 	bool first_animating = false;
 	pid_t trigger_client = 0;
-	bool checkfocus = false;
 	bool switchdesktop = false;
 
 	switch (ps->o.mode) {
@@ -1841,10 +1840,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 						wid = ev_window(ps, &ev);
 						num_events--;
 
-						if (ev.type == FocusOut || ev.type == LeaveNotify
-						 || ev.type == FocusIn || ev.type == EnterNotify)
-							checkfocus = true;
-
 						dlist *iter = (wid ? dlist_find(ps->mainwin->clients,
 								clientwin_cmp_func, (void *) wid): NULL);
 						if (iter) {
@@ -1883,16 +1878,9 @@ mainloop(session_t *ps, bool activate_on_start) {
 				}
 			}
 			else if (mw && wid == mw->window && !die) {
-				if (ev.type == FocusOut || ev.type == LeaveNotify
-				 || ev.type == FocusIn || ev.type == EnterNotify)
-					checkfocus = true;
 				die = mainwin_handle(mw, &ev);
 			}
 			else if (mw && wid) {
-				if (ev.type == FocusOut || ev.type == LeaveNotify
-				 || ev.type == FocusIn || ev.type == EnterNotify)
-					checkfocus = true;
-
 				bool processing = true;
 				dlist *iter = mw->clientondesktop;
 				if (layout == LAYOUTMODE_PAGING)
@@ -1934,7 +1922,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 			}
 		}
 
-		if (mw && ps->o.enforceFocus && checkfocus) {
+		if (mw && ps->o.enforceFocus) {
 			Window focus;
 			int revert;
 			XGetInputFocus(ps->dpy, &focus, &revert);
@@ -1943,7 +1931,9 @@ mainloop(session_t *ps, bool activate_on_start) {
 				if (focus != mw->window
 				 && focus != mw->client_to_focus->mini.window) {
 					printfdf(false, "(): skippy-xd focus stolen... take back focus");
-					XSetInputFocus(ps->dpy, mw->window, RevertToParent, CurrentTime);
+					XSetInputFocus(ps->dpy, mw->client_to_focus->mini.window,
+							RevertToParent, CurrentTime);
+					XSync(ps->dpy, False);
 					mw->client_to_focus->focused = true;
 					clientwin_render(mw->client_to_focus);
 					mainwin_render_borders(mw);
@@ -1955,8 +1945,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 					XSetInputFocus(ps->dpy, mw->window, RevertToParent, CurrentTime);
 				}
 			}
-
-			checkfocus = false;
 		}
 
 		// Do delayed painting if it's active

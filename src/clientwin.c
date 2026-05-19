@@ -1007,7 +1007,6 @@ close_clientwindow(ClientWin* cw, enum cliop op) {
 		mw->client_to_focus_on_cancel = NULL;
 
 	clientwin_action(cw, op);
-	usleep(10000);
 	focus_miniw_next(ps, cw);
 	mainwin_render_borders(mw);
 	XFlush(ps->dpy);
