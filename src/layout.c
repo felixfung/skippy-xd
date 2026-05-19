@@ -103,7 +103,10 @@ layout_xd(MainWin *mw, dlist *windows,
 	foreach_dlist (windows) {
 		ClientWin *cw = (ClientWin*) iter->data;
 		if (!cw->mode) continue;
-		dlist *slot_iter = dlist_first(slots);
+		dlist *slot_iter = NULL;
+		if ((mw->ps->o.mode == PROGMODE_SWITCH && mw->ps->o.switch_compact)
+		 || (mw->ps->o.mode == PROGMODE_EXPOSE && mw->ps->o.expose_compact))
+			slot_iter = dlist_first(slots);
 		for (; slot_iter; slot_iter = slot_iter->next) {
 			dlist *slot = (dlist *) slot_iter->data;
 			// Calculate current total height of slot

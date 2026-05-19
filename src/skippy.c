@@ -2761,19 +2761,28 @@ load_config_file(session_t *ps)
 			if (strcmp(s,"cosmos") == 0) {
 				ps->o.switchLayout = LAYOUT_COSMOS;
 			}
-			else if (strcmp(s,"xd") == 0) {
+			else if (strcmp(s,"rect") == 0) {
 				ps->o.switchLayout = LAYOUT_XD;
+				ps->o.switch_compact = false;
+			}
+			else if (strcmp(s,"compactrect") == 0) {
+				ps->o.switchLayout = LAYOUT_XD;
+				ps->o.switch_compact = true;
 			}
 			else {
 				printfef(true, "(): switchLayout \"%s\" not found. Valid switchLayout are:",
 						s);
-				printfef(true, "(): xd");
-				printfef(true, "(): cosmos (default)");
+				printfef(true, "(): rect (default)");
+				printfef(true, "(): compactrect");
+				printfef(true, "(): cosmos");
 				ps->o.switchLayout = LAYOUT_XD;
+				ps->o.switch_compact = false;
 			}
 		}
-		else
+		else {
 			ps->o.switchLayout = LAYOUT_XD;
+			ps->o.switch_compact = false;
+		}
     }
 	{
 		const char *s = config_get(config, "layout", "exposeLayout", NULL);
@@ -2781,19 +2790,28 @@ load_config_file(session_t *ps)
 			if (strcmp(s,"cosmos") == 0) {
 				ps->o.exposeLayout = LAYOUT_COSMOS;
 			}
-			else if (strcmp(s,"xd") == 0) {
+			else if (strcmp(s,"rect") == 0) {
 				ps->o.exposeLayout = LAYOUT_XD;
+				ps->o.expose_compact = false;
+			}
+			else if (strcmp(s,"compactrect") == 0) {
+				ps->o.exposeLayout = LAYOUT_XD;
+				ps->o.expose_compact = true;
 			}
 			else {
 				printfef(true, "(): exposeLayout \"%s\" not found. Valid exposeLayout are:",
 						s);
-				printfef(true, "(): xd");
+				printfef(true, "(): rect");
+				printfef(true, "(): compactrect");
 				printfef(true, "(): cosmos (default)");
 				ps->o.exposeLayout = LAYOUT_COSMOS;
+				ps->o.expose_compact = false;
 			}
 		}
-		else
+		else {
 			ps->o.exposeLayout = LAYOUT_COSMOS;
+			ps->o.expose_compact = false;
+		}
     }
     config_get_bool_wrap(config, "layout", "switchCycleDesktops", &ps->o.switchCycleDesktops);
     config_get_bool_wrap(config, "layout", "exposeCycleDesktops", &ps->o.exposeCycleDesktops);
