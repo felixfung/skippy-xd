@@ -1020,9 +1020,6 @@ calculatePanelBorders(MainWin *mw,
 static void
 transportPanelToActiveMonitor(ClientWin *cw)
 {
-	if (cw->paneltype != WINTYPE_PANEL)
-		return;
-
 #ifdef CFG_XINERAMA
 	int midx = cw->src.x + cw->src.width / 2;
 	int midy = cw->src.y + cw->src.height / 2;
@@ -1363,7 +1360,12 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 
 	foreach_dlist(mw->panels) {
 		ClientWin *cw = iter->data;
-		transportPanelToActiveMonitor(cw);
+		if (cw->paneltype == WINTYPE_PANEL)
+			transportPanelToActiveMonitor(cw);
+		if (cw->paneltype == WINTYPE_DESKTOP) {
+			cw->src.x -= mw->x;
+			cw->src.y -= mw->y;
+		}
 		clientwin_prepmove(cw);
 		clientwin_move(cw, 1, 0, 0, 0);
 	}
