@@ -1008,6 +1008,7 @@ close_clientwindow(ClientWin* cw, enum cliop op) {
 
 	clientwin_action(cw, op);
 	focus_miniw_next(ps, cw);
+	mainwin_render_borders(mw);
 	XFlush(ps->dpy);
 
 	{
