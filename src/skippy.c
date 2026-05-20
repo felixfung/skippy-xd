@@ -1808,8 +1808,21 @@ mainloop(session_t *ps, bool activate_on_start) {
 					cw = (ClientWin *) iter->data;
 				if (cw) {
 					clientwin_update(cw);
-					clientwin_update3(cw);
-					clientwin_update2(cw);
+					if (ev.type == PropertyNotify) {
+						clientwin_update3(cw);
+						clientwin_update2(cw);
+					}
+				}
+				num_events--;
+				XEvent ev_next = { };
+				while (num_events > 0)
+				{
+					XPeekEvent(ps->dpy, &ev_next);
+					if (ev_next.type != ConfigureNotify
+							&& ev_next.type != PropertyNotify)
+						break;
+					XNextEvent(ps->dpy, &ev);
+					num_events--;
 				}
             }
 			else if (ev.type == CreateNotify || ev.type == MapNotify) {
