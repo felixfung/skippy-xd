@@ -190,15 +190,20 @@ regexmatch_partial(const char *pattern, const char *str)
 	return false;
 }
 
-static bool
+typedef struct {
+	bool has_positive;
+	bool positive_match;
+	bool negative_match;
+} match_result_t;
+
+static match_result_t
 match_expr(const char *expr_list, const char *str)
 {
-	bool has_positive = false;
-	bool positive_match = false;
+	match_result_t result = { };
 
 	char *copy = strdup(expr_list);
 	char *token = strtok(copy, ",");
-    
+
 	while (token) {
 		while (*token == ' ') token++;
 		char *end = token + strlen(token) - 1;
@@ -208,26 +213,31 @@ match_expr(const char *expr_list, const char *str)
 		}
 
 		if (*token == '!') {
-			if (regexmatch_partial(token + 1, str)) {
-				free(copy);
-				return false; // negative overrides everything
-			}
+			if (regexmatch_partial(token + 1, str))
+				result.negative_match = true;
 		} else {
-			has_positive = true;
+			result.has_positive = true;
 			if (regexmatch_partial(token, str))
-				positive_match = true;
+				result.positive_match = true;
 		}
 
 		token = strtok(NULL, ",");
 	}
 
 	free(copy);
+	return result;
+}
 
-	// If there are positive expressions,
-	// 	   return whether any matched
-	// If there are no positive expressions,
-	//     return true (everything allowed) unless a negative blocked it
-	return has_positive? positive_match: true;
+// If there are positive expressions,
+// 	   return whether any matched
+// If there are no positive expressions,
+//     return true (everything allowed) unless a negative blocked it
+static bool
+match_filter_result(match_result_t result)
+{
+	return result.has_positive?
+			result.positive_match && !result.negative_match:
+			!result.negative_match;
 }
 
 int wm_get_status(char *status) {
@@ -925,20 +935,28 @@ wm_validate_window(session_t *ps, Window wid) {
 		XClassHint *hints = allocchk(XAllocClassHint());
 		if (hints){
 			XGetClassHint(ps->dpy, wid, hints);
-			bool regmatch_class = match_expr(ps->o.wm_class, hints->res_class);
-			bool regmatch_name = match_expr(ps->o.wm_class, hints->res_name);
+			match_result_t class_match = match_expr(ps->o.wm_class, hints->res_class);
+			match_result_t name_match = match_expr(ps->o.wm_class, hints->res_name);
+			match_result_t result = {
+				.has_positive = class_match.has_positive || name_match.has_positive,
+				.positive_match = class_match.positive_match || name_match.positive_match,
+				.negative_match = class_match.negative_match || name_match.negative_match,
+			};
+			bool matched = match_filter_result(result);
 
-			if (!regmatch_class && !regmatch_name)
-				return false;
 			XFree(hints->res_name);
 			XFree(hints->res_class);
 			XFree(hints);
+			if (!matched)
+				return false;
 		}
 	}
 
 	if (ps->o.wm_title) {
 		FcChar8 *win_title = wm_get_window_title(ps, wid, NULL);
-		if (!match_expr(ps->o.wm_title, (char *) win_title))
+		bool matched = match_filter_result(match_expr(ps->o.wm_title, (char *) win_title));
+		free(win_title);
+		if (!matched)
 			return false;
 	}
 
@@ -1205,4 +1223,3 @@ wid_get_prop_adv(const session_t *ps, Window w, Atom atom, long offset,
     .format = 0
   };
 }
-
