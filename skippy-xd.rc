@@ -60,9 +60,10 @@ verticalPanelAlignment = mid
 
 [layout]
 
-# xd: row-to-row layout
 # cosmos: position preserving layout
-switchLayout = xd
+# rect: row-to-row layout
+# compactrect: compactized row-to-row layout
+switchLayout = rect
 exposeLayout = cosmos
 
 # Wait time in ms before displaying switch previews

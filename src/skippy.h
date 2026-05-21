@@ -213,7 +213,9 @@ typedef struct {
 	char *desktops;
 
 	int switchLayout;
+	bool switch_compact;
 	int exposeLayout;
+	bool expose_compact;
 	int switchWaitDuration;
 	bool switchCycleDuringWait;
 	bool switchCycleDesktops;
@@ -309,7 +311,9 @@ typedef struct {
 	.wm_status = NULL, \
 \
 	.switchLayout = LAYOUT_XD, \
+	.switch_compact = false, \
 	.exposeLayout = LAYOUT_COSMOS, \
+	.expose_compact = false, \
 	.switchWaitDuration = 100, \
 	.switchCycleDuringWait = false, \
 	.switchCycleDesktops = false, \
