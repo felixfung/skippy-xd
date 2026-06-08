@@ -952,69 +952,85 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 		dlist_sort(mw->focuslist, sort_cw_by_column, 0);
 }
 
+/**
+ * Get workarea from EWMH _NET_WORKAREA property for current desktop.
+ * Returns true if successful, false otherwise.
+ * Workarea format: left, top, width, height for each desktop.
+ */
+static bool
+get_workarea(session_t *ps, int *work_x, int *work_y, int *work_w, int *work_h) {
+	Atom actual_type;
+	int actual_format;
+	unsigned long nitems, bytes_after;
+	unsigned char *data = NULL;
+
+	Atom _NET_WORKAREA = XInternAtom(ps->dpy, "_NET_WORKAREA", False);
+	int status = XGetWindowProperty(ps->dpy, ps->root, _NET_WORKAREA,
+			0, 4, False, XA_CARDINAL,
+			&actual_type, &actual_format, &nitems, &bytes_after, &data);
+
+	if (status != Success || !data || nitems < 4) {
+		if (data) XFree(data);
+		return false;
+	}
+
+	long *values = (long *)data;
+	*work_x = (int)values[0];
+	*work_y = (int)values[1];
+	*work_w = (int)values[2];
+	*work_h = (int)values[3];
+
+	XFree(data);
+	printfdf(false, "(): _NET_WORKAREA: %dx%d+%d+%d", *work_w, *work_h, *work_x, *work_y);
+	return true;
+}
+
 static void
 calculatePanelBorders(MainWin *mw,
 		int *x1, int *y1, int *x2, int *y2) {
-	if (!mw->ps->o.panel_reserveSpace)
+	session_t *ps = mw->ps;
+
+	printfdf(false, "(): calculatePanelBorders called, panel_reserveSpace=%d", ps->o.panel_reserveSpace);
+	printfdf(false, "(): monitor: %dx%d+%d+%d", mw->monitor_width, mw->monitor_height, mw->monitor_x, mw->monitor_y);
+
+	/* Default: no panel reservation */
+	*x1 = *y1 = 0;
+	*x2 = mw->width - mw->monitor_width;
+	*y2 = mw->height - mw->monitor_height;
+
+	if (!ps->o.panel_reserveSpace) {
+		printfdf(false, "(): panel_reserveSpace disabled, skipping");
 		return;
-
-	// use heuristics to find panel borders
-	// e.g. a panel on the bottom
-	*x1 = 0;
-	*y1 = 0;
-	*x2 = mw->width;
-	*y2 = mw->height;
-
-	foreach_dlist(mw->panels) {
-		ClientWin *cw = iter->data;
-		if (cw->paneltype != WINTYPE_PANEL)
-			continue;
-
-#ifdef CFG_XINERAMA
-			int midx = cw->src.x + cw->src.width / 2;
-			int midy = cw->src.y + cw->src.height / 2;
-
-			XineramaScreenInfo *xiter = mw->xin_info;
-			for (int i=0; i<mw->xin_screens; i++)
-			{
-				if(xiter->x_org <= midx && midx < xiter->x_org + xiter->width &&
-				   xiter->y_org <= midy && midy < xiter->y_org + xiter->height)
-				{
-					cw->src.x -= xiter->x_org;
-					cw->src.y -= xiter->y_org;
-				}
-				xiter++;
-			}
-#endif /* CFG_XINERAMA */
-
-		// assumed horizontal panel
-		if (cw->src.width >= cw->src.height) {
-			// assumed top panel
-			if (cw->src.y < mw->y + mw->height / 2.0) {
-				*y1 = MAX(*y1, cw->src.y + cw->src.height);
-			}
-			// assumed bottom panel
-			else {
-				*y2 = MIN(*y2, cw->src.y);
-			}
-		}
-		// assumed vertical panel
-		else {
-			// assumed left panel
-			if (cw->src.x < mw->x + mw->width / 2.0) {
-				*x1 = MAX(*x1, cw->src.x + cw->src.width);
-			}
-			// assumed right panel
-			else {
-				*x2 = MIN(*x2, cw->src.x);
-			}
-		}
 	}
 
-	*x2 = mw->width - *x2;
-	*y2 = mw->height - *y2;
+	/* Get current monitor bounds */
+	int mon_x = mw->monitor_x;
+	int mon_y = mw->monitor_y;
+	int mon_w = mw->monitor_width;
+	int mon_h = mw->monitor_height;
 
-	printfdf(false,"(): panel framing calculations: (%d,%d) (%d,%d)", *x1, *y1, *x2, *y2);
+	/* Try to get workarea from EWMH _NET_WORKAREA */
+	int work_x, work_y, work_w, work_h;
+	if (get_workarea(ps, &work_x, &work_y, &work_w, &work_h)) {
+		/* Intersect workarea with current monitor */
+		int left = MAX(mon_x, work_x);
+		int top = MAX(mon_y, work_y);
+		int right = MIN(mon_x + mon_w, work_x + work_w);
+		int bottom = MIN(mon_y + mon_h, work_y + work_h);
+
+		/* Calculate reserved space (panels) */
+		*x1 = left - mon_x;                    /* Left panel reserve */
+		*y1 = top - mon_y;                    /* Top panel reserve */
+		*x2 = (mon_x + mon_w) - right;        /* Right panel reserve */
+		*y2 = (mon_y + mon_h) - bottom;       /* Bottom panel reserve */
+
+		printfdf(false, "(): workarea: monitor %dx%d+%d+%d, workarea %dx%d+%d+%d",
+			mon_w, mon_h, mon_x, mon_y, work_w, work_h, work_x, work_y);
+		printfdf(false, "(): panel reserves: left=%d, top=%d, right=%d, bottom=%d",
+			*x1, *y1, *x2, *y2);
+	} else {
+		printfdf(false, "(): _NET_WORKAREA not available, no panel reservation");
+	}
 }
 
 static void

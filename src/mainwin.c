@@ -19,6 +19,10 @@
 
 #include "skippy.h"
 
+#ifdef CFG_XRANDR
+#include <X11/extensions/Xrandr.h>
+#endif /* CFG_XRANDR */
+
 void
 XRenderTintBorder(session_t *ps,
 		Drawable drawable,
@@ -174,6 +178,93 @@ find_argb_visual (Display *dpy, int scr)
 	XFree (xvi);
 	return visual;
 }
+
+#ifdef CFG_XRANDR
+/**
+ * Detect monitors using XRandr and set current monitor based on cursor position.
+ * Returns true if monitor detected, false otherwise.
+ */
+static bool
+mainwin_detect_monitor_xrandr(MainWin *mw) {
+	session_t *ps = mw->ps;
+	Display *dpy = ps->dpy;
+
+	int major, minor;
+	if (!XRRQueryVersion(dpy, &major, &minor)) {
+		printfdf(false, "(): XRandr not available");
+		return false;
+	}
+
+	Window root = ps->root;
+	XRRScreenResources *res = XRRGetScreenResources(dpy, root);
+	if (!res) {
+		printfdf(false, "(): XRRGetScreenResources failed");
+		return false;
+	}
+
+	/* Get cursor position */
+	int root_x, root_y;
+	Window dummy_w;
+	int dummy_i;
+	unsigned int dummy_u;
+	XQueryPointer(dpy, root, &dummy_w, &dummy_w, &root_x, &root_y, &dummy_i, &dummy_i, &dummy_u);
+
+	/* Find monitor containing cursor */
+	bool found = false;
+	for (int i = 0; i < res->ncrtc; i++) {
+		XRRCrtcInfo *crtc_info = XRRGetCrtcInfo(dpy, res, res->crtcs[i]);
+		if (!crtc_info) continue;
+
+		if (crtc_info->mode != None && crtc_info->noutput > 0) {
+			int x = crtc_info->x;
+			int y = crtc_info->y;
+			int w = crtc_info->width;
+			int h = crtc_info->height;
+
+			if (!found && root_x >= x && root_x < x + w && root_y >= y && root_y < y + h) {
+				mw->monitor_x = x;
+				mw->monitor_y = y;
+				mw->monitor_width = w;
+				mw->monitor_height = h;
+				found = true;
+				printfdf(false, "(): XRandr monitor %dx%d+%d+%d (cursor at %d,%d)",
+					w, h, x, y, root_x, root_y);
+			}
+		}
+		XRRFreeCrtcInfo(crtc_info);
+	}
+
+	XRRFreeScreenResources(res);
+
+	if (!found) {
+		/* Fallback: use first active CRTC */
+		res = XRRGetScreenResources(dpy, root);
+		if (res) {
+			for (int i = 0; i < res->ncrtc; i++) {
+				XRRCrtcInfo *crtc_info = XRRGetCrtcInfo(dpy, res, res->crtcs[i]);
+				if (!crtc_info) continue;
+
+				if (crtc_info->mode != None && crtc_info->noutput > 0) {
+					mw->monitor_x = crtc_info->x;
+					mw->monitor_y = crtc_info->y;
+					mw->monitor_width = crtc_info->width;
+					mw->monitor_height = crtc_info->height;
+					found = true;
+					printfdf(false, "(): XRandr fallback monitor %dx%d+%d+%d",
+						crtc_info->width, crtc_info->height,
+						crtc_info->x, crtc_info->y);
+					XRRFreeCrtcInfo(crtc_info);
+					break;
+				}
+				XRRFreeCrtcInfo(crtc_info);
+			}
+			XRRFreeScreenResources(res);
+		}
+	}
+
+	return found;
+}
+#endif /* CFG_XRANDR */
 
 MainWin *
 mainwin_create(session_t *ps) {
@@ -509,59 +600,93 @@ mainwin_render_borders(MainWin *mw)
 void
 mainwin_update(MainWin *mw)
 {
-#ifdef CFG_XINERAMA
 	session_t * const ps = mw->ps;
+	Display *dpy = ps->dpy;
+	bool monitor_detected = false;
 
-	XineramaScreenInfo *iter;
-	int i;
-	Window dummy_w;
-	int root_x, root_y, dummy_i;
-	unsigned int dummy_u;
+	/* Initialize monitor fields to root window as fallback */
+	mw->monitor_x = 0;
+	mw->monitor_y = 0;
+	XWindowAttributes rootattr;
+	XGetWindowAttributes(dpy, ps->root, &rootattr);
+	mw->monitor_width = rootattr.width;
+	mw->monitor_height = rootattr.height;
 
-	if (ps->xinfo.xinerama_exist && XineramaIsActive(ps->dpy)) {
+#ifdef CFG_XRANDR
+	/* Try XRandr first (modern X11 standard) */
+	if (mainwin_detect_monitor_xrandr(mw)) {
+		monitor_detected = true;
+		printfdf(false, "(): Using XRandr monitor detection");
+	}
+#endif /* CFG_XRANDR */
+
+#ifdef CFG_XINERAMA
+	/* Fall back to Xinerama if XRandr failed */
+	if (!monitor_detected && ps->xinfo.xinerama_exist && XineramaIsActive(dpy)) {
+		XineramaScreenInfo *iter;
+		int i;
+		Window dummy_w;
+		int root_x, root_y, dummy_i;
+		unsigned int dummy_u;
+
 		if(mw->xin_info)
 			XFree(mw->xin_info);
-		mw->xin_info = XineramaQueryScreens(ps->dpy, &mw->xin_screens);
+		mw->xin_info = XineramaQueryScreens(dpy, &mw->xin_screens);
 		printfdf(false, "(): Xinerama is enabled (%d screens).", mw->xin_screens);
-	}
-	
-	if(! mw->xin_info || ! mw->xin_screens)
-	{
-		mainwin_update_background(mw);
-		return;
-	}
-	
-	printfdf(false, "(): XINERAMA --> querying pointer... ");
-	XQueryPointer(ps->dpy, ps->root, &dummy_w, &dummy_w, &root_x, &root_y, &dummy_i, &dummy_i, &dummy_u);
-	printfdf(false, "(): XINERAMA +%i+%i\n", root_x, root_y);
-	
-	printfdf(false, "(): XINERAMA --> figuring out which screen we're on... ");
-	iter = mw->xin_info;
-	for(i = 0; i < mw->xin_screens; ++i)
-	{
-		if(root_x >= iter->x_org && root_x < iter->x_org + iter->width &&
-		   root_y >= iter->y_org && root_y < iter->y_org + iter->height)
-		{
-			printfdf(false, "(): XINERAMA screen %i %ix%i+%i+%i\n", iter->screen_number, iter->width, iter->height, iter->x_org, iter->y_org);
-			break;
-		}
-		iter++;
-	}
-	if(i == mw->xin_screens)
-	{
-		printfdf(false, "(): XINERAMA unknown\n");
-		return;
-	}
-	mw->x = iter->x_org;
-	mw->y = iter->y_org;
-	mw->width = iter->width;
-	mw->height = iter->height;
-	XMoveResizeWindow(ps->dpy, mw->window, iter->x_org, iter->y_org, mw->width, mw->height);
 
-	mw->xin_active = iter;
-	if (!ps->o.showOnlyCurrentMonitor)
-		mw->xin_active = 0;
+		if(mw->xin_info && mw->xin_screens)
+		{
+			printfdf(false, "(): XINERAMA --> querying pointer... ");
+			XQueryPointer(dpy, ps->root, &dummy_w, &dummy_w, &root_x, &root_y, &dummy_i, &dummy_i, &dummy_u);
+			printfdf(false, "(): XINERAMA +%i+%i\n", root_x, root_y);
+
+			printfdf(false, "(): XINERAMA --> figuring out which screen we're on... ");
+			iter = mw->xin_info;
+			for(i = 0; i < mw->xin_screens; ++i)
+			{
+				if(root_x >= iter->x_org && root_x < iter->x_org + iter->width &&
+				   root_y >= iter->y_org && root_y < iter->y_org + iter->height)
+				{
+					printfdf(false, "(): XINERAMA screen %i %ix%i+%i+%i\n",
+						iter->screen_number, iter->width, iter->height,
+						iter->x_org, iter->y_org);
+					mw->monitor_x = iter->x_org;
+					mw->monitor_y = iter->y_org;
+					mw->monitor_width = iter->width;
+					mw->monitor_height = iter->height;
+					monitor_detected = true;
+					break;
+				}
+				iter++;
+			}
+			if(i == mw->xin_screens)
+			{
+				printfdf(false, "(): XINERAMA unknown screen, using first");
+				iter = mw->xin_info;
+				mw->monitor_x = iter->x_org;
+				mw->monitor_y = iter->y_org;
+				mw->monitor_width = iter->width;
+				mw->monitor_height = iter->height;
+				monitor_detected = true;
+			}
+
+			mw->xin_active = iter;
+			if (!ps->o.showOnlyCurrentMonitor)
+				mw->xin_active = 0;
+		}
+	}
 #endif /* CFG_XINERAMA */
+
+	/* Update mainwin geometry to current monitor */
+	mw->x = mw->monitor_x;
+	mw->y = mw->monitor_y;
+	mw->width = mw->monitor_width;
+	mw->height = mw->monitor_height;
+	XMoveResizeWindow(dpy, mw->window, mw->x, mw->y, mw->width, mw->height);
+
+	printfdf(false, "(): Active monitor: %dx%d+%d+%d",
+		mw->width, mw->height, mw->x, mw->y);
+
 	mainwin_update_background(mw);
 }
 

@@ -77,6 +77,14 @@ struct _mainwin_t {
 	bool refocus;
 	bool mapped;
 
+	/// @brief Current monitor bounds (detected via XRandr or Xinerama)
+	int monitor_x, monitor_y;
+	int monitor_width, monitor_height;
+
+#ifdef CFG_XRANDR
+	int xrandr_event_base, xrandr_error_base;
+#endif /* CFG_XRANDR */
+
 #ifdef CFG_XINERAMA
 	int xin_screens;
 	XineramaScreenInfo *xin_info, *xin_active;
