@@ -19,10 +19,6 @@
 
 #include "skippy.h"
 
-#ifdef CFG_XRANDR
-#include <X11/extensions/Xrandr.h>
-#endif /* CFG_XRANDR */
-
 void
 XRenderTintBorder(session_t *ps,
 		Drawable drawable,
@@ -188,12 +184,6 @@ static bool
 mainwin_detect_monitor_xrandr(MainWin *mw) {
 	session_t *ps = mw->ps;
 	Display *dpy = ps->dpy;
-
-	int major, minor;
-	if (!XRRQueryVersion(dpy, &major, &minor)) {
-		printfdf(false, "(): XRandr not available");
-		return false;
-	}
 
 	Window root = ps->root;
 	XRRScreenResources *res = XRRGetScreenResources(dpy, root);
