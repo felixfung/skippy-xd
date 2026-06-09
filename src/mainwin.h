@@ -81,9 +81,6 @@ struct _mainwin_t {
 	int monitor_x, monitor_y;
 	int monitor_width, monitor_height;
 
-#ifdef CFG_XRANDR
-	int xrandr_event_base, xrandr_error_base;
-#endif /* CFG_XRANDR */
 
 #ifdef CFG_XINERAMA
 	int xin_screens;
