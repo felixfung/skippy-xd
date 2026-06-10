@@ -990,7 +990,7 @@ calculatePanelBorders(MainWin *mw,
 		// assumed horizontal panel
 		if (cw->src.width >= cw->src.height) {
 			// assumed top panel
-			if (cw->src.y < mw->y + mw->height / 2.0) {
+			if (cw->src.y < mw->height / 2.0) {
 				*y1 = MAX(*y1, cw->src.y + cw->src.height);
 			}
 			// assumed bottom panel
@@ -1001,7 +1001,7 @@ calculatePanelBorders(MainWin *mw,
 		// assumed vertical panel
 		else {
 			// assumed left panel
-			if (cw->src.x < mw->x + mw->width / 2.0) {
+			if (cw->src.x < mw->width / 2.0) {
 				*x1 = MAX(*x1, cw->src.x + cw->src.width);
 			}
 			// assumed right panel
