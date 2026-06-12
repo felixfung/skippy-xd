@@ -52,9 +52,11 @@ showOnlyCurrentMonitor = false
 showOnlyCurrentScreen = true
 
 # In multi-monitor environment,
-# Panels are displayed on the active monitor
-# Control how horizontal panels are aligned (left/mid/right)
-# And how vertical panels are aligned (top/mid/bottom)
+# Whether to display panels on the active monitor
+# If so, control how panels are aligned
+# left/mid/right for horizontal panels
+# top/mid/bottom for vertical panels
+panelOnActiveMonitor = false
 horizontalPanelAlignment = mid
 verticalPanelAlignment = mid
 

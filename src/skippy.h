@@ -205,6 +205,7 @@ typedef struct {
 
 	bool showOnlyCurrentMonitor;
 	bool filterxscreen;
+	bool panelOnActiveMonitor;
 	enum align horizontalPanelAlignment;
 	enum align verticalPanelAlignment;
 	char *wm_class;
@@ -306,6 +307,7 @@ typedef struct {
 \
 	.showOnlyCurrentMonitor = false, \
 	.filterxscreen = true, \
+	.panelOnActiveMonitor = false, \
 	.horizontalPanelAlignment = 1, \
 	.verticalPanelAlignment = 1, \
 	.wm_status = NULL, \

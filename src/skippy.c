@@ -1020,6 +1020,8 @@ calculatePanelBorders(MainWin *mw,
 static void
 transportPanelToActiveMonitor(ClientWin *cw)
 {
+	if (!cw->mainwin->ps->o.panelOnActiveMonitor)
+		return;
 #ifdef CFG_XINERAMA
 	int midx = cw->src.x + cw->src.width / 2;
 	int midy = cw->src.y + cw->src.height / 2;
@@ -2759,6 +2761,8 @@ load_config_file(session_t *ps)
 
     config_get_bool_wrap(config, "multimonitor", "showOnlyCurrentMonitor", &ps->o.showOnlyCurrentMonitor);
     config_get_bool_wrap(config, "multimonitor", "showOnlyCurrentScreen", &ps->o.filterxscreen);
+
+	config_get_bool_wrap(config, "multimonitor", "panelOnActiveMonitor", &ps->o.panelOnActiveMonitor);
 	{
 		const char* align_str = config_get(config, "multimonitor",
 				"horizontalPanelAlignment", "mid");
