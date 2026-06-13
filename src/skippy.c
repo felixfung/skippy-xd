@@ -970,22 +970,11 @@ calculatePanelBorders(MainWin *mw,
 		if (cw->paneltype != WINTYPE_PANEL)
 			continue;
 
-#ifdef CFG_XINERAMA
-			int midx = cw->src.x + cw->src.width / 2;
-			int midy = cw->src.y + cw->src.height / 2;
-
-			XineramaScreenInfo *xiter = mw->xin_info;
-			for (int i=0; i<mw->xin_screens; i++)
-			{
-				if(xiter->x_org <= midx && midx < xiter->x_org + xiter->width &&
-				   xiter->y_org <= midy && midy < xiter->y_org + xiter->height)
-				{
-					cw->src.x -= xiter->x_org;
-					cw->src.y -= xiter->y_org;
-				}
-				xiter++;
-			}
-#endif /* CFG_XINERAMA */
+		int midx = cw->src.x + cw->src.width / 2;
+		int midy = cw->src.y + cw->src.height / 2;
+		if (!(mw->x <= midx && midx < mw->x + mw->width
+		   && mw->y <= midy && midy < mw->y + mw->height))
+			continue;
 
 		// assumed horizontal panel
 		if (cw->src.width >= cw->src.height) {
