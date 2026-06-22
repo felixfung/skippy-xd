@@ -1,5 +1,9 @@
 Skippy-XD changelog
 
+0.10.7.1 -- "Bruh" (21 Jun 2026) ~/felixfung
+ - Layout "xd" -> "rect", "compactrect"
+ - panel/reserveSpace calculation fix in multi-monitor settings
+
 0.10.7 -- "Dojo Mojo" (24 May 2026) ~/felixfung
  - Highlight window with tinted border
  - Proper regex/wildcard expressions for window filtering parameters
