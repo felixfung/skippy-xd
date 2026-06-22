@@ -29,7 +29,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            build-essential wget \
+            build-essential wget zsync \
             libx11-dev libxft-dev libxrender-dev \
             libxcomposite-dev libxdamage-dev libxfixes-dev \
             libxext-dev libxinerama-dev \
@@ -51,7 +51,6 @@ jobs:
 
       - name: Install binary and files into AppDir
         run: |
-          mkdir -p skippy-xd.AppDir/usr/share/man/man1
           make install \
             DESTDIR=$(pwd)/skippy-xd.AppDir \
             PREFIX=/usr \
@@ -60,28 +59,28 @@ jobs:
       - name: Create AppRun
         run: |
           cat > skippy-xd.AppDir/AppRun << 'APPRUN'
-          #!/bin/bash
-          HERE="$(dirname "$(readlink -f "${0}")")"
+          #!/bin/sh
+          HERE="$(cd "${0%/*}" && echo "$PWD")"
           export PATH="${HERE}/usr/bin:${PATH}"
           export LD_LIBRARY_PATH="${HERE}/usr/lib:${LD_LIBRARY_PATH}"
           export XDG_CONFIG_DIRS="${HERE}/etc/xdg:${XDG_CONFIG_DIRS}"
           export XDG_DATA_DIRS="${HERE}/usr/share:${XDG_DATA_DIRS}"
 
           if [ "$1" = "--help-man" ]; then
-              for MANPAGE in \
-                  "${HERE}/usr/share/man/man1/skippy-xd.1.gz" \
-                  "${HERE}/usr/share/man/man1/skippy-xd.1"; do
-                  if [ -f "$MANPAGE" ]; then
-                      if [[ "$MANPAGE" == *.gz ]]; then
-                          zcat "$MANPAGE" | man -l -
-                      else
-                          man -l "$MANPAGE"
-                      fi
-                      exit $?
-                  fi
-              done
-              echo "Error: man page not found"
-              exit 1
+            for MANPAGE in \
+              "${HERE}/usr/share/man/man1/skippy-xd.1.gz" \
+              "${HERE}/usr/share/man/man1/skippy-xd.1"; do
+              if [ -f "$MANPAGE" ]; then
+                if [ "${MANPAGE%.gz}" != "$MANPAGE" ]; then
+                  zcat "$MANPAGE" | man -l -
+                else
+                  man -l "$MANPAGE"
+                fi
+                exit $?
+              fi
+            done
+            echo "Error: man page not found"
+            exit 1
           fi
 
           exec "${HERE}/usr/bin/skippy-xd" "$@"
@@ -173,21 +172,26 @@ jobs:
       - name: Download appimagetool
         run: |
           wget -q -O appimagetool \
-            https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+            https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x appimagetool
 
       - name: Build AppImage
         run: |
           VERSION="${{ steps.version.outputs.version }}"
+          APPIMAGE="skippy-xd_${VERSION}-x86_64.AppImage"
           ARCH=x86_64 ./appimagetool --appimage-extract-and-run \
+            -u "gh-releases-zsync|felixfung|skippy-xd|latest|*x86_64.AppImage.zsync" \
             skippy-xd.AppDir \
-            Skippy-xd-${VERSION}-x86_64.AppImage
+            "${APPIMAGE}"
+          zsyncmake "${APPIMAGE}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: skippy-xd-${{ steps.version.outputs.version }}-appimage
-          path: Skippy-xd-*.AppImage
+          path: |
+            skippy-xd_*.AppImage
+            skippy-xd_*.AppImage.zsync
           if-no-files-found: error
 
   release:
@@ -204,6 +208,8 @@ jobs:
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: appimages/**/*.AppImage
+          files: |
+            appimages/**/*.AppImage
+            appimages/**/*.AppImage.zsync
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
