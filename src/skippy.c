@@ -3179,7 +3179,7 @@ int main(int argc, char *argv[]) {
 
 		{
 			char *buf[BUF_LEN];
-			while (read(ps->fd_pipe, buf, sizeof(buf)))
+			while (read(ps->fd_pipe, buf, sizeof(buf)) > 0)
 				continue;
 			printfdf(false, "(): Finished flushing pipe \"%s\".", pipePath);
 		}
