@@ -56,6 +56,26 @@ jobs:
             PREFIX=/usr \
             MANDIR=/usr/share/man/man1
 
+      - name: Bundle shared libraries
+        run: |
+          mkdir -p skippy-xd.AppDir/usr/lib
+          BIN=skippy-xd.AppDir/usr/bin/skippy-xd
+          # Libraries that must be provided by the host (glibc, C++ runtime,
+          # core X11/GL/driver stack). Everything else the binary links is
+          # copied in so the AppImage is self-contained across distros.
+          EXCLUDE='^(ld-linux.*|libc|libm|libdl|libpthread|librt|libresolv|libutil|libnsl|libstdc\+\+|libgcc_s|libGL|libGLX|libGLdispatch|libEGL|libOpenGL|libglapi|libdrm|libgbm|libX11|libX11-xcb|libxcb|libXau|libXdmcp|libxshmfence)$'
+          ldd "$BIN" | awk '/=> \//{print $3}' | sort -u | while read -r lib; do
+            soname=$(basename "$lib")
+            base=${soname%%.so*}
+            if printf '%s\n' "$base" | grep -qE "$EXCLUDE"; then
+              echo "skip (host)  $soname"
+              continue
+            fi
+            cp -Lv "$lib" skippy-xd.AppDir/usr/lib/
+          done
+          echo "--- bundled ---"
+          ls -1 skippy-xd.AppDir/usr/lib/
+
       - name: Create AppRun
         run: |
           cat > skippy-xd.AppDir/AppRun << 'APPRUN'
