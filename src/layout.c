@@ -230,6 +230,12 @@ safe_positive(float x)
 	return MAX(x, 1e-6);
 }
 
+static inline float
+clampf(float x, float low, float high)
+{
+	return MAX(low, MIN(high, x));
+}
+
 static float
 bodyWidth(ClientWin *cw, unsigned int *total_width)
 {
@@ -332,6 +338,191 @@ restorePositions(ClientWin **wins, int n, float *fx, float *fy)
 		wins[i]->fx = fx[i];
 		wins[i]->fy = fy[i];
 	}
+}
+
+static int
+scatterFind(int *parent, int i)
+{
+	while (parent[i] != i) {
+		parent[i] = parent[parent[i]];
+		i = parent[i];
+	}
+
+	return i;
+}
+
+static void
+scatterUnion(int *parent, int a, int b)
+{
+	int ra = scatterFind(parent, a);
+	int rb = scatterFind(parent, b);
+
+	if (ra != rb)
+		parent[rb] = ra;
+}
+
+/*
+ * Deterministic crowded-center scatter.
+ *
+ * This replaces repeated random pair nudges.
+ *
+ * Purpose:
+ *   - if several windows have nearly identical centers, their pairwise force
+ *     directions are degenerate;
+ *   - create a coherent 2D seed so expansion/contraction can infer meaningful
+ *     left/right, above/below, and diagonal relations.
+ *
+ * This version uses a rectangular 3x3-perimeter stencil instead of circular
+ * 8-way directions.
+ *
+ * Direction order:
+ *   corner pair, corner pair, horizontal pair, vertical pair
+ *
+ * This keeps prefixes balanced while making the seed more rectangular and
+ * window-layout-like.
+ */
+static int
+scatterCrowdedCenters(ClientWin **wins, int n,
+		unsigned int *total_width, unsigned int *total_height,
+		float center_threshold,
+		float min_strength,
+		float max_strength)
+{
+	if (n <= 1)
+		return 0;
+
+	static const float dirx[8] = {
+		-1.0,  1.0,  1.0, -1.0,
+		-1.0,  1.0,  0.0,  0.0
+	};
+
+	static const float diry[8] = {
+		-1.0,  1.0, -1.0,  1.0,
+		 0.0,  0.0, -1.0,  1.0
+	};
+
+	int *parent = calloc(n, sizeof(*parent));
+	float *offset_x = calloc(n, sizeof(*offset_x));
+	float *offset_y = calloc(n, sizeof(*offset_y));
+
+	for (int i = 0; i < n; i++)
+		parent[i] = i;
+
+	for (int i = 0; i < n; i++) {
+		float x1, y1;
+
+		bodyCenter(wins[i], &x1, &y1,
+				total_width, total_height);
+
+		for (int j = i + 1; j < n; j++) {
+			float x2, y2;
+
+			bodyCenter(wins[j], &x2, &y2,
+					total_width, total_height);
+
+			if (f_abs(x2 - x1) <= center_threshold
+					&& f_abs(y2 - y1) <= center_threshold)
+				scatterUnion(parent, i, j);
+		}
+	}
+
+	int groups_scattered = 0;
+
+	for (int root_candidate = 0; root_candidate < n; root_candidate++) {
+		int root = scatterFind(parent, root_candidate);
+
+		if (root != root_candidate)
+			continue;
+
+		int count = 0;
+
+		float avg_width = 0;
+		float avg_height = 0;
+
+		float min_cx = INFINITY;
+		float max_cx = -INFINITY;
+		float min_cy = INFINITY;
+		float max_cy = -INFINITY;
+
+		for (int i = 0; i < n; i++) {
+			if (scatterFind(parent, i) != root)
+				continue;
+
+			float cx, cy;
+
+			bodyCenter(wins[i], &cx, &cy,
+					total_width, total_height);
+
+			count++;
+
+			avg_width += bodyWidth(wins[i], total_width);
+			avg_height += bodyHeight(wins[i], total_height);
+
+			min_cx = MIN(min_cx, cx);
+			max_cx = MAX(max_cx, cx);
+			min_cy = MIN(min_cy, cy);
+			max_cy = MAX(max_cy, cy);
+		}
+
+		if (count <= 1)
+			continue;
+
+		avg_width /= count;
+		avg_height /= count;
+
+		float spread_x = max_cx - min_cx;
+		float spread_y = max_cy - min_cy;
+		float spread = MAX(spread_x, spread_y);
+
+		float degeneracy =
+			1.0 - clampf(spread / safe_positive(center_threshold),
+					0.0, 1.0);
+
+		float scatter_strength =
+			min_strength + degeneracy * (max_strength - min_strength);
+
+		float mean_offset_x = 0;
+		float mean_offset_y = 0;
+
+		int rank = 0;
+
+		for (int i = 0; i < n; i++) {
+			if (scatterFind(parent, i) != root)
+				continue;
+
+			int shell = rank / 8;
+			int dir = rank % 8;
+
+			float radius = scatter_strength * (float)(shell + 1);
+
+			offset_x[i] = radius * avg_width * dirx[dir];
+			offset_y[i] = radius * avg_height * diry[dir];
+
+			mean_offset_x += offset_x[i];
+			mean_offset_y += offset_y[i];
+
+			rank++;
+		}
+
+		mean_offset_x /= count;
+		mean_offset_y /= count;
+
+		for (int i = 0; i < n; i++) {
+			if (scatterFind(parent, i) != root)
+				continue;
+
+			wins[i]->fx += offset_x[i] - mean_offset_x;
+			wins[i]->fy += offset_y[i] - mean_offset_y;
+		}
+
+		groups_scattered++;
+	}
+
+	free(parent);
+	free(offset_x);
+	free(offset_y);
+
+	return groups_scattered;
 }
 
 typedef struct {
@@ -886,6 +1077,10 @@ layout_cosmos(MainWin *mw, dlist *windows,
 	const float relation_bias = 0.05;
 	const float closing_bias = 0.02;
 
+	const float scatter_center_threshold = 0.10;
+	const float scatter_min_strength = 0.10;
+	const float scatter_max_strength = 0.35;
+
 	const int progress_window = 32;
 	const int stable_windows_required = 2;
 	const int max_collapse_iterations = 2000;
@@ -957,56 +1152,18 @@ layout_cosmos(MainWin *mw, dlist *windows,
 
 	collectWindows(windows, wins);
 
-	// scatter windows with nearly identical centers
+	// scatter crowded centers into deterministic rectangular shell clouds
 	{
-		srand(0);
-
-		int iterations = -1;
-		bool colliding = true;
-
-		while (colliding && iterations <= 1000) {
-			colliding = false;
-
-			for (int i = 0; i < n; i++) {
-				for (int j = 0; j < n; j++) {
-					if (i == j)
-						continue;
-
-					float x1, y1, x2, y2;
-
-					bodyCenter(wins[i], &x1, &y1,
-							total_width, total_height);
-					bodyCenter(wins[j], &x2, &y2,
-							total_width, total_height);
-
-					float delta = 0.1;
-
-					if (f_abs(x2 - x1) <= delta
-							&& f_abs(y2 - y1) <= delta) {
-						colliding = true;
-
-						float randx =
-							(float)rand()
-							/ (float)(RAND_MAX / delta / 2)
-							- delta;
-
-						float randy =
-							(float)rand()
-							/ (float)(RAND_MAX / delta / 2)
-							- delta;
-
-						wins[i]->fx += randx;
-						wins[i]->fy += randy;
-					}
-				}
-			}
-
-			iterations++;
-		}
+		int groups_scattered =
+			scatterCrowdedCenters(wins, n,
+					total_width, total_height,
+					scatter_center_threshold,
+					scatter_min_strength,
+					scatter_max_strength);
 
 		printfdf(false,
-				"(): %d iterations to resolve identical COM",
-				iterations);
+				"(): scattered %d crowded center groups",
+				groups_scattered);
 		printfdf(false, "():");
 	}
 
