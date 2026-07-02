@@ -243,6 +243,12 @@ clampf(float x, float low, float high)
 	return MAX(low, MIN(high, x));
 }
 
+static inline int
+round_pixel(float x)
+{
+	return x < 0 ? (int) ceil(x - 0.5) : (int) floor(x + 0.5);
+}
+
 static float
 body_width(ClientWin *cw, unsigned int *total_width)
 {
@@ -1257,8 +1263,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 		foreach_dlist (dlist_first(windows)) {
 			ClientWin *cw = iter->data;
 
-			cw->x = (float) cw->fx * (float) *total_width;
-			cw->y = (float) cw->fy * (float) *total_height;
+			cw->x = round_pixel(cw->fx * (float) *total_width);
+			cw->y = round_pixel(cw->fy * (float) *total_height);
 
 			minx = MIN(minx, cw->x);
 			maxx = MAX(maxx, cw->x + cw->src.width);
