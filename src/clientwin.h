@@ -60,12 +60,19 @@ struct _clientwin_t {
 	bool zombie;
 	wintype_t paneltype;
 	/* XserverRegion repair; */
-	
+
 	/* These are virtual positions set by the layout routine */
 	int x, y;
 	float fx, fy, fx2, fy2, vx, vy;
+
+	/* Scratch state used by the cosmos layout routine */
+	float best_fx, best_fy;
+	float layout_x, layout_y;
+	int layout_index;
+	struct _clientwin_t *layout_parent;
+
 	struct _Tooltip *tooltip;
-    int slots;
+	int slots;
 };
 
 #define CLIENTWT_INIT { \

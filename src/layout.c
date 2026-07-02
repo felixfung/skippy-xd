@@ -188,24 +188,31 @@ layout_xd(MainWin *mw, dlist *windows,
 #include <stdbool.h>
 #include <stdlib.h>
 
+typedef struct {
+	ClientWin *before;
+	ClientWin *after;
+	float gap;
+	float lambda;
+} SepConstraint;
+
 float
 intersectArea(ClientWin *cw1, ClientWin *cw2,
 		unsigned int *total_width, unsigned int *total_height)
 {
 	int dis = cw1->mainwin->distance / 2;
 
-	float disx = (float)dis / (float)*total_width;
-	float disy = (float)dis / (float)*total_height;
+	float disx = (float) dis / (float) *total_width;
+	float disy = (float) dis / (float) *total_height;
 
 	float x1 = cw1->fx - disx;
 	float y1 = cw1->fy - disy;
-	float w1 = (float)cw1->src.width / (float)*total_width + 2 * disx;
-	float h1 = (float)cw1->src.height / (float)*total_height + 2 * disy;
+	float w1 = (float) cw1->src.width / (float) *total_width + 2 * disx;
+	float h1 = (float) cw1->src.height / (float) *total_height + 2 * disy;
 
 	float x2 = cw2->fx - disx;
 	float y2 = cw2->fy - disy;
-	float w2 = (float)cw2->src.width / (float)*total_width + 2 * disx;
-	float h2 = (float)cw2->src.height / (float)*total_height + 2 * disy;
+	float w2 = (float) cw2->src.width / (float) *total_width + 2 * disx;
+	float h2 = (float) cw2->src.height / (float) *total_height + 2 * disy;
 
 	float left = MAX(x1, x2);
 	float top = MAX(y1, y2);
@@ -237,52 +244,52 @@ clampf(float x, float low, float high)
 }
 
 static float
-bodyWidth(ClientWin *cw, unsigned int *total_width)
+body_width(ClientWin *cw, unsigned int *total_width)
 {
-	return (float)cw->src.width / (float)*total_width;
+	return (float) cw->src.width / (float) *total_width;
 }
 
 static float
-bodyHeight(ClientWin *cw, unsigned int *total_height)
+body_height(ClientWin *cw, unsigned int *total_height)
 {
-	return (float)cw->src.height / (float)*total_height;
+	return (float) cw->src.height / (float) *total_height;
 }
 
 static float
-bodyMass(ClientWin *cw,
+body_mass(ClientWin *cw,
 		unsigned int *total_width, unsigned int *total_height)
 {
-	float m = (float)cw->src.width * (float)cw->src.height
-		/ (float)*total_width / (float)*total_height;
+	float m = (float) cw->src.width * (float) cw->src.height
+		/ (float) *total_width / (float) *total_height;
 
 	return safe_positive(m);
 }
 
 static void
-bodyCenter(ClientWin *cw, float *x, float *y,
+body_center(ClientWin *cw, float *x, float *y,
 		unsigned int *total_width, unsigned int *total_height)
 {
-	*x = cw->fx + bodyWidth(cw, total_width) / 2.0;
-	*y = cw->fy + bodyHeight(cw, total_height) / 2.0;
+	*x = cw->fx + body_width(cw, total_width) / 2.0;
+	*y = cw->fy + body_height(cw, total_height) / 2.0;
 }
 
 static void
-bodyCenterAt(ClientWin *cw, float fx, float fy,
+body_center_at(ClientWin *cw, float fx, float fy,
 		float *x, float *y,
 		unsigned int *total_width, unsigned int *total_height)
 {
-	*x = fx + bodyWidth(cw, total_width) / 2.0;
-	*y = fy + bodyHeight(cw, total_height) / 2.0;
+	*x = fx + body_width(cw, total_width) / 2.0;
+	*y = fy + body_height(cw, total_height) / 2.0;
 }
 
 static void
-paddedRect(ClientWin *cw,
+padded_rect(ClientWin *cw,
 		unsigned int *total_width, unsigned int *total_height,
 		float gapx, float gapy,
 		float *left, float *top, float *right, float *bottom)
 {
-	float w = bodyWidth(cw, total_width);
-	float h = bodyHeight(cw, total_height);
+	float w = body_width(cw, total_width);
+	float h = body_height(cw, total_height);
 
 	*left = cw->fx - gapx / 2.0;
 	*right = cw->fx + w + gapx / 2.0;
@@ -291,7 +298,7 @@ paddedRect(ClientWin *cw,
 }
 
 static inline void
-unitAttraction(float dx, float dy, float *ux, float *uy)
+unit_attraction(float dx, float dy, float *ux, float *uy)
 {
 	const float soft = 0.05;
 
@@ -302,63 +309,25 @@ unitAttraction(float dx, float dy, float *ux, float *uy)
 	*uy = dy / dist;
 }
 
-static int
-countWindows(dlist *windows)
+static ClientWin *
+scatter_find(ClientWin *cw)
 {
-	int n = 0;
-
-	foreach_dlist (dlist_first(windows))
-		n++;
-
-	return n;
-}
-
-static void
-collectWindows(dlist *windows, ClientWin **wins)
-{
-	int i = 0;
-
-	foreach_dlist (dlist_first(windows))
-		wins[i++] = iter->data;
-}
-
-static void
-savePositions(ClientWin **wins, int n, float *fx, float *fy)
-{
-	for (int i = 0; i < n; i++) {
-		fx[i] = wins[i]->fx;
-		fy[i] = wins[i]->fy;
-	}
-}
-
-static void
-restorePositions(ClientWin **wins, int n, float *fx, float *fy)
-{
-	for (int i = 0; i < n; i++) {
-		wins[i]->fx = fx[i];
-		wins[i]->fy = fy[i];
-	}
-}
-
-static int
-scatterFind(int *parent, int i)
-{
-	while (parent[i] != i) {
-		parent[i] = parent[parent[i]];
-		i = parent[i];
+	while (cw->layout_parent != cw) {
+		cw->layout_parent = cw->layout_parent->layout_parent;
+		cw = cw->layout_parent;
 	}
 
-	return i;
+	return cw;
 }
 
 static void
-scatterUnion(int *parent, int a, int b)
+scatter_union(ClientWin *a, ClientWin *b)
 {
-	int ra = scatterFind(parent, a);
-	int rb = scatterFind(parent, b);
+	ClientWin *ra = scatter_find(a);
+	ClientWin *rb = scatter_find(b);
 
 	if (ra != rb)
-		parent[rb] = ra;
+		rb->layout_parent = ra;
 }
 
 /*
@@ -381,16 +350,13 @@ scatterUnion(int *parent, int a, int b)
  * This keeps prefixes balanced while making the seed more rectangular and
  * window-layout-like.
  */
-static int
-scatterCrowdedCenters(ClientWin **wins, int n,
+static void
+scatter_crowded_centers(dlist *windows,
 		unsigned int *total_width, unsigned int *total_height,
 		float center_threshold,
 		float min_strength,
 		float max_strength)
 {
-	if (n <= 1)
-		return 0;
-
 	static const float dirx[8] = {
 		-1.0,  1.0,  1.0, -1.0,
 		-1.0,  1.0,  0.0,  0.0
@@ -401,41 +367,43 @@ scatterCrowdedCenters(ClientWin **wins, int n,
 		 0.0,  0.0, -1.0,  1.0
 	};
 
-	int *parent = calloc(n, sizeof(*parent));
-	float *offset_x = calloc(n, sizeof(*offset_x));
-	float *offset_y = calloc(n, sizeof(*offset_y));
+	if (dlist_len(windows) <= 1)
+		return;
 
-	for (int i = 0; i < n; i++)
-		parent[i] = i;
+	foreach_dlist (dlist_first(windows)) {
+		ClientWin *cw = iter->data;
+		cw->layout_parent = cw;
+		cw->layout_x = 0;
+		cw->layout_y = 0;
+	}
 
-	for (int i = 0; i < n; i++) {
+	for (dlist *iter = dlist_first(windows); iter; iter = iter->next) {
+		ClientWin *cw1 = iter->data;
 		float x1, y1;
 
-		bodyCenter(wins[i], &x1, &y1,
-				total_width, total_height);
+		body_center(cw1, &x1, &y1, total_width, total_height);
 
-		for (int j = i + 1; j < n; j++) {
+		for (dlist *jter = iter->next; jter; jter = jter->next) {
+			ClientWin *cw2 = jter->data;
 			float x2, y2;
 
-			bodyCenter(wins[j], &x2, &y2,
-					total_width, total_height);
+			body_center(cw2, &x2, &y2, total_width, total_height);
 
 			if (f_abs(x2 - x1) <= center_threshold
 					&& f_abs(y2 - y1) <= center_threshold)
-				scatterUnion(parent, i, j);
+				scatter_union(cw1, cw2);
 		}
 	}
 
-	int groups_scattered = 0;
 
-	for (int root_candidate = 0; root_candidate < n; root_candidate++) {
-		int root = scatterFind(parent, root_candidate);
+	foreach_dlist (dlist_first(windows)) {
+		ClientWin *root_candidate = iter->data;
+		ClientWin *root = scatter_find(root_candidate);
 
 		if (root != root_candidate)
 			continue;
 
 		int count = 0;
-
 		float avg_width = 0;
 		float avg_height = 0;
 
@@ -444,20 +412,18 @@ scatterCrowdedCenters(ClientWin **wins, int n,
 		float min_cy = INFINITY;
 		float max_cy = -INFINITY;
 
-		for (int i = 0; i < n; i++) {
-			if (scatterFind(parent, i) != root)
-				continue;
-
+		foreach_dlist_vn (jter, dlist_first(windows)) {
+			ClientWin *cw = jter->data;
 			float cx, cy;
 
-			bodyCenter(wins[i], &cx, &cy,
-					total_width, total_height);
+			if (scatter_find(cw) != root)
+				continue;
+
+			body_center(cw, &cx, &cy, total_width, total_height);
 
 			count++;
-
-			avg_width += bodyWidth(wins[i], total_width);
-			avg_height += bodyHeight(wins[i], total_height);
-
+			avg_width += body_width(cw, total_width);
+			avg_height += body_height(cw, total_height);
 			min_cx = MIN(min_cx, cx);
 			max_cx = MAX(max_cx, cx);
 			min_cy = MIN(min_cy, cy);
@@ -483,23 +449,23 @@ scatterCrowdedCenters(ClientWin **wins, int n,
 
 		float mean_offset_x = 0;
 		float mean_offset_y = 0;
-
 		int rank = 0;
 
-		for (int i = 0; i < n; i++) {
-			if (scatterFind(parent, i) != root)
+		foreach_dlist_vn (jter, dlist_first(windows)) {
+			ClientWin *cw = jter->data;
+
+			if (scatter_find(cw) != root)
 				continue;
 
 			int shell = rank / 8;
 			int dir = rank % 8;
+			float radius = scatter_strength * (float) (shell + 1);
 
-			float radius = scatter_strength * (float)(shell + 1);
+			cw->layout_x = radius * avg_width * dirx[dir];
+			cw->layout_y = radius * avg_height * diry[dir];
 
-			offset_x[i] = radius * avg_width * dirx[dir];
-			offset_y[i] = radius * avg_height * diry[dir];
-
-			mean_offset_x += offset_x[i];
-			mean_offset_y += offset_y[i];
+			mean_offset_x += cw->layout_x;
+			mean_offset_y += cw->layout_y;
 
 			rank++;
 		}
@@ -507,58 +473,45 @@ scatterCrowdedCenters(ClientWin **wins, int n,
 		mean_offset_x /= count;
 		mean_offset_y /= count;
 
-		for (int i = 0; i < n; i++) {
-			if (scatterFind(parent, i) != root)
+		foreach_dlist_vn (jter, dlist_first(windows)) {
+			ClientWin *cw = jter->data;
+
+			if (scatter_find(cw) != root)
 				continue;
 
-			wins[i]->fx += offset_x[i] - mean_offset_x;
-			wins[i]->fy += offset_y[i] - mean_offset_y;
+			cw->fx += cw->layout_x - mean_offset_x;
+			cw->fy += cw->layout_y - mean_offset_y;
 		}
 
-		groups_scattered++;
 	}
-
-	free(parent);
-	free(offset_x);
-	free(offset_y);
-
-	return groups_scattered;
 }
 
-typedef struct {
-	int before;
-	int after;
-	float gap;
-} SepConstraint;
-
 static bool
-chooseHorizontalConstraint(ClientWin **wins,
-		int i, int j,
-		float *old_fx, float *old_fy,
+choose_horizontal_constraint(ClientWin *cw1, ClientWin *cw2,
 		unsigned int *total_width, unsigned int *total_height,
 		float gapx, float gapy,
-		float overlapXpx, float overlapYpx,
+		float overlap_x_px, float overlap_y_px,
 		float relation_bias,
 		float closing_bias)
 {
 	float cx1, cy1, cx2, cy2;
 	float old_cx1, old_cy1, old_cx2, old_cy2;
 
-	bodyCenter(wins[i], &cx1, &cy1, total_width, total_height);
-	bodyCenter(wins[j], &cx2, &cy2, total_width, total_height);
+	body_center(cw1, &cx1, &cy1, total_width, total_height);
+	body_center(cw2, &cx2, &cy2, total_width, total_height);
 
-	bodyCenterAt(wins[i], old_fx[i], old_fy[i],
+	body_center_at(cw1, cw1->fx2, cw1->fy2,
 			&old_cx1, &old_cy1, total_width, total_height);
-	bodyCenterAt(wins[j], old_fx[j], old_fy[j],
+	body_center_at(cw2, cw2->fx2, cw2->fy2,
 			&old_cx2, &old_cy2, total_width, total_height);
 
 	float required_x =
-		(bodyWidth(wins[i], total_width)
-		 + bodyWidth(wins[j], total_width)) / 2.0 + gapx;
+		(body_width(cw1, total_width)
+		 + body_width(cw2, total_width)) / 2.0 + gapx;
 
 	float required_y =
-		(bodyHeight(wins[i], total_height)
-		 + bodyHeight(wins[j], total_height)) / 2.0 + gapy;
+		(body_height(cw1, total_height)
+		 + body_height(cw2, total_height)) / 2.0 + gapy;
 
 	required_x = safe_positive(required_x);
 	required_y = safe_positive(required_y);
@@ -586,40 +539,66 @@ chooseHorizontalConstraint(ClientWin **wins,
 	if (closing_y > closing_x + closing_bias)
 		return false;
 
-	if (overlapXpx < overlapYpx)
+	if (overlap_x_px < overlap_y_px)
 		return true;
 
-	if (overlapYpx < overlapXpx)
+	if (overlap_y_px < overlap_x_px)
 		return false;
 
-	return ((i + j) & 1) == 0;
+	return (((int) cw1->layout_index + (int) cw2->layout_index) & 1) == 0;
+}
+
+static dlist *
+add_separation_constraint(dlist *constraints,
+		ClientWin *before, ClientWin *after, float gap)
+{
+	SepConstraint *c = calloc(1, sizeof(*c));
+
+	c->before = before;
+	c->after = after;
+	c->gap = MAX(gap, 0);
+
+	return dlist_add(constraints, c);
 }
 
 static void
-buildSeparationConstraints(ClientWin **wins, int n,
-		float *old_fx, float *old_fy,
-		SepConstraint *xcons, int *xcount,
-		SepConstraint *ycons, int *ycount,
+free_constraint_list(dlist *constraints)
+{
+	if (!constraints)
+		return;
+
+	foreach_dlist (dlist_first(constraints))
+		free(iter->data);
+
+	dlist_free(constraints);
+}
+
+static void
+build_separation_constraints(dlist *windows,
+		dlist **xcons, dlist **ycons,
 		unsigned int *total_width, unsigned int *total_height,
 		float gapx, float gapy,
 		float slop_px, float corner_slop_px,
 		float relation_bias,
 		float closing_bias)
 {
-	*xcount = 0;
-	*ycount = 0;
+	*xcons = NULL;
+	*ycons = NULL;
 
-	float slopx = slop_px / (float)*total_width;
-	float slopy = slop_px / (float)*total_height;
+	float slopx = slop_px / (float) *total_width;
+	float slopy = slop_px / (float) *total_height;
 
-	for (int i = 0; i < n; i++) {
-		for (int j = i + 1; j < n; j++) {
+	for (dlist *iter = dlist_first(windows); iter; iter = iter->next) {
+		ClientWin *cw1 = iter->data;
+
+		for (dlist *jter = iter->next; jter; jter = jter->next) {
+			ClientWin *cw2 = jter->data;
 			float l1, t1, r1, b1;
 			float l2, t2, r2, b2;
 
-			paddedRect(wins[i], total_width, total_height,
+			padded_rect(cw1, total_width, total_height,
 					gapx, gapy, &l1, &t1, &r1, &b1);
-			paddedRect(wins[j], total_width, total_height,
+			padded_rect(cw2, total_width, total_height,
 					gapx, gapy, &l2, &t2, &r2, &b2);
 
 			float overlap_x = MIN(r1, r2) - MAX(l1, l2);
@@ -628,8 +607,8 @@ buildSeparationConstraints(ClientWin **wins, int n,
 			if (overlap_x <= 0 || overlap_y <= 0)
 				continue;
 
-			float overlap_x_px = overlap_x * (float)*total_width;
-			float overlap_y_px = overlap_y * (float)*total_height;
+			float overlap_x_px = overlap_x * (float) *total_width;
+			float overlap_y_px = overlap_y * (float) *total_height;
 
 			if (corner_slop_px > 0
 					&& overlap_x_px <= corner_slop_px
@@ -638,15 +617,11 @@ buildSeparationConstraints(ClientWin **wins, int n,
 
 			float cx1, cy1, cx2, cy2;
 
-			bodyCenter(wins[i], &cx1, &cy1,
-					total_width, total_height);
-			bodyCenter(wins[j], &cx2, &cy2,
-					total_width, total_height);
+			body_center(cw1, &cx1, &cy1, total_width, total_height);
+			body_center(cw2, &cx2, &cy2, total_width, total_height);
 
 			bool horizontal =
-				chooseHorizontalConstraint(wins,
-						i, j,
-						old_fx, old_fy,
+				choose_horizontal_constraint(cw1, cw2,
 						total_width, total_height,
 						gapx, gapy,
 						overlap_x_px, overlap_y_px,
@@ -657,87 +632,79 @@ buildSeparationConstraints(ClientWin **wins, int n,
 				if (overlap_x_px <= slop_px)
 					continue;
 
-				SepConstraint *c = &xcons[(*xcount)++];
-
-				if (cx2 > cx1 || (cx2 == cx1 && j > i)) {
-					c->before = i;
-					c->after = j;
-					c->gap = bodyWidth(wins[i], total_width)
-						+ gapx - slopx;
-				} else {
-					c->before = j;
-					c->after = i;
-					c->gap = bodyWidth(wins[j], total_width)
-						+ gapx - slopx;
+				if (cx2 > cx1 || (cx2 == cx1
+							&& cw2->layout_index > cw1->layout_index)) {
+					*xcons = add_separation_constraint(*xcons,
+							cw1, cw2,
+							body_width(cw1, total_width) + gapx - slopx);
 				}
-
-				c->gap = MAX(c->gap, 0);
-			} else {
+				else {
+					*xcons = add_separation_constraint(*xcons,
+							cw2, cw1,
+							body_width(cw2, total_width) + gapx - slopx);
+				}
+			}
+			else {
 				if (overlap_y_px <= slop_px)
 					continue;
 
-				SepConstraint *c = &ycons[(*ycount)++];
-
-				if (cy2 > cy1 || (cy2 == cy1 && j > i)) {
-					c->before = i;
-					c->after = j;
-					c->gap = bodyHeight(wins[i], total_height)
-						+ gapy - slopy;
-				} else {
-					c->before = j;
-					c->after = i;
-					c->gap = bodyHeight(wins[j], total_height)
-						+ gapy - slopy;
+				if (cy2 > cy1 || (cy2 == cy1
+							&& cw2->layout_index > cw1->layout_index)) {
+					*ycons = add_separation_constraint(*ycons,
+							cw1, cw2,
+							body_height(cw1, total_height) + gapy - slopy);
 				}
-
-				c->gap = MAX(c->gap, 0);
+				else {
+					*ycons = add_separation_constraint(*ycons,
+							cw2, cw1,
+							body_height(cw2, total_height) + gapy - slopy);
+				}
 			}
 		}
 	}
 }
 
 static float
-solveAxisConstraints(ClientWin **wins, int n,
-		SepConstraint *cons, int count,
+solve_axis_constraints(dlist *windows, dlist *constraints,
 		unsigned int *total_width, unsigned int *total_height,
 		bool solve_x,
-		float *desired,
-		float *position,
-		float *lambda,
 		int max_iterations,
 		float tolerance)
 {
-	if (count <= 0)
+	if (!constraints)
 		return 0;
 
-	for (int i = 0; i < n; i++)
-		position[i] = desired[i];
+	foreach_dlist (dlist_first(windows)) {
+		ClientWin *cw = iter->data;
 
-	for (int i = 0; i < count; i++)
-		lambda[i] = 0;
+		if (solve_x)
+			cw->fx = cw->vx;
+		else
+			cw->fy = cw->vy;
+	}
 
 	float max_violation = 0;
 
-	for (int iter = 0; iter < max_iterations; iter++) {
+	for (int i = 0; i < max_iterations; i++) {
 		max_violation = 0;
 
-		for (int ci = 0; ci < count; ci++) {
-			SepConstraint *c = &cons[ci];
-
-			int before = c->before;
-			int after = c->after;
+		foreach_dlist (dlist_first(constraints)) {
+			SepConstraint *c = iter->data;
+			ClientWin *before = c->before;
+			ClientWin *after = c->after;
 
 			float before_weight =
-				bodyMass(wins[before], total_width, total_height);
+				body_mass(before, total_width, total_height);
 			float after_weight =
-				bodyMass(wins[after], total_width, total_height);
+				body_mass(after, total_width, total_height);
 
 			float before_inv_weight = 1.0 / before_weight;
 			float after_inv_weight = 1.0 / after_weight;
 
-			float value =
-				position[after] - position[before] - c->gap;
+			float before_pos = solve_x ? before->fx : before->fy;
+			float after_pos = solve_x ? after->fx : after->fy;
 
+			float value = after_pos - before_pos - c->gap;
 			float violation = -value;
 
 			if (violation > max_violation)
@@ -748,52 +715,54 @@ solveAxisConstraints(ClientWin **wins, int n,
 			if (denom <= 0)
 				continue;
 
-			float new_lambda = lambda[ci] + violation / denom;
+			float new_lambda = c->lambda + violation / denom;
 
 			if (new_lambda < 0)
 				new_lambda = 0;
 
-			float delta = new_lambda - lambda[ci];
+			float delta = new_lambda - c->lambda;
 
 			if (delta == 0)
 				continue;
 
-			lambda[ci] = new_lambda;
+			c->lambda = new_lambda;
 
-			position[before] -= delta * before_inv_weight;
-			position[after] += delta * after_inv_weight;
+			if (solve_x) {
+				before->fx -= delta * before_inv_weight;
+				after->fx += delta * after_inv_weight;
+			}
+			else {
+				before->fy -= delta * before_inv_weight;
+				after->fy += delta * after_inv_weight;
+			}
 		}
 
 		if (max_violation <= tolerance)
 			break;
 	}
 
-	for (int i = 0; i < n; i++) {
-		if (solve_x)
-			wins[i]->fx = position[i];
-		else
-			wins[i]->fy = position[i];
-	}
-
 	return max_violation;
 }
 
 static float
-maxResidualPenetrationPx(ClientWin **wins, int n,
+max_residual_penetration_px(dlist *windows,
 		unsigned int *total_width, unsigned int *total_height,
 		float gapx, float gapy,
 		float slop_px, float corner_slop_px)
 {
 	float max_residual = 0;
 
-	for (int i = 0; i < n; i++) {
-		for (int j = i + 1; j < n; j++) {
+	for (dlist *iter = dlist_first(windows); iter; iter = iter->next) {
+		ClientWin *cw1 = iter->data;
+
+		for (dlist *jter = iter->next; jter; jter = jter->next) {
+			ClientWin *cw2 = jter->data;
 			float l1, t1, r1, b1;
 			float l2, t2, r2, b2;
 
-			paddedRect(wins[i], total_width, total_height,
+			padded_rect(cw1, total_width, total_height,
 					gapx, gapy, &l1, &t1, &r1, &b1);
-			paddedRect(wins[j], total_width, total_height,
+			padded_rect(cw2, total_width, total_height,
 					gapx, gapy, &l2, &t2, &r2, &b2);
 
 			float overlap_x = MIN(r1, r2) - MAX(l1, l2);
@@ -802,8 +771,8 @@ maxResidualPenetrationPx(ClientWin **wins, int n,
 			if (overlap_x <= 0 || overlap_y <= 0)
 				continue;
 
-			float overlap_x_px = overlap_x * (float)*total_width;
-			float overlap_y_px = overlap_y * (float)*total_height;
+			float overlap_x_px = overlap_x * (float) *total_width;
+			float overlap_y_px = overlap_y * (float) *total_height;
 
 			if (corner_slop_px > 0
 					&& overlap_x_px <= corner_slop_px
@@ -821,82 +790,68 @@ maxResidualPenetrationPx(ClientWin **wins, int n,
 }
 
 static float
-resolveSeparationConstraints(ClientWin **wins, int n,
-		float *old_fx, float *old_fy,
-		SepConstraint *xcons, SepConstraint *ycons,
+resolve_separation_constraints(dlist *windows,
 		unsigned int *total_width, unsigned int *total_height,
 		float gapx, float gapy,
 		int passes,
 		float slop_px, float corner_slop_px,
 		float relation_bias,
 		float closing_bias,
-		float target_residual_px,
-		float *desired_x,
-		float *desired_y,
-		float *axis_position,
-		float *lambda)
+		float target_residual_px)
 {
-	for (int i = 0; i < n; i++) {
-		desired_x[i] = wins[i]->fx;
-		desired_y[i] = wins[i]->fy;
+	foreach_dlist (dlist_first(windows)) {
+		ClientWin *cw = iter->data;
+		cw->vx = cw->fx;
+		cw->vy = cw->fy;
 	}
 
 	float residual =
-		maxResidualPenetrationPx(wins, n,
+		max_residual_penetration_px(windows,
 				total_width, total_height,
 				gapx, gapy,
 				slop_px, corner_slop_px);
 
-	float tolerance_x = 0.001 / (float)*total_width;
-	float tolerance_y = 0.001 / (float)*total_height;
+	float tolerance_x = 0.001 / (float) *total_width;
+	float tolerance_y = 0.001 / (float) *total_height;
 
-	int solver_iterations = 64 + 16 * n;
+	int solver_iterations = 64 + 16 * dlist_len(windows);
 
 	for (int pass = 0; pass < passes; pass++) {
 		if (residual <= target_residual_px)
 			break;
 
-		int xcount = 0;
-		int ycount = 0;
+		dlist *xcons = NULL;
+		dlist *ycons = NULL;
 
-		buildSeparationConstraints(wins, n,
-				old_fx, old_fy,
-				xcons, &xcount,
-				ycons, &ycount,
+		build_separation_constraints(windows,
+				&xcons, &ycons,
 				total_width, total_height,
 				gapx, gapy,
 				slop_px, corner_slop_px,
 				relation_bias, closing_bias);
 
-		if (xcount == 0 && ycount == 0)
+		if (!xcons && !ycons)
 			break;
 
-		if (xcount > 0) {
-			solveAxisConstraints(wins, n,
-					xcons, xcount,
+		if (xcons)
+			solve_axis_constraints(windows, xcons,
 					total_width, total_height,
 					true,
-					desired_x,
-					axis_position,
-					lambda,
 					solver_iterations,
 					tolerance_x);
-		}
 
-		if (ycount > 0) {
-			solveAxisConstraints(wins, n,
-					ycons, ycount,
+		if (ycons)
+			solve_axis_constraints(windows, ycons,
 					total_width, total_height,
 					false,
-					desired_y,
-					axis_position,
-					lambda,
 					solver_iterations,
 					tolerance_y);
-		}
+
+		free_constraint_list(xcons);
+		free_constraint_list(ycons);
 
 		float next_residual =
-			maxResidualPenetrationPx(wins, n,
+			max_residual_penetration_px(windows,
 					total_width, total_height,
 					gapx, gapy,
 					slop_px, corner_slop_px);
@@ -912,29 +867,30 @@ resolveSeparationConstraints(ClientWin **wins, int n,
 }
 
 static float
-layoutCompactness(ClientWin **wins, int n,
+layout_compactness(dlist *windows,
 		unsigned int *total_width, unsigned int *total_height,
 		float aratio)
 {
 	float energy = 0;
 	float weight = 0;
 
-	for (int i = 0; i < n; i++) {
-		for (int j = i + 1; j < n; j++) {
+	for (dlist *iter = dlist_first(windows); iter; iter = iter->next) {
+		ClientWin *cw1 = iter->data;
+
+		for (dlist *jter = iter->next; jter; jter = jter->next) {
+			ClientWin *cw2 = jter->data;
 			float x1, y1, x2, y2;
 
-			bodyCenter(wins[i], &x1, &y1,
-					total_width, total_height);
-			bodyCenter(wins[j], &x2, &y2,
-					total_width, total_height);
+			body_center(cw1, &x1, &y1, total_width, total_height);
+			body_center(cw2, &x2, &y2, total_width, total_height);
 
 			float dx = x2 - x1;
 			float dy = (y2 - y1) / aratio;
 
 			float dist = sqrt(dx * dx + dy * dy + 1e-8);
 
-			float m1 = bodyMass(wins[i], total_width, total_height);
-			float m2 = bodyMass(wins[j], total_width, total_height);
+			float m1 = body_mass(cw1, total_width, total_height);
+			float m2 = body_mass(cw2, total_width, total_height);
 			float w = m1 * m2;
 
 			energy += w * dist;
@@ -949,116 +905,152 @@ layoutCompactness(ClientWin **wins, int n,
 }
 
 static void
-applyPositionStep(ClientWin **wins, int n,
-		float *step_x, float *step_y,
-		float max_position_step)
+apply_position_step(dlist *windows, float max_position_step)
 {
-	for (int i = 0; i < n; i++) {
-		float len = sqrt(step_x[i] * step_x[i]
-				+ step_y[i] * step_y[i]);
+	foreach_dlist (dlist_first(windows)) {
+		ClientWin *cw = iter->data;
+		float len = sqrt(cw->vx * cw->vx + cw->vy * cw->vy);
 
 		if (len > max_position_step && len > 0) {
-			step_x[i] *= max_position_step / len;
-			step_y[i] *= max_position_step / len;
+			cw->vx *= max_position_step / len;
+			cw->vy *= max_position_step / len;
 		}
 
-		wins[i]->fx += step_x[i];
-		wins[i]->fy += step_y[i];
+		cw->fx += cw->vx;
+		cw->fy += cw->vy;
 	}
 }
 
 static void
-applyAttractionStep(ClientWin **wins, int n,
+apply_attraction_step(dlist *windows,
 		unsigned int *total_width, unsigned int *total_height,
 		float aratio,
 		float attraction_step,
-		float max_position_step,
-		float *step_x, float *step_y)
+		float max_position_step)
 {
-	for (int i = 0; i < n; i++) {
-		step_x[i] = 0;
-		step_y[i] = 0;
+	foreach_dlist (dlist_first(windows)) {
+		ClientWin *cw = iter->data;
+		cw->vx = 0;
+		cw->vy = 0;
 	}
 
-	for (int i = 0; i < n; i++) {
-		for (int j = 0; j < n; j++) {
-			if (i == j)
-				continue;
+	for (dlist *iter = dlist_first(windows); iter; iter = iter->next) {
+		ClientWin *cw1 = iter->data;
 
+		for (dlist *jter = dlist_first(windows); jter; jter = jter->next) {
+			ClientWin *cw2 = jter->data;
 			float x1, y1, x2, y2;
 			float ux, uy;
 
-			bodyCenter(wins[i], &x1, &y1,
-					total_width, total_height);
-			bodyCenter(wins[j], &x2, &y2,
-					total_width, total_height);
+			if (cw1 == cw2)
+				continue;
 
-			unitAttraction(x2 - x1, y2 - y1, &ux, &uy);
+			body_center(cw1, &x1, &y1, total_width, total_height);
+			body_center(cw2, &x2, &y2, total_width, total_height);
 
-			float m = bodyMass(wins[j],
-					total_width, total_height);
+			unit_attraction(x2 - x1, y2 - y1, &ux, &uy);
 
-			step_x[i] += attraction_step * m * ux;
-			step_y[i] += attraction_step * m * uy / aratio;
+			float m = body_mass(cw2, total_width, total_height);
+
+			cw1->vx += attraction_step * m * ux;
+			cw1->vy += attraction_step * m * uy / aratio;
 		}
 	}
 
-	applyPositionStep(wins, n, step_x, step_y, max_position_step);
+	apply_position_step(windows, max_position_step);
 }
 
 static void
-applyRepulsionStep(ClientWin **wins, int n,
+apply_repulsion_step(dlist *windows,
 		unsigned int *total_width, unsigned int *total_height,
 		float aratio,
 		float repulsion_step,
-		float max_position_step,
-		float *step_x, float *step_y)
+		float max_position_step)
 {
-	for (int i = 0; i < n; i++) {
-		step_x[i] = 0;
-		step_y[i] = 0;
+	foreach_dlist (dlist_first(windows)) {
+		ClientWin *cw = iter->data;
+		cw->vx = 0;
+		cw->vy = 0;
 	}
 
-	for (int i = 0; i < n; i++) {
-		for (int j = 0; j < n; j++) {
-			if (i == j)
-				continue;
+	for (dlist *iter = dlist_first(windows); iter; iter = iter->next) {
+		ClientWin *cw1 = iter->data;
 
-			if (intersectArea(wins[i], wins[j],
-						total_width, total_height) <= 0)
-				continue;
-
+		for (dlist *jter = dlist_first(windows); jter; jter = jter->next) {
+			ClientWin *cw2 = jter->data;
 			float x1, y1, x2, y2;
 			float ux, uy;
 
-			bodyCenter(wins[i], &x1, &y1,
-					total_width, total_height);
-			bodyCenter(wins[j], &x2, &y2,
-					total_width, total_height);
+			if (cw1 == cw2)
+				continue;
 
-			unitAttraction(x2 - x1, y2 - y1, &ux, &uy);
+			if (intersectArea(cw1, cw2,
+						total_width, total_height) <= 0)
+				continue;
 
-			float m = bodyMass(wins[j],
-					total_width, total_height);
+			body_center(cw1, &x1, &y1, total_width, total_height);
+			body_center(cw2, &x2, &y2, total_width, total_height);
 
-			step_x[i] -= repulsion_step * m * ux;
-			step_y[i] -= repulsion_step * m * uy / aratio;
+			unit_attraction(x2 - x1, y2 - y1, &ux, &uy);
+
+			float m = body_mass(cw2, total_width, total_height);
+
+			cw1->vx -= repulsion_step * m * ux;
+			cw1->vy -= repulsion_step * m * uy / aratio;
 		}
 	}
 
-	applyPositionStep(wins, n, step_x, step_y, max_position_step);
+	apply_position_step(windows, max_position_step);
+}
+
+static void
+save_positions(dlist *windows)
+{
+	foreach_dlist (dlist_first(windows)) {
+		ClientWin *cw = iter->data;
+		cw->fx2 = cw->fx;
+		cw->fy2 = cw->fy;
+	}
+}
+
+static void
+save_best_positions(dlist *windows)
+{
+	foreach_dlist (dlist_first(windows)) {
+		ClientWin *cw = iter->data;
+		cw->best_fx = cw->fx;
+		cw->best_fy = cw->fy;
+	}
+}
+
+static void
+restore_best_positions(dlist *windows)
+{
+	foreach_dlist (dlist_first(windows)) {
+		ClientWin *cw = iter->data;
+		cw->fx = cw->best_fx;
+		cw->fy = cw->best_fy;
+	}
+}
+
+static void
+set_layout_indices(dlist *windows)
+{
+	int i = 0;
+
+	foreach_dlist (dlist_first(windows)) {
+		ClientWin *cw = iter->data;
+		cw->layout_index = i++;
+	}
 }
 
 void
 layout_cosmos(MainWin *mw, dlist *windows,
 		unsigned int *total_width, unsigned int *total_height)
 {
-	int n = countWindows(windows);
+	set_layout_indices(windows);
 
-	if (n <= 0)
-		return;
-
-	const float aratio = (float)mw->width / (float)mw->height;
+	const float aratio = (float) mw->width / (float) mw->height;
 
 	const float attraction_step = 3e-2;
 	const float repulsion_step = 1e-2;
@@ -1120,52 +1112,21 @@ layout_cosmos(MainWin *mw, dlist *windows,
 		foreach_dlist (dlist_first(windows)) {
 			ClientWin *cw = iter->data;
 
-			cw->fx = (float)cw->x / (float)*total_width;
-			cw->fy = (float)cw->y / (float)*total_height;
+			cw->fx = (float) cw->x / (float) *total_width;
+			cw->fy = (float) cw->y / (float) *total_height;
 		}
 	}
 
 	const int distance = mw->distance;
-	const float gapx = (float)distance / (float)*total_width;
-	const float gapy = (float)distance / (float)*total_height;
-
-	ClientWin **wins = calloc(n, sizeof(*wins));
-
-	float *step_x = calloc(n, sizeof(*step_x));
-	float *step_y = calloc(n, sizeof(*step_y));
-
-	float *old_fx = calloc(n, sizeof(*old_fx));
-	float *old_fy = calloc(n, sizeof(*old_fy));
-
-	float *desired_x = calloc(n, sizeof(*desired_x));
-	float *desired_y = calloc(n, sizeof(*desired_y));
-	float *axis_position = calloc(n, sizeof(*axis_position));
-
-	int max_constraints = n * (n - 1) / 2;
-
-	if (max_constraints < 1)
-		max_constraints = 1;
-
-	SepConstraint *xcons = calloc(max_constraints, sizeof(*xcons));
-	SepConstraint *ycons = calloc(max_constraints, sizeof(*ycons));
-	float *lambda = calloc(max_constraints, sizeof(*lambda));
-
-	collectWindows(windows, wins);
+	const float gapx = (float) distance / (float) *total_width;
+	const float gapy = (float) distance / (float) *total_height;
 
 	// scatter crowded centers into deterministic rectangular shell clouds
-	{
-		int groups_scattered =
-			scatterCrowdedCenters(wins, n,
-					total_width, total_height,
-					scatter_center_threshold,
-					scatter_min_strength,
-					scatter_max_strength);
-
-		printfdf(false,
-				"(): scattered %d crowded center groups",
-				groups_scattered);
-		printfdf(false, "():");
-	}
+	scatter_crowded_centers(windows,
+			total_width, total_height,
+			scatter_center_threshold,
+			scatter_min_strength,
+			scatter_max_strength);
 
 	// expansion
 	{
@@ -1173,7 +1134,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 
 		while (iterations < 1000) {
 			float residual =
-				maxResidualPenetrationPx(wins, n,
+				max_residual_penetration_px(windows,
 						total_width, total_height,
 						gapx, gapy,
 						expansion_slop_px,
@@ -1182,18 +1143,15 @@ layout_cosmos(MainWin *mw, dlist *windows,
 			if (residual <= 0)
 				break;
 
-			savePositions(wins, n, old_fx, old_fy);
+			save_positions(windows);
 
-			applyRepulsionStep(wins, n,
+			apply_repulsion_step(windows,
 					total_width, total_height,
 					aratio,
 					repulsion_step,
-					max_position_step,
-					step_x, step_y);
+					max_position_step);
 
-			resolveSeparationConstraints(wins, n,
-					old_fx, old_fy,
-					xcons, ycons,
+			resolve_separation_constraints(windows,
 					total_width, total_height,
 					gapx, gapy,
 					expansion_projection_passes,
@@ -1201,19 +1159,12 @@ layout_cosmos(MainWin *mw, dlist *windows,
 					expansion_corner_slop_px,
 					relation_bias,
 					closing_bias,
-					0.0,
-					desired_x,
-					desired_y,
-					axis_position,
-					lambda);
+					0.0);
 
-			printfdf(false, "():");
 
 			iterations++;
 		}
 
-		printfdf(false, "(): %d expansion iterations", iterations);
-		printfdf(false, "():");
 	}
 
 	// contraction
@@ -1223,32 +1174,26 @@ layout_cosmos(MainWin *mw, dlist *windows,
 		int stable_windows = 0;
 		bool done = false;
 
-		float *best_fx = calloc(n, sizeof(*best_fx));
-		float *best_fy = calloc(n, sizeof(*best_fy));
-
 		float best_compactness =
-			layoutCompactness(wins, n,
+			layout_compactness(windows,
 					total_width, total_height,
 					aratio);
 
 		float window_start_best_compactness = best_compactness;
 
-		savePositions(wins, n, best_fx, best_fy);
+		save_best_positions(windows);
 
 		while (!done && iterations < max_collapse_iterations) {
-			savePositions(wins, n, old_fx, old_fy);
+			save_positions(windows);
 
-			applyAttractionStep(wins, n,
+			apply_attraction_step(windows,
 					total_width, total_height,
 					aratio,
 					attraction_step,
-					max_position_step,
-					step_x, step_y);
+					max_position_step);
 
 			float residual =
-				resolveSeparationConstraints(wins, n,
-						old_fx, old_fy,
-						xcons, ycons,
+				resolve_separation_constraints(windows,
 						total_width, total_height,
 						gapx, gapy,
 						collapse_projection_passes,
@@ -1256,21 +1201,17 @@ layout_cosmos(MainWin *mw, dlist *windows,
 						collision_corner_slop_px,
 						relation_bias,
 						closing_bias,
-						residual_sleep_px,
-						desired_x,
-						desired_y,
-						axis_position,
-						lambda);
+						residual_sleep_px);
 
 			float compactness =
-				layoutCompactness(wins, n,
+				layout_compactness(windows,
 						total_width, total_height,
 						aratio);
 
 			if (residual <= residual_sleep_px
 					&& compactness < best_compactness) {
 				best_compactness = compactness;
-				savePositions(wins, n, best_fx, best_fy);
+				save_best_positions(windows);
 			}
 
 			window_iterations++;
@@ -1279,7 +1220,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 				float progress_px =
 					(window_start_best_compactness
 					 - best_compactness)
-					* (float)MAX(*total_width, *total_height);
+					* (float) MAX(*total_width, *total_height);
 
 				bool compactness_stable =
 					progress_px <= compactness_sleep_px;
@@ -1301,32 +1242,11 @@ layout_cosmos(MainWin *mw, dlist *windows,
 
 			iterations++;
 
-			for (int i = 0; i < n; i++) {
-				printfdf(true, "(): %p -> (%f,%f)",
-						wins[i]->wid_client,
-						wins[i]->fx,
-						wins[i]->fy);
-			}
-
-			printfdf(true,
-					"(): compactness=%f best=%f residual_px=%f window_iter=%d stable_windows=%d",
-					compactness,
-					best_compactness,
-					residual,
-					window_iterations,
-					stable_windows);
-
-			printfdf(true, "():");
-			fflush(stdout);
 		}
 
-		restorePositions(wins, n, best_fx, best_fy);
+		restore_best_positions(windows);
 
-		free(best_fx);
-		free(best_fy);
-
-		printfdf(true, "(): %d collapse iterations", iterations);
-		printfdf(true, "():");
+		printfdf(false, "(): %d collapse iterations", iterations);
 	}
 
 	// convert normalized layout coordinates back to pixels
@@ -1334,11 +1254,11 @@ layout_cosmos(MainWin *mw, dlist *windows,
 		int minx = INT_MAX, maxx = INT_MIN;
 		int miny = INT_MAX, maxy = INT_MIN;
 
-		for (int i = 0; i < n; i++) {
-			ClientWin *cw = wins[i];
+		foreach_dlist (dlist_first(windows)) {
+			ClientWin *cw = iter->data;
 
-			cw->x = (float)cw->fx * (float)*total_width;
-			cw->y = (float)cw->fy * (float)*total_height;
+			cw->x = (float) cw->fx * (float) *total_width;
+			cw->y = (float) cw->fy * (float) *total_height;
 
 			minx = MIN(minx, cw->x);
 			maxx = MAX(maxx, cw->x + cw->src.width);
@@ -1346,8 +1266,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 			maxy = MAX(maxy, cw->y + cw->src.height);
 		}
 
-		for (int i = 0; i < n; i++) {
-			ClientWin *cw = wins[i];
+		foreach_dlist (dlist_first(windows)) {
+			ClientWin *cw = iter->data;
 
 			cw->x -= minx;
 			cw->y -= miny;
@@ -1356,16 +1276,4 @@ layout_cosmos(MainWin *mw, dlist *windows,
 		*total_width = maxx - minx;
 		*total_height = maxy - miny;
 	}
-
-	free(step_x);
-	free(step_y);
-	free(old_fx);
-	free(old_fy);
-	free(desired_x);
-	free(desired_y);
-	free(axis_position);
-	free(xcons);
-	free(ycons);
-	free(lambda);
-	free(wins);
 }
