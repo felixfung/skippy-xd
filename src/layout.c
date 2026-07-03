@@ -237,12 +237,6 @@ safe_positive(float x)
 	return MAX(x, 1e-6);
 }
 
-static inline float
-clampf(float x, float low, float high)
-{
-	return MAX(low, MIN(high, x));
-}
-
 static inline int
 round_pixel(float x)
 {
@@ -315,6 +309,13 @@ unit_attraction(float dx, float dy, float *ux, float *uy)
 	*uy = dy / dist;
 }
 
+static void
+choose_scatter_grid(int count, int *cols, int *rows)
+{
+	*cols = ceil(sqrt(count));
+	*rows = (count + *cols - 1) / *cols;
+}
+
 static ClientWin *
 scatter_find(ClientWin *cw)
 {
@@ -336,43 +337,56 @@ scatter_union(ClientWin *a, ClientWin *b)
 		rb->layout_parent = ra;
 }
 
+static void
+choose_scatter_size(dlist *windows, ClientWin *root,
+		unsigned int *total_width, unsigned int *total_height,
+		float *width, float *height)
+{
+	int best_count = 0;
+	int best_area = 0;
+	ClientWin *best = NULL;
+
+	foreach_dlist_vn (iter, dlist_first(windows)) {
+		ClientWin *cw1 = iter->data;
+		int count = 0;
+
+		if (scatter_find(cw1) != root)
+			continue;
+
+		foreach_dlist_vn (jter, dlist_first(windows)) {
+			ClientWin *cw2 = jter->data;
+
+			if (scatter_find(cw2) == root
+					&& cw2->src.width == cw1->src.width
+					&& cw2->src.height == cw1->src.height)
+				count++;
+		}
+
+		int area = cw1->src.width * cw1->src.height;
+
+		if (count > best_count || (count == best_count && area > best_area)) {
+			best_count = count;
+			best_area = area;
+			best = cw1;
+		}
+	}
+
+	*width = body_width(best, total_width);
+	*height = body_height(best, total_height);
+}
+
 /*
  * Deterministic crowded-center scatter.
  *
- * This replaces repeated random pair nudges.
- *
- * Purpose:
- *   - if several windows have nearly identical centers, their pairwise force
- *     directions are degenerate;
- *   - create a coherent 2D seed so expansion/contraction can infer meaningful
- *     left/right, above/below, and diagonal relations.
- *
- * This version uses a rectangular 3x3-perimeter stencil instead of circular
- * 8-way directions.
- *
- * Direction order:
- *   corner pair, corner pair, horizontal pair, vertical pair
- *
- * This keeps prefixes balanced while making the seed more rectangular and
- * window-layout-like.
+ * If several windows have nearly identical centers, their pairwise force
+ * directions are degenerate.  Give each crowded group a simple rectangular
+ * seed so expansion/contraction can infer meaningful row/column relations.
  */
 static void
 scatter_crowded_centers(dlist *windows,
 		unsigned int *total_width, unsigned int *total_height,
-		float center_threshold,
-		float min_strength,
-		float max_strength)
+		float center_threshold)
 {
-	static const float dirx[8] = {
-		-1.0,  1.0,  1.0, -1.0,
-		-1.0,  1.0,  0.0,  0.0
-	};
-
-	static const float diry[8] = {
-		-1.0,  1.0, -1.0,  1.0,
-		 0.0,  0.0, -1.0,  1.0
-	};
-
 	if (dlist_len(windows) <= 1)
 		return;
 
@@ -401,7 +415,6 @@ scatter_crowded_centers(dlist *windows,
 		}
 	}
 
-
 	foreach_dlist (dlist_first(windows)) {
 		ClientWin *root_candidate = iter->data;
 		ClientWin *root = scatter_find(root_candidate);
@@ -410,52 +423,29 @@ scatter_crowded_centers(dlist *windows,
 			continue;
 
 		int count = 0;
-		float avg_width = 0;
-		float avg_height = 0;
-
-		float min_cx = INFINITY;
-		float max_cx = -INFINITY;
-		float min_cy = INFINITY;
-		float max_cy = -INFINITY;
+		float width = 0;
+		float height = 0;
 
 		foreach_dlist_vn (jter, dlist_first(windows)) {
 			ClientWin *cw = jter->data;
-			float cx, cy;
 
-			if (scatter_find(cw) != root)
-				continue;
-
-			body_center(cw, &cx, &cy, total_width, total_height);
-
-			count++;
-			avg_width += body_width(cw, total_width);
-			avg_height += body_height(cw, total_height);
-			min_cx = MIN(min_cx, cx);
-			max_cx = MAX(max_cx, cx);
-			min_cy = MIN(min_cy, cy);
-			max_cy = MAX(max_cy, cy);
+			if (scatter_find(cw) == root)
+				count++;
 		}
 
 		if (count <= 1)
 			continue;
 
-		avg_width /= count;
-		avg_height /= count;
+		choose_scatter_size(windows, root,
+				total_width, total_height,
+				&width, &height);
 
-		float spread_x = max_cx - min_cx;
-		float spread_y = max_cy - min_cy;
-		float spread = MAX(spread_x, spread_y);
-
-		float degeneracy =
-			1.0 - clampf(spread / safe_positive(center_threshold),
-					0.0, 1.0);
-
-		float scatter_strength =
-			min_strength + degeneracy * (max_strength - min_strength);
-
+		int cols = 0, rows = 0;
+		int rank = 0;
 		float mean_offset_x = 0;
 		float mean_offset_y = 0;
-		int rank = 0;
+
+		choose_scatter_grid(count, &cols, &rows);
 
 		foreach_dlist_vn (jter, dlist_first(windows)) {
 			ClientWin *cw = jter->data;
@@ -463,12 +453,14 @@ scatter_crowded_centers(dlist *windows,
 			if (scatter_find(cw) != root)
 				continue;
 
-			int shell = rank / 8;
-			int dir = rank % 8;
-			float radius = scatter_strength * (float) (shell + 1);
+			int row = rank / cols;
+			int col = rank % cols;
+			int row_count = MIN(cols, count - row * cols);
 
-			cw->layout_x = radius * avg_width * dirx[dir];
-			cw->layout_y = radius * avg_height * diry[dir];
+			cw->layout_x = width
+				* ((float) col - ((float) row_count - 1.0) / 2.0);
+			cw->layout_y = height
+				* ((float) row - ((float) rows - 1.0) / 2.0);
 
 			mean_offset_x += cw->layout_x;
 			mean_offset_y += cw->layout_y;
@@ -488,7 +480,6 @@ scatter_crowded_centers(dlist *windows,
 			cw->fx += cw->layout_x - mean_offset_x;
 			cw->fy += cw->layout_y - mean_offset_y;
 		}
-
 	}
 }
 
@@ -1083,8 +1074,6 @@ layout_cosmos(MainWin *mw, dlist *windows,
 	const float closing_bias = 0.02;
 
 	const float scatter_center_threshold = 0.10;
-	const float scatter_min_strength = 0.10;
-	const float scatter_max_strength = 0.35;
 
 	const int progress_window = 32;
 	const int stable_windows_required = 2;
@@ -1134,12 +1123,10 @@ layout_cosmos(MainWin *mw, dlist *windows,
 	const float gapx = (float) distance / (float) *total_width;
 	const float gapy = (float) distance / (float) *total_height;
 
-	// scatter crowded centers into deterministic rectangular shell clouds
+	// scatter crowded centers into deterministic rectangular grid seeds
 	scatter_crowded_centers(windows,
 			total_width, total_height,
-			scatter_center_threshold,
-			scatter_min_strength,
-			scatter_max_strength);
+			scatter_center_threshold);
 
 	// expansion
 	{
