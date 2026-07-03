@@ -498,7 +498,8 @@ choose_horizontal_constraint(ClientWin *cw1, ClientWin *cw2,
 		float gapx, float gapy,
 		float overlap_x_px, float overlap_y_px,
 		float relation_bias,
-		float closing_bias)
+		float closing_bias,
+		float aspect_bias)
 {
 	float cx1, cy1, cx2, cy2;
 	float old_cx1, old_cy1, old_cx2, old_cy2;
@@ -522,8 +523,8 @@ choose_horizontal_constraint(ClientWin *cw1, ClientWin *cw2,
 	required_x = safe_positive(required_x);
 	required_y = safe_positive(required_y);
 
-	float relation_x = f_abs(cx2 - cx1) / required_x;
-	float relation_y = f_abs(cy2 - cy1) / required_y;
+	float relation_x = f_abs(cx2 - cx1) / required_x * aspect_bias;
+	float relation_y = f_abs(cy2 - cy1) / required_y / aspect_bias;
 
 	if (relation_x > relation_y + relation_bias)
 		return true;
@@ -536,8 +537,10 @@ choose_horizontal_constraint(ClientWin *cw1, ClientWin *cw2,
 	float new_dx = cx2 - cx1;
 	float new_dy = cy2 - cy1;
 
-	float closing_x = (f_abs(old_dx) - f_abs(new_dx)) / required_x;
-	float closing_y = (f_abs(old_dy) - f_abs(new_dy)) / required_y;
+	float closing_x = (f_abs(old_dx) - f_abs(new_dx))
+		/ required_x * aspect_bias;
+	float closing_y = (f_abs(old_dy) - f_abs(new_dy))
+		/ required_y / aspect_bias;
 
 	if (closing_x > closing_y + closing_bias)
 		return true;
@@ -545,10 +548,10 @@ choose_horizontal_constraint(ClientWin *cw1, ClientWin *cw2,
 	if (closing_y > closing_x + closing_bias)
 		return false;
 
-	if (overlap_x_px < overlap_y_px)
+	if (overlap_x_px / aspect_bias < overlap_y_px * aspect_bias)
 		return true;
 
-	if (overlap_y_px < overlap_x_px)
+	if (overlap_y_px * aspect_bias < overlap_x_px / aspect_bias)
 		return false;
 
 	return (((int) cw1->layout_index + (int) cw2->layout_index) & 1) == 0;
@@ -586,7 +589,8 @@ build_separation_constraints(dlist *windows,
 		float gapx, float gapy,
 		float slop_px, float corner_slop_px,
 		float relation_bias,
-		float closing_bias)
+		float closing_bias,
+		float aspect_bias)
 {
 	*xcons = NULL;
 	*ycons = NULL;
@@ -632,7 +636,8 @@ build_separation_constraints(dlist *windows,
 						gapx, gapy,
 						overlap_x_px, overlap_y_px,
 						relation_bias,
-						closing_bias);
+						closing_bias,
+						aspect_bias);
 
 			if (horizontal) {
 				if (overlap_x_px <= slop_px)
@@ -803,7 +808,8 @@ resolve_separation_constraints(dlist *windows,
 		float slop_px, float corner_slop_px,
 		float relation_bias,
 		float closing_bias,
-		float target_residual_px)
+		float target_residual_px,
+		float aspect_bias)
 {
 	foreach_dlist (dlist_first(windows)) {
 		ClientWin *cw = iter->data;
@@ -834,7 +840,8 @@ resolve_separation_constraints(dlist *windows,
 				total_width, total_height,
 				gapx, gapy,
 				slop_px, corner_slop_px,
-				relation_bias, closing_bias);
+				relation_bias, closing_bias,
+				aspect_bias);
 
 		if (!xcons && !ycons)
 			break;
@@ -875,7 +882,7 @@ resolve_separation_constraints(dlist *windows,
 static float
 layout_compactness(dlist *windows,
 		unsigned int *total_width, unsigned int *total_height,
-		float aratio)
+		float aspect_bias)
 {
 	float energy = 0;
 	float weight = 0;
@@ -890,8 +897,8 @@ layout_compactness(dlist *windows,
 			body_center(cw1, &x1, &y1, total_width, total_height);
 			body_center(cw2, &x2, &y2, total_width, total_height);
 
-			float dx = x2 - x1;
-			float dy = (y2 - y1) / aratio;
+			float dx = (x2 - x1) / aspect_bias;
+			float dy = (y2 - y1) * aspect_bias;
 
 			float dist = sqrt(dx * dx + dy * dy + 1e-8);
 
@@ -930,7 +937,7 @@ apply_position_step(dlist *windows, float max_position_step)
 static void
 apply_attraction_step(dlist *windows,
 		unsigned int *total_width, unsigned int *total_height,
-		float aratio,
+		float aspect_bias,
 		float attraction_step,
 		float max_position_step)
 {
@@ -958,8 +965,8 @@ apply_attraction_step(dlist *windows,
 
 			float m = body_mass(cw2, total_width, total_height);
 
-			cw1->vx += attraction_step * m * ux;
-			cw1->vy += attraction_step * m * uy / aratio;
+			cw1->vx += attraction_step * m * ux / aspect_bias;
+			cw1->vy += attraction_step * m * uy * aspect_bias;
 		}
 	}
 
@@ -969,7 +976,6 @@ apply_attraction_step(dlist *windows,
 static void
 apply_repulsion_step(dlist *windows,
 		unsigned int *total_width, unsigned int *total_height,
-		float aratio,
 		float repulsion_step,
 		float max_position_step)
 {
@@ -1002,7 +1008,7 @@ apply_repulsion_step(dlist *windows,
 			float m = body_mass(cw2, total_width, total_height);
 
 			cw1->vx -= repulsion_step * m * ux;
-			cw1->vy -= repulsion_step * m * uy / aratio;
+			cw1->vy -= repulsion_step * m * uy;
 		}
 	}
 
@@ -1057,6 +1063,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 	set_layout_indices(windows);
 
 	const float aratio = (float) mw->width / (float) mw->height;
+	const float aspect_bias = sqrt(aratio) / 1.4;
 
 	const float attraction_step = 3e-2;
 	const float repulsion_step = 1e-2;
@@ -1153,7 +1160,6 @@ layout_cosmos(MainWin *mw, dlist *windows,
 
 			apply_repulsion_step(windows,
 					total_width, total_height,
-					aratio,
 					repulsion_step,
 					max_position_step);
 
@@ -1165,7 +1171,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 					expansion_corner_slop_px,
 					relation_bias,
 					closing_bias,
-					0.0);
+					0.0,
+					aspect_bias);
 
 
 			iterations++;
@@ -1183,7 +1190,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 		float best_compactness =
 			layout_compactness(windows,
 					total_width, total_height,
-					aratio);
+					aspect_bias);
 
 		float window_start_best_compactness = best_compactness;
 
@@ -1194,7 +1201,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 
 			apply_attraction_step(windows,
 					total_width, total_height,
-					aratio,
+					aspect_bias,
 					attraction_step,
 					max_position_step);
 
@@ -1207,12 +1214,13 @@ layout_cosmos(MainWin *mw, dlist *windows,
 						collision_corner_slop_px,
 						relation_bias,
 						closing_bias,
-						residual_sleep_px);
+						residual_sleep_px,
+						aspect_bias);
 
 			float compactness =
 				layout_compactness(windows,
 						total_width, total_height,
-						aratio);
+						aspect_bias);
 
 			if (residual <= residual_sleep_px
 					&& compactness < best_compactness) {
