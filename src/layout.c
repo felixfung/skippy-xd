@@ -547,16 +547,12 @@ build_separation_constraints(dlist *windows,
 		dlist **xcons, dlist **ycons,
 		unsigned int *total_width, unsigned int *total_height,
 		float gapx, float gapy,
-		float slop_px, float corner_slop_px,
 		float relation_bias,
 		float closing_bias,
 		float aspect_bias)
 {
 	*xcons = NULL;
 	*ycons = NULL;
-
-	float slopx = slop_px / (float) *total_width;
-	float slopy = slop_px / (float) *total_height;
 
 	for (dlist *iter = dlist_first(windows); iter; iter = iter->next) {
 		ClientWin *cw1 = iter->data;
@@ -580,11 +576,6 @@ build_separation_constraints(dlist *windows,
 			float overlap_x_px = overlap_x * (float) *total_width;
 			float overlap_y_px = overlap_y * (float) *total_height;
 
-			if (corner_slop_px > 0
-					&& overlap_x_px <= corner_slop_px
-					&& overlap_y_px <= corner_slop_px)
-				continue;
-
 			float cx1, cy1, cx2, cy2;
 
 			body_center(cw1, &cx1, &cy1, total_width, total_height);
@@ -600,35 +591,29 @@ build_separation_constraints(dlist *windows,
 						aspect_bias);
 
 			if (horizontal) {
-				if (overlap_x_px <= slop_px)
-					continue;
-
 				if (cx2 > cx1 || (cx2 == cx1
 							&& cw2->layout_index > cw1->layout_index)) {
 					*xcons = add_separation_constraint(*xcons,
 							cw1, cw2,
-							body_width(cw1, total_width) + gapx - slopx);
+							body_width(cw1, total_width) + gapx);
 				}
 				else {
 					*xcons = add_separation_constraint(*xcons,
 							cw2, cw1,
-							body_width(cw2, total_width) + gapx - slopx);
+							body_width(cw2, total_width) + gapx);
 				}
 			}
 			else {
-				if (overlap_y_px <= slop_px)
-					continue;
-
 				if (cy2 > cy1 || (cy2 == cy1
 							&& cw2->layout_index > cw1->layout_index)) {
 					*ycons = add_separation_constraint(*ycons,
 							cw1, cw2,
-							body_height(cw1, total_height) + gapy - slopy);
+							body_height(cw1, total_height) + gapy);
 				}
 				else {
 					*ycons = add_separation_constraint(*ycons,
 							cw2, cw1,
-							body_height(cw2, total_height) + gapy - slopy);
+							body_height(cw2, total_height) + gapy);
 				}
 			}
 		}
@@ -718,8 +703,7 @@ solve_axis_constraints(dlist *windows, dlist *constraints,
 static float
 max_residual_penetration_px(dlist *windows,
 		unsigned int *total_width, unsigned int *total_height,
-		float gapx, float gapy,
-		float slop_px, float corner_slop_px)
+		float gapx, float gapy)
 {
 	float max_residual = 0;
 
@@ -744,13 +728,7 @@ max_residual_penetration_px(dlist *windows,
 
 			float overlap_x_px = overlap_x * (float) *total_width;
 			float overlap_y_px = overlap_y * (float) *total_height;
-
-			if (corner_slop_px > 0
-					&& overlap_x_px <= corner_slop_px
-					&& overlap_y_px <= corner_slop_px)
-				continue;
-
-			float residual = MIN(overlap_x_px, overlap_y_px) - slop_px;
+			float residual = MIN(overlap_x_px, overlap_y_px);
 
 			if (residual > max_residual)
 				max_residual = residual;
@@ -764,8 +742,6 @@ static float
 resolve_separation_constraints(dlist *windows,
 		unsigned int *total_width, unsigned int *total_height,
 		float gapx, float gapy,
-		int passes,
-		float slop_px, float corner_slop_px,
 		float relation_bias,
 		float closing_bias,
 		float target_residual_px,
@@ -780,63 +756,49 @@ resolve_separation_constraints(dlist *windows,
 	float residual =
 		max_residual_penetration_px(windows,
 				total_width, total_height,
-				gapx, gapy,
-				slop_px, corner_slop_px);
+				gapx, gapy);
+
+	if (residual <= target_residual_px)
+		return residual;
+
+	dlist *xcons = NULL;
+	dlist *ycons = NULL;
+
+	build_separation_constraints(windows,
+			&xcons, &ycons,
+			total_width, total_height,
+			gapx, gapy,
+			relation_bias, closing_bias,
+			aspect_bias);
+
+	if (!xcons && !ycons)
+		return residual;
 
 	float tolerance_x = 0.001 / (float) *total_width;
 	float tolerance_y = 0.001 / (float) *total_height;
 
 	int solver_iterations = 64 + 16 * dlist_len(windows);
 
-	for (int pass = 0; pass < passes; pass++) {
-		if (residual <= target_residual_px)
-			break;
-
-		dlist *xcons = NULL;
-		dlist *ycons = NULL;
-
-		build_separation_constraints(windows,
-				&xcons, &ycons,
+	if (xcons)
+		solve_axis_constraints(windows, xcons,
 				total_width, total_height,
-				gapx, gapy,
-				slop_px, corner_slop_px,
-				relation_bias, closing_bias,
-				aspect_bias);
+				true,
+				solver_iterations,
+				tolerance_x);
 
-		if (!xcons && !ycons)
-			break;
+	if (ycons)
+		solve_axis_constraints(windows, ycons,
+				total_width, total_height,
+				false,
+				solver_iterations,
+				tolerance_y);
 
-		if (xcons)
-			solve_axis_constraints(windows, xcons,
-					total_width, total_height,
-					true,
-					solver_iterations,
-					tolerance_x);
+	free_constraint_list(xcons);
+	free_constraint_list(ycons);
 
-		if (ycons)
-			solve_axis_constraints(windows, ycons,
-					total_width, total_height,
-					false,
-					solver_iterations,
-					tolerance_y);
-
-		free_constraint_list(xcons);
-		free_constraint_list(ycons);
-
-		float next_residual =
-			max_residual_penetration_px(windows,
-					total_width, total_height,
-					gapx, gapy,
-					slop_px, corner_slop_px);
-
-		float improvement = residual - next_residual;
-		residual = next_residual;
-
-		if (improvement <= 0.001)
-			break;
-	}
-
-	return residual;
+	return max_residual_penetration_px(windows,
+			total_width, total_height,
+			gapx, gapy);
 }
 
 static void
@@ -1006,14 +968,6 @@ layout_cosmos(MainWin *mw, dlist *windows,
 	const float expansion_constant = 3e-3;
 	const float pairwise_soft_distance = 0.05;
 
-	const int expansion_projection_passes = 8;
-	const int contraction_projection_passes = 16;
-
-	const float expansion_slop_px = 0.0;
-	const float expansion_corner_slop_px = 0.0;
-
-	const float collision_slop_px = 0.10;
-	const float collision_corner_slop_px = 0.25;
 	const float stable_residual_px = 0.25;
 
 	const float relation_bias = 0.05;
@@ -1083,9 +1037,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 			float residual =
 				max_residual_penetration_px(windows,
 						total_width, total_height,
-						gapx, gapy,
-						expansion_slop_px,
-						expansion_corner_slop_px);
+						gapx, gapy);
 
 			if (residual <= 0)
 				break;
@@ -1102,9 +1054,6 @@ layout_cosmos(MainWin *mw, dlist *windows,
 			resolve_separation_constraints(windows,
 					total_width, total_height,
 					gapx, gapy,
-					expansion_projection_passes,
-					expansion_slop_px,
-					expansion_corner_slop_px,
 					relation_bias,
 					closing_bias,
 					0.0,
@@ -1141,9 +1090,6 @@ layout_cosmos(MainWin *mw, dlist *windows,
 				resolve_separation_constraints(windows,
 						total_width, total_height,
 						gapx, gapy,
-						contraction_projection_passes,
-						collision_slop_px,
-						collision_corner_slop_px,
 						relation_bias,
 						closing_bias,
 						stable_residual_px,
