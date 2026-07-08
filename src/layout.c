@@ -265,8 +265,8 @@ choose_scatter_size(dlist *windows, ClientWin *root,
 		if (scatter_find(cw1) != root)
 			continue;
 
-		foreach_dlist_vn (jter, dlist_first(windows)) {
-			ClientWin *cw2 = jter->data;
+		foreach_dlist_vn (iter2, dlist_first(windows)) {
+			ClientWin *cw2 = iter2->data;
 
 			if (scatter_find(cw2) == root
 					&& cw2->src.width == cw1->src.width
@@ -313,8 +313,8 @@ scatter_crowded_centers(dlist *windows,
 
 		body_center(cw1, &x1, &y1, total_width, total_height);
 
-		for (dlist *jter = iter->next; jter; jter = jter->next) {
-			ClientWin *cw2 = jter->data;
+		for (dlist *iter2 = iter->next; iter2; iter2 = iter2->next) {
+			ClientWin *cw2 = iter2->data;
 			float x2, y2;
 
 			body_center(cw2, &x2, &y2, total_width, total_height);
@@ -336,8 +336,8 @@ scatter_crowded_centers(dlist *windows,
 		float width = 0;
 		float height = 0;
 
-		foreach_dlist_vn (jter, dlist_first(windows)) {
-			ClientWin *cw = jter->data;
+		foreach_dlist_vn (iter2, dlist_first(windows)) {
+			ClientWin *cw = iter2->data;
 
 			if (scatter_find(cw) == root)
 				count++;
@@ -356,8 +356,8 @@ scatter_crowded_centers(dlist *windows,
 		float mean_offset_x = 0;
 		float mean_offset_y = 0;
 
-		foreach_dlist_vn (jter, dlist_first(windows)) {
-			ClientWin *cw = jter->data;
+		foreach_dlist_vn (iter2, dlist_first(windows)) {
+			ClientWin *cw = iter2->data;
 
 			if (scatter_find(cw) != root)
 				continue;
@@ -378,8 +378,8 @@ scatter_crowded_centers(dlist *windows,
 		mean_offset_y /= count;
 		rank = 0;
 
-		foreach_dlist_vn (jter, dlist_first(windows)) {
-			ClientWin *cw = jter->data;
+		foreach_dlist_vn (iter2, dlist_first(windows)) {
+			ClientWin *cw = iter2->data;
 
 			if (scatter_find(cw) != root)
 				continue;
@@ -478,8 +478,8 @@ build_separation_constraints(dlist *windows,
 	for (dlist *iter = dlist_first(windows); iter; iter = iter->next) {
 		ClientWin *cw1 = iter->data;
 
-		for (dlist *jter = iter->next; jter; jter = jter->next) {
-			ClientWin *cw2 = jter->data;
+		for (dlist *iter2 = iter->next; iter2; iter2 = iter2->next) {
+			ClientWin *cw2 = iter2->data;
 			float l1, t1, r1, b1;
 			float l2, t2, r2, b2;
 
@@ -612,8 +612,8 @@ max_residual_penetration_px(dlist *windows,
 	for (dlist *iter = dlist_first(windows); iter; iter = iter->next) {
 		ClientWin *cw1 = iter->data;
 
-		for (dlist *jter = iter->next; jter; jter = jter->next) {
-			ClientWin *cw2 = jter->data;
+		for (dlist *iter2 = iter->next; iter2; iter2 = iter2->next) {
+			ClientWin *cw2 = iter2->data;
 			float l1, t1, r1, b1;
 			float l2, t2, r2, b2;
 
@@ -745,6 +745,63 @@ restore_mass_center(dlist *windows,
 }
 
 static void
+axis_closing_limit(float pos, float vel, float radius, float *limit)
+{
+	if (pos > 0 && vel < 0) {
+		float t = (radius - pos) / vel;
+		if (t >= 0 && t < *limit)
+			*limit = t;
+		return;
+	}
+	if (pos < 0 && vel > 0) {
+		float t = (-radius - pos) / vel;
+		if (t >= 0 && t < *limit)
+			*limit = t;
+		return;
+	}
+}
+
+static void
+limit_expansion_sweep_step(dlist *windows,
+		unsigned int *total_width, unsigned int *total_height,
+		float gapx, float gapy)
+{
+	float limit = 1.0;
+
+	for (dlist *iter = dlist_first(windows); iter; iter = iter->next) {
+		ClientWin *cw1 = iter->data;
+		float x1, y1;
+		body_center(cw1, &x1, &y1, total_width, total_height);
+
+		for (dlist *iter2 = iter->next; iter2; iter2 = iter2->next) {
+			ClientWin *cw2 = iter2->data;
+			float x2, y2;
+			body_center(cw2, &x2, &y2,
+					total_width, total_height);
+
+			float dx = x2 - x1;
+			float dy = y2 - y1;
+			float dvx = cw2->vx - cw1->vx;
+			float dvy = cw2->vy - cw1->vy;
+
+			float radius_x = MAX(0.0,
+					(fabsf(dx) - gapx) / 2.0);
+			float radius_y = MAX(0.0,
+					(fabsf(dy) - gapy) / 2.0);
+
+			axis_closing_limit(dx, dvx, radius_x, &limit);
+			axis_closing_limit(dy, dvy, radius_y, &limit);
+		}
+	}
+
+	foreach_dlist (dlist_first(windows)) {
+		ClientWin *cw = iter->data;
+		cw->vx *= limit;
+		cw->vy *= limit;
+	}
+}
+
+static void
 apply_pairwise_gravity_step(dlist *windows,
 		unsigned int *total_width, unsigned int *total_height,
 		float aspect_bias,
@@ -764,8 +821,8 @@ apply_pairwise_gravity_step(dlist *windows,
 	for (dlist *iter = dlist_first(windows); iter; iter = iter->next) {
 		ClientWin *cw1 = iter->data;
 
-		for (dlist *jter = iter->next; jter; jter = jter->next) {
-			ClientWin *cw2 = jter->data;
+		for (dlist *iter2 = iter->next; iter2; iter2 = iter2->next) {
+			ClientWin *cw2 = iter2->data;
 			float x1, y1, x2, y2;
 			float dx, dy;
 			float dist;
@@ -808,6 +865,11 @@ apply_pairwise_gravity_step(dlist *windows,
 				* m1 * dy / dist * aspect_bias;
 		}
 	}
+
+	if (!attraction)
+		limit_expansion_sweep_step(windows,
+				total_width, total_height,
+				gapx, gapy);
 
 	foreach_dlist (dlist_first(windows)) {
 		ClientWin *cw = iter->data;
@@ -857,7 +919,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 	const float pairwise_soft_distance = 0.05;
 	const float stable_residual_px = 0.25;
 	const float relation_bias = 0.05;
-	const float scatter_center_threshold = 0.05;
+	const float scatter_center_threshold = 0.02;
 	const float stable_movement_px = 0.003;
 
 	// convert pixel coordinates to normalized layout coordinates
