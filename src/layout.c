@@ -414,7 +414,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 				float vx = 0, vy = 0;
 				while (speed > 0) {
 					vx = cw1->vx / speed * disx;
-					vy = cw1->vy / speed * disx;
+					vy = cw1->vy / speed * disy;
 
 					cw1->fx += vx * deltat;
 					cw1->fy += vy * deltat;
