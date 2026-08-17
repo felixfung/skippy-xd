@@ -1103,7 +1103,7 @@ init_layout(MainWin *mw, enum layoutmode layout, Window leader)
 {
 	unsigned int newwidth = 100, newheight = 100;
 	if (mw->clientondesktop)
-		layout_run(mw, mw->clientondesktop, &newwidth, &newheight, layout);
+		layout_run(mw, mw->clientondesktop, &newwidth, &newheight);
 
 	init_multiplier(mw, newwidth, newheight, mw->ps->o.upscaleWindows, 2);
 	init_focus(mw, layout, leader);
