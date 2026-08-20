@@ -445,7 +445,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 	float scale_x = MAX(1, max_x - min_x);
 	float scale_y = MAX(1, max_y - min_y);
 	float padding = (float) mw->distance + 1.0f;
-	AabbWorld *world = aabb_world_create(count, padding);
+	AabbWorld *world = aabb_world_create(count, padding, scale_x, scale_y);
 
 	if (!world) {
 		free(drive_y);
@@ -516,4 +516,3 @@ layout_cosmos(MainWin *mw, dlist *windows,
 	free(drive_x);
 	free(items);
 }
-

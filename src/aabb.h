@@ -38,8 +38,14 @@ typedef struct {
 	unsigned int substeps;
 } AabbStepResult;
 
-/* capacity is fixed for the lifetime of the world. */
-AabbWorld *aabb_world_create(size_t capacity, float padding);
+/*
+ * capacity is fixed for the lifetime of the world.  coordinate_scale_x/y
+ * describe the initial Cosmos extent.  Public coordinates remain pixels;
+ * a backend may use the ratio internally to make collision-axis choice
+ * independent of the display aspect ratio.
+ */
+AabbWorld *aabb_world_create(size_t capacity, float padding,
+		float coordinate_scale_x, float coordinate_scale_y);
 void aabb_world_destroy(AabbWorld *world);
 
 AabbBodyId aabb_world_add_body(AabbWorld *world,

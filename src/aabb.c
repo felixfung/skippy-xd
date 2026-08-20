@@ -7,20 +7,38 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef CFG_CHIPMUNK
+#include <chipmunk/chipmunk.h>
+#endif
+
 typedef struct {
-	float x;
-	float y;
 	float width;
 	float height;
 	float inverse_mass;
-	float velocity_x;
-	float velocity_y;
 	float drive_x;
 	float drive_y;
+#ifdef CFG_CHIPMUNK
+	cpBody *chipmunk_body;
+	cpShape *chipmunk_shape;
+	float step_start_x;
+	float step_start_y;
+#else
+	float x;
+	float y;
+	float velocity_x;
+	float velocity_y;
+#endif
 } AabbBody;
 
 struct AabbWorld {
 	AabbBody *bodies;
+	size_t count;
+	size_t capacity;
+	float padding;
+#ifdef CFG_CHIPMUNK
+	cpSpace *chipmunk_space;
+	float coordinate_y_scale;
+#else
 	float *step_start_x;
 	float *step_start_y;
 	/*
@@ -29,24 +47,12 @@ struct AabbWorld {
 	 * The sign says which side the second body occupies.
 	 */
 	signed char *contact_axis;
-	size_t count;
-	size_t capacity;
-	float padding;
+#endif
 };
 
 enum {
-	AABB_SOLVER_ITERATIONS = 16,
 	AABB_MAX_SUBSTEPS = 128
 };
-
-static const float AABB_POSITION_SLOP = 0.001f;
-static const float AABB_CONTACT_RELEASE_SLOP = 0.5f;
-
-static size_t
-pair_index(const AabbWorld *world, size_t a, size_t b)
-{
-	return a * world->capacity + b;
-}
 
 static float
 half_width(const AabbWorld *world, const AabbBody *body)
@@ -58,6 +64,336 @@ static float
 half_height(const AabbWorld *world, const AabbBody *body)
 {
 	return (body->height + world->padding) / 2.0f;
+}
+
+#ifdef CFG_CHIPMUNK
+
+enum {
+	AABB_CHIPMUNK_SOLVER_ITERATIONS = 30
+};
+
+static const float AABB_CHIPMUNK_COLLISION_SLOP = 0.001f;
+
+static unsigned int
+count_contacts(const AabbWorld *world)
+{
+	unsigned int count = 0;
+
+	for (size_t a_id = 0; a_id < world->count; a_id++) {
+		const AabbBody *a = &world->bodies[a_id];
+		cpVect a_position = cpBodyGetPosition(a->chipmunk_body);
+
+		for (size_t b_id = a_id + 1; b_id < world->count; b_id++) {
+			const AabbBody *b = &world->bodies[b_id];
+			cpVect b_position = cpBodyGetPosition(b->chipmunk_body);
+			float required_x = half_width(world, a) + half_width(world, b);
+			float required_y = half_height(world, a) + half_height(world, b);
+			float separation_x = fabsf((float) (b_position.x - a_position.x))
+				- required_x;
+			float separation_y = fabsf((float) (b_position.y - a_position.y)
+				/ world->coordinate_y_scale)
+				- required_y;
+
+			if (separation_x <= AABB_CHIPMUNK_COLLISION_SLOP
+					&& separation_y <= AABB_CHIPMUNK_COLLISION_SLOP)
+				count++;
+		}
+	}
+
+	return count;
+}
+
+AabbWorld *
+aabb_world_create(size_t capacity, float padding,
+		float coordinate_scale_x, float coordinate_scale_y)
+{
+	if (capacity == 0 || capacity > UINT_MAX
+			|| capacity > SIZE_MAX / sizeof(AabbBody))
+		return NULL;
+
+	AabbWorld *world = calloc(1, sizeof(*world));
+
+	if (!world)
+		return NULL;
+
+	world->bodies = calloc(capacity, sizeof(*world->bodies));
+	world->chipmunk_space = cpSpaceNew();
+
+	if (!world->bodies || !world->chipmunk_space) {
+		aabb_world_destroy(world);
+		return NULL;
+	}
+
+	float y_scale = coordinate_scale_x > 0 && coordinate_scale_y > 0
+		? coordinate_scale_x / coordinate_scale_y : 1.0f;
+	if (!isfinite(y_scale) || y_scale <= 0)
+		y_scale = 1.0f;
+
+	world->coordinate_y_scale = y_scale;
+	cpSpaceSetIterations(world->chipmunk_space,
+			AABB_CHIPMUNK_SOLVER_ITERATIONS);
+	cpSpaceSetCollisionSlop(world->chipmunk_space,
+			AABB_CHIPMUNK_COLLISION_SLOP * fminf(1.0f, y_scale));
+	world->capacity = capacity;
+	world->padding = padding > 0 ? padding : 0;
+	return world;
+}
+
+void
+aabb_world_destroy(AabbWorld *world)
+{
+	if (!world)
+		return;
+
+	if (world->chipmunk_space) {
+		for (size_t i = 0; i < world->count; i++) {
+			AabbBody *body = &world->bodies[i];
+
+			if (body->chipmunk_shape) {
+				if (cpShapeGetSpace(body->chipmunk_shape)
+						== world->chipmunk_space)
+					cpSpaceRemoveShape(world->chipmunk_space,
+							body->chipmunk_shape);
+				cpShapeFree(body->chipmunk_shape);
+			}
+			if (body->chipmunk_body) {
+				if (cpBodyGetSpace(body->chipmunk_body)
+						== world->chipmunk_space)
+					cpSpaceRemoveBody(world->chipmunk_space,
+							body->chipmunk_body);
+				cpBodyFree(body->chipmunk_body);
+			}
+		}
+
+		cpSpaceFree(world->chipmunk_space);
+	}
+
+	free(world->bodies);
+	free(world);
+}
+
+AabbBodyId
+aabb_world_add_body(AabbWorld *world, const AabbBodyDef *definition)
+{
+	if (!world || !definition || world->count >= world->capacity
+			|| definition->width <= 0 || definition->height <= 0)
+		return AABB_BODY_INVALID;
+
+	bool movable = definition->inverse_mass > 0;
+	cpFloat mass = movable ? 1.0 / definition->inverse_mass : INFINITY;
+	cpBody *chipmunk_body = movable
+		? cpBodyNew(mass, INFINITY) : cpBodyNewStatic();
+
+	if (!chipmunk_body)
+		return AABB_BODY_INVALID;
+
+	cpBodySetPosition(chipmunk_body,
+			cpv(definition->center_x,
+				definition->center_y * world->coordinate_y_scale));
+	if (movable)
+		cpSpaceAddBody(world->chipmunk_space, chipmunk_body);
+
+	cpShape *shape = cpBoxShapeNew(chipmunk_body,
+			definition->width + world->padding,
+			(definition->height + world->padding)
+				* world->coordinate_y_scale, 0);
+
+	if (!shape) {
+		if (cpBodyGetSpace(chipmunk_body) == world->chipmunk_space)
+			cpSpaceRemoveBody(world->chipmunk_space, chipmunk_body);
+		cpBodyFree(chipmunk_body);
+		return AABB_BODY_INVALID;
+	}
+
+	cpShapeSetFriction(shape, 0);
+	cpShapeSetElasticity(shape, 0);
+	cpSpaceAddShape(world->chipmunk_space, shape);
+
+	size_t id = world->count++;
+	AabbBody *body = &world->bodies[id];
+	body->chipmunk_body = chipmunk_body;
+	body->chipmunk_shape = shape;
+	body->width = definition->width;
+	body->height = definition->height;
+	body->inverse_mass = movable ? definition->inverse_mass : 0;
+
+	return (AabbBodyId) id;
+}
+
+size_t
+aabb_world_body_count(const AabbWorld *world)
+{
+	return world ? world->count : 0;
+}
+
+bool
+aabb_body_get_position(const AabbWorld *world, AabbBodyId body,
+		float *center_x, float *center_y)
+{
+	if (!world || body >= world->count || !center_x || !center_y)
+		return false;
+
+	cpVect position = cpBodyGetPosition(world->bodies[body].chipmunk_body);
+	*center_x = (float) position.x;
+	*center_y = (float) position.y / world->coordinate_y_scale;
+	return true;
+}
+
+bool
+aabb_body_set_position(AabbWorld *world, AabbBodyId body,
+		float center_x, float center_y)
+{
+	if (!world || body >= world->count)
+		return false;
+
+	AabbBody *aabb_body = &world->bodies[body];
+	cpBodySetPosition(aabb_body->chipmunk_body,
+			cpv(center_x, center_y * world->coordinate_y_scale));
+	cpSpaceReindexShapesForBody(world->chipmunk_space,
+			aabb_body->chipmunk_body);
+	return true;
+}
+
+bool
+aabb_body_set_drive(AabbWorld *world, AabbBodyId body,
+		float velocity_x, float velocity_y)
+{
+	if (!world || body >= world->count)
+		return false;
+
+	world->bodies[body].drive_x = velocity_x;
+	world->bodies[body].drive_y = velocity_y;
+	return true;
+}
+
+void
+aabb_world_clear_drives(AabbWorld *world)
+{
+	if (!world)
+		return;
+
+	for (size_t i = 0; i < world->count; i++) {
+		AabbBody *body = &world->bodies[i];
+		body->drive_x = 0;
+		body->drive_y = 0;
+		if (body->inverse_mass > 0)
+			cpBodySetVelocity(body->chipmunk_body, cpvzero);
+	}
+}
+
+float
+aabb_world_max_penetration(const AabbWorld *world)
+{
+	float maximum = 0;
+
+	if (!world)
+		return maximum;
+
+	for (size_t a_id = 0; a_id < world->count; a_id++) {
+		const AabbBody *a = &world->bodies[a_id];
+		cpVect a_position = cpBodyGetPosition(a->chipmunk_body);
+
+		for (size_t b_id = a_id + 1; b_id < world->count; b_id++) {
+			const AabbBody *b = &world->bodies[b_id];
+			cpVect b_position = cpBodyGetPosition(b->chipmunk_body);
+			float required_x = half_width(world, a) + half_width(world, b);
+			float required_y = half_height(world, a) + half_height(world, b);
+			float overlap_x = required_x
+				- fabsf((float) (b_position.x - a_position.x));
+			float overlap_y = required_y
+				- fabsf((float) (b_position.y - a_position.y)
+					/ world->coordinate_y_scale);
+
+			if (overlap_x > 0 && overlap_y > 0) {
+				float penetration = fminf(overlap_x, overlap_y);
+
+				if (penetration > maximum)
+					maximum = penetration;
+			}
+		}
+	}
+
+	return maximum;
+}
+
+AabbStepResult
+aabb_world_step(AabbWorld *world, float dt)
+{
+	AabbStepResult result = {0};
+
+	if (!world || world->count == 0 || dt <= 0)
+		return result;
+
+	float max_speed = 0;
+	float minimum_extent = FLT_MAX;
+
+	for (size_t i = 0; i < world->count; i++) {
+		AabbBody *body = &world->bodies[i];
+		cpVect position = cpBodyGetPosition(body->chipmunk_body);
+		body->step_start_x = (float) position.x;
+		body->step_start_y = (float) position.y
+			/ world->coordinate_y_scale;
+
+		if (body->inverse_mass > 0) {
+			cpBodySetVelocity(body->chipmunk_body,
+					cpv(body->drive_x,
+						body->drive_y * world->coordinate_y_scale));
+		}
+
+		float speed = hypotf(body->drive_x, body->drive_y);
+		float extent = fminf(body->width + world->padding,
+				body->height + world->padding);
+
+		if (speed > max_speed)
+			max_speed = speed;
+		if (extent < minimum_extent)
+			minimum_extent = extent;
+	}
+
+	float max_translation = fmaxf(1.0f, minimum_extent * 0.2f);
+	unsigned int substeps = (unsigned int)
+		ceilf(max_speed * dt / max_translation);
+
+	if (substeps < 1)
+		substeps = 1;
+	if (substeps > AABB_MAX_SUBSTEPS)
+		substeps = AABB_MAX_SUBSTEPS;
+
+	result.substeps = substeps;
+	cpFloat substep_dt = dt / (cpFloat) substeps;
+
+	for (unsigned int step = 0; step < substeps; step++)
+		cpSpaceStep(world->chipmunk_space, substep_dt);
+
+	for (size_t i = 0; i < world->count; i++) {
+		AabbBody *body = &world->bodies[i];
+		cpVect position = cpBodyGetPosition(body->chipmunk_body);
+		float movement = hypotf((float) position.x - body->step_start_x,
+				(float) position.y / world->coordinate_y_scale
+					- body->step_start_y);
+
+		if (movement > result.max_movement)
+			result.max_movement = movement;
+	}
+
+	result.max_penetration = aabb_world_max_penetration(world);
+	result.contacts = count_contacts(world);
+	return result;
+}
+
+#else
+
+enum {
+	AABB_SOLVER_ITERATIONS = 16
+};
+
+static const float AABB_POSITION_SLOP = 0.001f;
+static const float AABB_CONTACT_RELEASE_SLOP = 0.5f;
+
+static size_t
+pair_index(const AabbWorld *world, size_t a, size_t b)
+{
+	return a * world->capacity + b;
 }
 
 static signed char
@@ -264,8 +600,12 @@ count_contacts(const AabbWorld *world)
 }
 
 AabbWorld *
-aabb_world_create(size_t capacity, float padding)
+aabb_world_create(size_t capacity, float padding,
+		float coordinate_scale_x, float coordinate_scale_y)
 {
+	(void) coordinate_scale_x;
+	(void) coordinate_scale_y;
+
 	if (capacity == 0 || capacity > UINT_MAX
 			|| capacity > SIZE_MAX / capacity)
 		return NULL;
@@ -496,3 +836,5 @@ aabb_world_step(AabbWorld *world, float dt)
 
 	return result;
 }
+
+#endif
