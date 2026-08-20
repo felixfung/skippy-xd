@@ -2325,6 +2325,10 @@ init_xexts(session_t *ps) {
 			(ps->xinfo.xinerama_exist ? "yes": "no"));
 #endif /* CFG_XINERAMA */
 
+#ifdef CFG_CHIPMUNK
+	printfef(true, "(): Chipmunk extension: yes");
+#endif
+
 	if(!XDamageQueryExtension(dpy,
 				&ps->xinfo.damage_ev_base, &ps->xinfo.damage_err_base)) {
 		printfef(true, "(): FATAL: XDamage extension not found.");
