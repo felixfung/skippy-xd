@@ -2326,7 +2326,7 @@ init_xexts(session_t *ps) {
 #endif /* CFG_XINERAMA */
 
 #ifdef CFG_CHIPMUNK
-	printfef(true, "(): Chipmunk extension: yes");
+	printfef(true, "(): Chipmunk extension: yes. Cosmos layout will be optimized.");
 #endif
 
 	if(!XDamageQueryExtension(dpy,
