@@ -443,7 +443,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 	}
 
 	float scale_x = MAX(1, max_x - min_x);
-	float scale_y = MAX(1, max_y - min_y);
+	float scale_y = MAX(1, max_y - min_y)
+		* (float) mw->width / (float) mw->height / 1.4f;
 	float padding = (float) mw->distance + 1.0f;
 	AabbWorld *world = aabb_world_create(count, padding, scale_x, scale_y);
 
