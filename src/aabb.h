@@ -27,9 +27,9 @@ typedef struct {
 } AabbBodyDef;
 
 /*
- * Result of one fixed simulation step.  Cosmos uses max_penetration to
- * decide whether expansion is complete and max_movement to decide whether
- * contraction has settled.  The counters are useful for diagnostics.
+ * Result of one fixed simulation step.  Cosmos uses max_movement to decide
+ * whether contraction has settled and max_penetration while resolving the
+ * remaining contacts.  The counters are useful for diagnostics.
  */
 typedef struct {
 	float max_penetration;
@@ -61,6 +61,13 @@ bool aabb_body_set_position(AabbWorld *world, AabbBodyId body,
 bool aabb_body_set_drive(AabbWorld *world, AabbBodyId body,
 		float velocity_x, float velocity_y);
 void aabb_world_clear_drives(AabbWorld *world);
+
+/* Backend-independent geometry used by the Cosmos radial field. */
+bool aabb_world_center_of_mass(const AabbWorld *world,
+		float *center_x, float *center_y);
+float aabb_world_required_dilation(const AabbWorld *world, float clearance);
+bool aabb_world_dilate(AabbWorld *world,
+		float center_x, float center_y, float scale);
 
 /* Largest remaining padded-AABB penetration, measured in pixels. */
 float aabb_world_max_penetration(const AabbWorld *world);

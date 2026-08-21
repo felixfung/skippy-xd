@@ -25,7 +25,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
-#include <string.h>
 
 // this function redirects to different functions
 // which performs the expose layout
@@ -190,17 +189,6 @@ layout_xd(MainWin *mw, dlist *windows,
 	dlist_free(rows);
 }
 
-static void
-limit_vector(float *x, float *y, float maximum)
-{
-	float length = hypotf(*x, *y);
-
-	if (length > maximum && length > 0) {
-		*x *= maximum / length;
-		*y *= maximum / length;
-	}
-}
-
 static float
 scatter_random(unsigned int *state)
 {
@@ -249,133 +237,46 @@ run_scatter(AabbWorld *world, size_t count,
 	return iteration;
 }
 
-static bool
-bodies_overlap(AabbWorld *world, ClientWin **windows,
-		size_t first, size_t second, float padding)
+static unsigned int
+run_expansion(AabbWorld *world)
 {
-	float x1, y1, x2, y2;
-	aabb_body_get_position(world, (AabbBodyId) first, &x1, &y1);
-	aabb_body_get_position(world, (AabbBodyId) second, &x2, &y2);
+	const float clearance = 0.02f;
+	float center_x, center_y;
 
-	float required_x = (windows[first]->src.width
-			+ windows[second]->src.width) / 2.0f + padding;
-	float required_y = (windows[first]->src.height
-			+ windows[second]->src.height) / 2.0f + padding;
+	if (!aabb_world_center_of_mass(world, &center_x, &center_y))
+		return 0;
 
-	return fabsf(x2 - x1) < required_x && fabsf(y2 - y1) < required_y;
-}
+	float expansion_scale = aabb_world_required_dilation(world, clearance);
 
-static void
-pair_field(AabbWorld *world, ClientWin **windows,
-		size_t first, size_t second,
-		float scale_x, float scale_y,
-		float *field_x, float *field_y)
-{
-	float x1, y1, x2, y2;
-	aabb_body_get_position(world, (AabbBodyId) first, &x1, &y1);
-	aabb_body_get_position(world, (AabbBodyId) second, &x2, &y2);
+	if (expansion_scale <= 1.0f)
+		return 0;
 
-	float dx = (x2 - x1) / scale_x;
-	float dy = (y2 - y1) / scale_y;
-	float distance = hypotf(dx, dy);
-
-	if (distance < 0.01f) {
-		*field_x = 0;
-		*field_y = 0;
-		return;
-	}
-
-	float mass = (float) windows[second]->src.width
-		* (float) windows[second]->src.height / (scale_x * scale_y);
-	float magnitude = mass / (distance * distance);
-	float aspect_ratio = scale_x / scale_y;
-
-	*field_x = magnitude * dx / distance;
-	*field_y = magnitude * dy / distance / aspect_ratio;
-}
-
-static AabbStepResult
-pairwise_step(AabbWorld *world, ClientWin **windows, size_t count,
-		float scale_x, float scale_y, float padding,
-		float *drive_x, float *drive_y,
-		bool attraction, bool contacts_only)
-{
-	const float field_strength = 0.10f;
-	const float time_step = 0.10f;
-
-	memset(drive_x, 0, count * sizeof(*drive_x));
-	memset(drive_y, 0, count * sizeof(*drive_y));
-
-	for (size_t i = 0; i < count; i++) {
-		for (size_t j = 0; j < count; j++) {
-			if (i == j)
-				continue;
-			if (contacts_only
-					&& !bodies_overlap(world, windows, i, j, padding))
-				continue;
-
-			float field_x, field_y;
-			pair_field(world, windows, i, j,
-					scale_x, scale_y, &field_x, &field_y);
-
-			float direction = attraction ? 1.0f : -1.0f;
-			drive_x[i] += direction * field_strength * field_x;
-			drive_y[i] += direction * field_strength * field_y;
-		}
-	}
-
-	for (size_t i = 0; i < count; i++) {
-		limit_vector(&drive_x[i], &drive_y[i], 1.0f);
-		aabb_body_set_drive(world, (AabbBodyId) i,
-				drive_x[i] * scale_x * time_step,
-				drive_y[i] * scale_y * time_step);
-	}
-
-	return aabb_world_step(world, 1.0f);
+	return aabb_world_dilate(world, center_x, center_y, expansion_scale) ? 1 : 0;
 }
 
 static unsigned int
-run_expansion(AabbWorld *world, ClientWin **windows, size_t count,
-		float scale_x, float scale_y, float padding,
-		float *drive_x, float *drive_y)
+run_contraction(AabbWorld *world, size_t count)
 {
-	const float penetration_tolerance = 0.02f;
-	unsigned int iteration = 0;
-
-	for (; iteration < 1000; iteration++) {
-		if (aabb_world_max_penetration(world) <= penetration_tolerance)
-			break;
-
-		AabbStepResult result = pairwise_step(world, windows, count,
-				scale_x, scale_y, padding,
-				drive_x, drive_y, false, true);
-
-		if (result.max_penetration <= penetration_tolerance) {
-			iteration++;
-			break;
-		}
-	}
-
-	aabb_world_clear_drives(world);
-	return iteration;
-}
-
-static unsigned int
-run_contraction(AabbWorld *world, ClientWin **windows, size_t count,
-		float scale_x, float scale_y, float padding,
-		float *drive_x, float *drive_y)
-{
-	const float penetration_tolerance = 0.02f;
+	const float contraction_rate = 0.02f;
 	const float movement_tolerance = 0.01f;
 	unsigned int iteration = 0;
 
 	for (; iteration < 1000; iteration++) {
-		AabbStepResult result = pairwise_step(world, windows, count,
-				scale_x, scale_y, padding,
-				drive_x, drive_y, true, false);
+		float center_x, center_y;
+		if (!aabb_world_center_of_mass(world, &center_x, &center_y))
+			break;
 
-		if (result.max_penetration <= penetration_tolerance
-				&& result.max_movement <= movement_tolerance) {
+		for (size_t i = 0; i < count; i++) {
+			float x, y;
+			aabb_body_get_position(world, (AabbBodyId) i, &x, &y);
+			aabb_body_set_drive(world, (AabbBodyId) i,
+					contraction_rate * (center_x - x),
+					contraction_rate * (center_y - y));
+		}
+
+		AabbStepResult result = aabb_world_step(world, 1.0f);
+
+		if (result.max_movement <= movement_tolerance) {
 			iteration++;
 			break;
 		}
@@ -419,12 +320,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 		return;
 
 	ClientWin **items = calloc(count, sizeof(*items));
-	float *drive_x = calloc(count, sizeof(*drive_x));
-	float *drive_y = calloc(count, sizeof(*drive_y));
 
-	if (!items || !drive_x || !drive_y) {
-		free(drive_y);
-		free(drive_x);
+	if (!items) {
 		free(items);
 		return;
 	}
@@ -449,8 +346,6 @@ layout_cosmos(MainWin *mw, dlist *windows,
 	AabbWorld *world = aabb_world_create(count, padding, scale_x, scale_y);
 
 	if (!world) {
-		free(drive_y);
-		free(drive_x);
 		free(items);
 		return;
 	}
@@ -467,8 +362,6 @@ layout_cosmos(MainWin *mw, dlist *windows,
 
 		if (aabb_world_add_body(world, &definition) == AABB_BODY_INVALID) {
 			aabb_world_destroy(world);
-			free(drive_y);
-			free(drive_x);
 			free(items);
 			return;
 		}
@@ -476,10 +369,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 
 	unsigned int scatter_iterations = run_scatter(world, count,
 			scale_x, scale_y);
-	unsigned int expansion_iterations = run_expansion(world, items, count,
-			scale_x, scale_y, padding, drive_x, drive_y);
-	unsigned int contraction_iterations = run_contraction(world, items, count,
-			scale_x, scale_y, padding, drive_x, drive_y);
+	unsigned int expansion_iterations = run_expansion(world);
+	unsigned int contraction_iterations = run_contraction(world, count);
 	unsigned int settle_iterations = run_final_settle(world);
 
 	printfdf(false, "(): %u scatter iterations", scatter_iterations);
@@ -513,7 +404,5 @@ layout_cosmos(MainWin *mw, dlist *windows,
 	*total_height = (unsigned int) (max_y - min_y);
 
 	aabb_world_destroy(world);
-	free(drive_y);
-	free(drive_x);
 	free(items);
 }

@@ -838,3 +838,99 @@ aabb_world_step(AabbWorld *world, float dt)
 }
 
 #endif
+
+bool
+aabb_world_center_of_mass(const AabbWorld *world,
+		float *center_x, float *center_y)
+{
+	if (!world || world->count == 0 || !center_x || !center_y)
+		return false;
+
+	double total_mass = 0;
+	double weighted_x = 0;
+	double weighted_y = 0;
+
+	for (size_t i = 0; i < world->count; i++) {
+		const AabbBody *body = &world->bodies[i];
+		float x, y;
+
+		if (body->inverse_mass <= 0
+				|| !aabb_body_get_position(world, (AabbBodyId) i, &x, &y))
+			continue;
+
+		double mass = 1.0 / body->inverse_mass;
+		total_mass += mass;
+		weighted_x += mass * x;
+		weighted_y += mass * y;
+	}
+
+	if (total_mass <= 0)
+		return false;
+
+	*center_x = (float) (weighted_x / total_mass);
+	*center_y = (float) (weighted_y / total_mass);
+	return true;
+}
+
+float
+aabb_world_required_dilation(const AabbWorld *world, float clearance)
+{
+	float dilation = 1.0f;
+
+	if (!world)
+		return dilation;
+	if (clearance < 0)
+		clearance = 0;
+
+	for (size_t a_id = 0; a_id < world->count; a_id++) {
+		const AabbBody *a = &world->bodies[a_id];
+		float ax, ay;
+		if (!aabb_body_get_position(world, (AabbBodyId) a_id, &ax, &ay))
+			return 1.0f;
+
+		for (size_t b_id = a_id + 1; b_id < world->count; b_id++) {
+			const AabbBody *b = &world->bodies[b_id];
+			float bx, by;
+			if (!aabb_body_get_position(world, (AabbBodyId) b_id, &bx, &by))
+				return 1.0f;
+
+			float distance_x = fabsf(bx - ax);
+			float distance_y = fabsf(by - ay);
+			float required_x = half_width(world, a)
+				+ half_width(world, b) + clearance;
+			float required_y = half_height(world, a)
+				+ half_height(world, b) + clearance;
+			float dilation_x = distance_x > 0
+				? required_x / distance_x : INFINITY;
+			float dilation_y = distance_y > 0
+				? required_y / distance_y : INFINITY;
+			float pair_dilation = fminf(dilation_x, dilation_y);
+
+			if (pair_dilation > dilation)
+				dilation = pair_dilation;
+		}
+	}
+
+	return dilation;
+}
+
+bool
+aabb_world_dilate(AabbWorld *world,
+		float center_x, float center_y, float scale)
+{
+	if (!world || !isfinite(center_x) || !isfinite(center_y)
+			|| !isfinite(scale) || scale <= 0)
+		return false;
+
+	for (size_t i = 0; i < world->count; i++) {
+		float x, y;
+		if (!aabb_body_get_position(world, (AabbBodyId) i, &x, &y)
+				|| !aabb_body_set_position(world, (AabbBodyId) i,
+				center_x + scale * (x - center_x),
+				center_y + scale * (y - center_y)))
+			return false;
+	}
+
+	aabb_world_clear_drives(world);
+	return true;
+}
