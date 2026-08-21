@@ -2327,6 +2327,8 @@ init_xexts(session_t *ps) {
 
 #ifdef CFG_CHIPMUNK
 	printfef(true, "(): Chipmunk extension: yes. Cosmos layout will be optimized.");
+#else
+	printfef(true, "(): Chipmunk extension: no. Cosmos layout will be in-house implementation.");
 #endif
 
 	if(!XDamageQueryExtension(dpy,
