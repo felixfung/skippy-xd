@@ -58,6 +58,12 @@ if xinerama_dep.found()
   add_project_dependencies(xinerama_dep, language: 'c')
 endif
 
+chipmunk_dep = cc.find_library('chipmunk', required: get_option('skippy_chipmunk'))
+if chipmunk_dep.found()
+  add_project_arguments('-DCFG_CHIPMUNK', language: 'c')
+  add_project_dependencies(chipmunk_dep, language: 'c')
+endif
+
 executable(
   meson.project_name(),
   sources: skippy_sources,
