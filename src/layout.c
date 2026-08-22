@@ -88,7 +88,7 @@ void
 layout_xd(MainWin *mw, dlist *windows,
 		unsigned int *total_width, unsigned int *total_height)
 {
-	int sum_w = 0, max_h = 0, max_w = 0;
+	int sum_w = 0, max_h = 0;
 
 	dlist *slots = NULL;
 
@@ -98,16 +98,13 @@ layout_xd(MainWin *mw, dlist *windows,
 	// Get total window width and max window width/height
 	foreach_dlist (windows) {
 		ClientWin *cw = (ClientWin *) iter->data;
-		if (!cw->mode) continue;
 		sum_w += cw->src.width;
-		max_w = MAX(max_w, cw->src.width);
 		max_h = MAX(max_h, cw->src.height);
 	}
 
 	// Vertical layout
 	foreach_dlist (windows) {
 		ClientWin *cw = (ClientWin*) iter->data;
-		if (!cw->mode) continue;
 		dlist *slot_iter = NULL;
 		if ((mw->ps->o.mode == PROGMODE_SWITCH && mw->ps->o.switch_compact)
 		 || (mw->ps->o.mode == PROGMODE_EXPOSE && mw->ps->o.expose_compact))

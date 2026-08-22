@@ -26,6 +26,4 @@ void layout_run(MainWin *, dlist *, unsigned int *, unsigned int *);
 void layout_xd(MainWin *, dlist *, unsigned int *, unsigned int *);
 void layout_cosmos(MainWin *, dlist *, unsigned int *, unsigned int *);
 
-int middleOfThree(int a, int b, int c);
-
 #endif /* SKIPPY_LAYOUT_H */
