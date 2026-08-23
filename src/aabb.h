@@ -9,7 +9,8 @@
  *
  * Coordinates are floating-point pixels.  A body position is its center;
  * width and height are fixed.  The world adds the same padding around every
- * body so that contact also enforces the configured window gap.
+ * body so that contact also enforces the configured window gap.  Every body
+ * is movable, with mass equal to its unpadded area.
  */
 
 typedef struct AabbWorld AabbWorld;
@@ -22,21 +23,7 @@ typedef struct {
 	float center_y;
 	float width;
 	float height;
-	/* Zero makes a body immovable.  Equal values give equal movement. */
-	float inverse_mass;
 } AabbBodyDef;
-
-/*
- * Result of one fixed simulation step.  Cosmos uses max_movement to decide
- * whether contraction has settled and max_penetration while resolving the
- * remaining contacts.  The counters are useful for diagnostics.
- */
-typedef struct {
-	float max_penetration;
-	float max_movement;
-	unsigned int contacts;
-	unsigned int substeps;
-} AabbStepResult;
 
 /*
  * capacity is fixed for the lifetime of the world.  coordinate_scale_x/y
@@ -54,8 +41,6 @@ size_t aabb_world_body_count(const AabbWorld *world);
 
 bool aabb_body_get_position(const AabbWorld *world, AabbBodyId body,
 		float *center_x, float *center_y);
-bool aabb_body_set_position(AabbWorld *world, AabbBodyId body,
-		float center_x, float center_y);
 
 /* Drive is the desired velocity, in pixels per simulation-time unit. */
 bool aabb_body_set_drive(AabbWorld *world, AabbBodyId body,
@@ -72,7 +57,7 @@ bool aabb_world_dilate(AabbWorld *world,
 /* Largest remaining padded-AABB penetration, measured in pixels. */
 float aabb_world_max_penetration(const AabbWorld *world);
 
-/* Advance by dt.  Cosmos uses a fixed dt of 1.0. */
-AabbStepResult aabb_world_step(AabbWorld *world, float dt);
+/* Advance by dt and return the largest body movement in pixels. */
+float aabb_world_step(AabbWorld *world, float dt);
 
 #endif

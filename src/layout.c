@@ -18,6 +18,7 @@
  */
 
 #include "skippy.h"
+#include "layout.h"
 #include "aabb.h"
 
 #include <limits.h>
@@ -26,14 +27,18 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-// this function redirects to different functions
-// which performs the expose layout
-// by calaculating cw->x, cw->y (new coordinates)
-// and total_width, total_height
-// given cw->src.x, cw->src.y (original coordinates)
+static void layout_xd(MainWin *mw, dlist *windows,
+		unsigned int *total_width, unsigned int *total_height);
+static void layout_cosmos(MainWin *mw, dlist *windows,
+		unsigned int *total_width, unsigned int *total_height);
 
-void layout_run(MainWin *mw, dlist *windows,
-		unsigned int *total_width, unsigned int *total_height) {
+// Redirect to the configured expose layout.  The selected implementation
+// calculates cw->x, cw->y and the total dimensions from cw->src.x, cw->src.y.
+
+void
+layout_run(MainWin *mw, dlist *windows,
+		unsigned int *total_width, unsigned int *total_height)
+{
 	if ((mw->ps->o.mode == PROGMODE_EXPOSE && mw->ps->o.exposeLayout == LAYOUT_COSMOS)
 	|| (mw->ps->o.mode == PROGMODE_SWITCH && mw->ps->o.switchLayout == LAYOUT_COSMOS)) {
 		foreach_dlist (dlist_first(windows)) {
@@ -84,7 +89,7 @@ void layout_run(MainWin *mw, dlist *windows,
 // original legacy layout
 //
 //
-void
+static void
 layout_xd(MainWin *mw, dlist *windows,
 		unsigned int *total_width, unsigned int *total_height)
 {
@@ -187,6 +192,25 @@ layout_xd(MainWin *mw, dlist *windows,
 }
 
 static void
+window_extents(ClientWin **windows, size_t count,
+		int *min_x, int *max_x, int *min_y, int *max_y)
+{
+	*min_x = INT_MAX;
+	*max_x = INT_MIN;
+	*min_y = INT_MAX;
+	*max_y = INT_MIN;
+
+	for (size_t i = 0; i < count; i++) {
+		*min_x = MIN(*min_x, windows[i]->x);
+		*max_x = MAX(*max_x,
+				windows[i]->x + windows[i]->src.width);
+		*min_y = MIN(*min_y, windows[i]->y);
+		*max_y = MAX(*max_y,
+				windows[i]->y + windows[i]->src.height);
+	}
+}
+
+static void
 window_center(const ClientWin *window, float *center_x, float *center_y)
 {
 	*center_x = window->x + window->src.width / 2.0f;
@@ -198,6 +222,12 @@ set_window_center(ClientWin *window, float center_x, float center_y)
 {
 	window->x = (int) lroundf(center_x - window->src.width / 2.0f);
 	window->y = (int) lroundf(center_y - window->src.height / 2.0f);
+}
+
+static double
+window_mass(const ClientWin *window)
+{
+	return (double) window->src.width * (double) window->src.height;
 }
 
 static void
@@ -219,12 +249,183 @@ grid_offset(size_t rank, size_t count, size_t columns,
 		* ((float) row - ((float) rows - 1.0f) / 2.0f);
 }
 
+static size_t
+find_scatter_members(ClientWin **windows, size_t count,
+		const bool *gridded, bool *members, size_t seed,
+		float threshold_x, float threshold_y)
+{
+	float seed_x, seed_y;
+	window_center(windows[seed], &seed_x, &seed_y);
+	size_t member_count = 0;
+
+	for (size_t i = 0; i < count; i++) {
+		float x, y;
+
+		members[i] = false;
+		if (gridded[i])
+			continue;
+		window_center(windows[i], &x, &y);
+
+		if (fabsf(x - seed_x) <= threshold_x
+				&& fabsf(y - seed_y) <= threshold_y) {
+			members[i] = true;
+			member_count++;
+		}
+	}
+
+	return member_count;
+}
+
+static void
+scatter_group(ClientWin **windows, size_t count,
+		const bool *members, bool *gridded, size_t member_count,
+		float screen_aspect, float padding, float clearance)
+{
+	size_t mode_count = 0;
+	double mode_area = 0;
+	int mode_width = 0;
+	int mode_height = 0;
+
+	for (size_t i = 0; i < count; i++) {
+		if (!members[i])
+			continue;
+
+		size_t geometry_count = 0;
+		for (size_t j = 0; j < count; j++) {
+			if (members[j]
+					&& windows[j]->src.width == windows[i]->src.width
+					&& windows[j]->src.height == windows[i]->src.height)
+				geometry_count++;
+		}
+
+		double area = window_mass(windows[i]);
+		if (geometry_count > mode_count
+				|| (geometry_count == mode_count && area > mode_area)) {
+			mode_count = geometry_count;
+			mode_area = area;
+			mode_width = windows[i]->src.width;
+			mode_height = windows[i]->src.height;
+		}
+	}
+
+	double total_mass = 0;
+	double weighted_x = 0;
+	double weighted_y = 0;
+	for (size_t i = 0; i < count; i++) {
+		if (!members[i])
+			continue;
+
+		float x, y;
+		double mass = window_mass(windows[i]);
+		window_center(windows[i], &x, &y);
+		total_mass += mass;
+		weighted_x += mass * x;
+		weighted_y += mass * y;
+	}
+
+	float center_x = (float) (weighted_x / total_mass);
+	float center_y = (float) (weighted_y / total_mass);
+	float cell_width = mode_width + padding;
+	float cell_height = mode_height + padding;
+	float window_aspect = (float) mode_width / mode_height;
+	size_t columns = (size_t) ceilf(sqrtf(
+		(float) member_count * screen_aspect / window_aspect));
+	if (columns < 1)
+		columns = 1;
+	if (columns > member_count)
+		columns = member_count;
+	size_t rows = (member_count + columns - 1) / columns;
+
+	double weighted_offset_x = 0;
+	double weighted_offset_y = 0;
+	size_t rank = 0;
+	for (size_t i = 0; i < count; i++) {
+		if (!members[i])
+			continue;
+
+		float offset_x, offset_y;
+		double mass = window_mass(windows[i]);
+		grid_offset(rank, member_count, columns,
+				cell_width, cell_height, &offset_x, &offset_y);
+		weighted_offset_x += mass * offset_x;
+		weighted_offset_y += mass * offset_y;
+		rank++;
+	}
+
+	float mean_offset_x = (float) (weighted_offset_x / total_mass);
+	float mean_offset_y = (float) (weighted_offset_y / total_mass);
+	float reserve_half_x = columns * cell_width / 2.0f
+		+ fabsf(mean_offset_x);
+	float reserve_half_y = rows * cell_height / 2.0f
+		+ fabsf(mean_offset_y);
+
+	rank = 0;
+	for (size_t i = 0; i < count; i++) {
+		if (!members[i])
+			continue;
+
+		float offset_x, offset_y;
+		grid_offset(rank, member_count, columns,
+				cell_width, cell_height, &offset_x, &offset_y);
+		set_window_center(windows[i],
+				center_x + offset_x - mean_offset_x,
+				center_y + offset_y - mean_offset_y);
+		gridded[i] = true;
+		rank++;
+
+		float x, y;
+		window_center(windows[i], &x, &y);
+		float actual_half_x = fabsf(x - center_x)
+			+ (windows[i]->src.width + padding) / 2.0f;
+		float actual_half_y = fabsf(y - center_y)
+			+ (windows[i]->src.height + padding) / 2.0f;
+		reserve_half_x = fmaxf(reserve_half_x, actual_half_x);
+		reserve_half_y = fmaxf(reserve_half_y, actual_half_y);
+	}
+
+	float outsider_scale = 1.0f;
+	for (size_t i = 0; i < count; i++) {
+		if (members[i])
+			continue;
+
+		float x, y;
+		window_center(windows[i], &x, &y);
+		float distance_x = fabsf(x - center_x);
+		float distance_y = fabsf(y - center_y);
+		float required_x = reserve_half_x
+			+ (windows[i]->src.width + padding) / 2.0f + clearance;
+		float required_y = reserve_half_y
+			+ (windows[i]->src.height + padding) / 2.0f + clearance;
+		float scale_for_x = distance_x > 0
+			? required_x / distance_x : INFINITY;
+		float scale_for_y = distance_y > 0
+			? required_y / distance_y : INFINITY;
+		float scale_for_window = fminf(scale_for_x, scale_for_y);
+
+		if (scale_for_window > outsider_scale)
+			outsider_scale = scale_for_window;
+	}
+
+	if (outsider_scale > 1.0f && isfinite(outsider_scale)) {
+		for (size_t i = 0; i < count; i++) {
+			if (members[i])
+				continue;
+
+			float x, y;
+			window_center(windows[i], &x, &y);
+			set_window_center(windows[i],
+					center_x + outsider_scale * (x - center_x),
+					center_y + outsider_scale * (y - center_y));
+		}
+	}
+}
+
 static unsigned int
-run_scatter(MainWin *mw, ClientWin **windows, size_t count,
-		float scale_x, float scale_y, float padding)
+run_scatter(ClientWin **windows, size_t count,
+		float scale_x, float scale_y, float screen_aspect,
+		float padding, float clearance)
 {
 	const float center_threshold = 0.10f;
-	const float clearance = 0.02f;
 	float threshold_x = center_threshold * scale_x;
 	float threshold_y = center_threshold * scale_y;
 	bool *gridded = calloc(count, sizeof(*gridded));
@@ -244,175 +445,13 @@ run_scatter(MainWin *mw, ClientWin **windows, size_t count,
 			if (gridded[seed])
 				continue;
 
-			float seed_x, seed_y;
-			window_center(windows[seed], &seed_x, &seed_y);
-			size_t member_count = 0;
-
-			for (size_t i = 0; i < count; i++) {
-				float x, y;
-
-				members[i] = false;
-				if (gridded[i])
-					continue;
-				window_center(windows[i], &x, &y);
-
-				if (fabsf(x - seed_x) <= threshold_x
-						&& fabsf(y - seed_y) <= threshold_y) {
-					members[i] = true;
-					member_count++;
-				}
-			}
-
+			size_t member_count = find_scatter_members(windows, count,
+					gridded, members, seed, threshold_x, threshold_y);
 			if (member_count <= 1)
 				continue;
 
-			size_t mode_count = 0;
-			double mode_area = 0;
-			int mode_width = 0;
-			int mode_height = 0;
-
-			for (size_t i = 0; i < count; i++) {
-				if (!members[i])
-					continue;
-
-				size_t geometry_count = 0;
-				for (size_t j = 0; j < count; j++) {
-					if (members[j]
-							&& windows[j]->src.width
-								== windows[i]->src.width
-							&& windows[j]->src.height
-								== windows[i]->src.height)
-						geometry_count++;
-				}
-
-				double area = (double) windows[i]->src.width
-					* (double) windows[i]->src.height;
-				if (geometry_count > mode_count
-						|| (geometry_count == mode_count
-							&& area > mode_area)) {
-					mode_count = geometry_count;
-					mode_area = area;
-					mode_width = windows[i]->src.width;
-					mode_height = windows[i]->src.height;
-				}
-			}
-
-			double total_mass = 0;
-			double weighted_x = 0;
-			double weighted_y = 0;
-			for (size_t i = 0; i < count; i++) {
-				if (!members[i])
-					continue;
-
-				float x, y;
-				double mass = (double) windows[i]->src.width
-					* (double) windows[i]->src.height;
-				window_center(windows[i], &x, &y);
-				total_mass += mass;
-				weighted_x += mass * x;
-				weighted_y += mass * y;
-			}
-
-			float center_x = (float) (weighted_x / total_mass);
-			float center_y = (float) (weighted_y / total_mass);
-			float screen_aspect = mw->width > 0 && mw->height > 0
-				? (float) mw->width / (float) mw->height : 1.0f;
-			float cell_width = mode_width + padding;
-			float cell_height = mode_height + padding;
-			float window_aspect = (float) mode_width / mode_height;
-			size_t columns = (size_t) ceilf(sqrtf(
-				(float) member_count * screen_aspect / window_aspect));
-			if (columns < 1)
-				columns = 1;
-			if (columns > member_count)
-				columns = member_count;
-			size_t rows = (member_count + columns - 1) / columns;
-
-			double weighted_offset_x = 0;
-			double weighted_offset_y = 0;
-			size_t rank = 0;
-			for (size_t i = 0; i < count; i++) {
-				if (!members[i])
-					continue;
-
-				float offset_x, offset_y;
-				double mass = (double) windows[i]->src.width
-					* (double) windows[i]->src.height;
-				grid_offset(rank, member_count, columns,
-						cell_width, cell_height, &offset_x, &offset_y);
-				weighted_offset_x += mass * offset_x;
-				weighted_offset_y += mass * offset_y;
-				rank++;
-			}
-
-			float mean_offset_x = (float) (weighted_offset_x / total_mass);
-			float mean_offset_y = (float) (weighted_offset_y / total_mass);
-			float reserve_half_x = columns * cell_width / 2.0f
-				+ fabsf(mean_offset_x);
-			float reserve_half_y = rows * cell_height / 2.0f
-				+ fabsf(mean_offset_y);
-
-			rank = 0;
-			for (size_t i = 0; i < count; i++) {
-				if (!members[i])
-					continue;
-
-				float offset_x, offset_y;
-				grid_offset(rank, member_count, columns,
-						cell_width, cell_height, &offset_x, &offset_y);
-				set_window_center(windows[i],
-						center_x + offset_x - mean_offset_x,
-						center_y + offset_y - mean_offset_y);
-				gridded[i] = true;
-				rank++;
-
-				float x, y;
-				window_center(windows[i], &x, &y);
-				float actual_half_x = fabsf(x - center_x)
-					+ (windows[i]->src.width + padding) / 2.0f;
-				float actual_half_y = fabsf(y - center_y)
-					+ (windows[i]->src.height + padding) / 2.0f;
-				reserve_half_x = fmaxf(reserve_half_x, actual_half_x);
-				reserve_half_y = fmaxf(reserve_half_y, actual_half_y);
-			}
-
-			float outsider_scale = 1.0f;
-			for (size_t i = 0; i < count; i++) {
-				if (members[i])
-					continue;
-
-				float x, y;
-				window_center(windows[i], &x, &y);
-				float distance_x = fabsf(x - center_x);
-				float distance_y = fabsf(y - center_y);
-				float required_x = reserve_half_x
-					+ (windows[i]->src.width + padding) / 2.0f
-					+ clearance;
-				float required_y = reserve_half_y
-					+ (windows[i]->src.height + padding) / 2.0f
-					+ clearance;
-				float scale_for_x = distance_x > 0
-					? required_x / distance_x : INFINITY;
-				float scale_for_y = distance_y > 0
-					? required_y / distance_y : INFINITY;
-				float scale_for_window = fminf(scale_for_x, scale_for_y);
-
-				if (scale_for_window > outsider_scale)
-					outsider_scale = scale_for_window;
-			}
-
-			if (outsider_scale > 1.0f && isfinite(outsider_scale)) {
-				for (size_t i = 0; i < count; i++) {
-					if (members[i])
-						continue;
-
-					float x, y;
-					window_center(windows[i], &x, &y);
-					set_window_center(windows[i],
-							center_x + outsider_scale * (x - center_x),
-							center_y + outsider_scale * (y - center_y));
-				}
-			}
+			scatter_group(windows, count, members, gridded, member_count,
+					screen_aspect, padding, clearance);
 
 			groups++;
 			found = true;
@@ -429,9 +468,8 @@ run_scatter(MainWin *mw, ClientWin **windows, size_t count,
 }
 
 static unsigned int
-run_expansion(AabbWorld *world)
+run_expansion(AabbWorld *world, float clearance)
 {
-	const float clearance = 0.02f;
 	float center_x, center_y;
 
 	if (!aabb_world_center_of_mass(world, &center_x, &center_y))
@@ -446,10 +484,11 @@ run_expansion(AabbWorld *world)
 }
 
 static unsigned int
-run_contraction(AabbWorld *world, size_t count)
+run_contraction(AabbWorld *world)
 {
 	const float contraction_rate = 0.02f;
 	const float movement_tolerance = 0.01f;
+	size_t count = aabb_world_body_count(world);
 	unsigned int iteration = 0;
 
 	for (; iteration < 1000; iteration++) {
@@ -465,9 +504,9 @@ run_contraction(AabbWorld *world, size_t count)
 					contraction_rate * (center_y - y));
 		}
 
-		AabbStepResult result = aabb_world_step(world, 1.0f);
+		float max_movement = aabb_world_step(world, 1.0f);
 
-		if (result.max_movement <= movement_tolerance) {
+		if (max_movement <= movement_tolerance) {
 			iteration++;
 			break;
 		}
@@ -488,8 +527,8 @@ run_final_settle(AabbWorld *world)
 		if (aabb_world_max_penetration(world) <= penetration_tolerance)
 			break;
 
-		AabbStepResult result = aabb_world_step(world, 1.0f);
-		if (result.max_penetration <= penetration_tolerance) {
+		aabb_world_step(world, 1.0f);
+		if (aabb_world_max_penetration(world) <= penetration_tolerance) {
 			iteration++;
 			break;
 		}
@@ -498,10 +537,14 @@ run_final_settle(AabbWorld *world)
 	return iteration;
 }
 
-void
+static void
 layout_cosmos(MainWin *mw, dlist *windows,
 		unsigned int *total_width, unsigned int *total_height)
 {
+	const float aspect_balance = 1.4f;
+	const float clearance = 0.02f;
+	const float rounding_padding = 1.0f;
+
 	windows = dlist_first(windows);
 	size_t count = (size_t) dlist_len(windows);
 
@@ -512,46 +555,30 @@ layout_cosmos(MainWin *mw, dlist *windows,
 
 	ClientWin **items = calloc(count, sizeof(*items));
 
-	if (!items) {
-		free(items);
+	if (!items)
 		return;
-	}
 
 	size_t index = 0;
-	int min_x = INT_MAX, max_x = INT_MIN;
-	int min_y = INT_MAX, max_y = INT_MIN;
 
 	foreach_dlist (windows) {
 		ClientWin *cw = iter->data;
 		items[index++] = cw;
-		min_x = MIN(min_x, cw->x);
-		max_x = MAX(max_x, cw->x + cw->src.width);
-		min_y = MIN(min_y, cw->y);
-		max_y = MAX(max_y, cw->y + cw->src.height);
 	}
 
+	float screen_aspect = (float) mw->width / (float) mw->height;
+	int min_x, max_x, min_y, max_y;
+	window_extents(items, count, &min_x, &max_x, &min_y, &max_y);
 	float scale_x = MAX(1, max_x - min_x);
 	float scale_y = MAX(1, max_y - min_y)
-		* (float) mw->width / (float) mw->height / 1.4f;
-	float padding = (float) mw->distance + 1.0f;
-	unsigned int scatter_groups = run_scatter(mw, items, count,
-			scale_x, scale_y, padding);
+		* screen_aspect / aspect_balance;
+	float padding = (float) mw->distance + rounding_padding;
+	unsigned int scatter_groups = run_scatter(items, count,
+			scale_x, scale_y, screen_aspect, padding, clearance);
 
-	min_x = INT_MAX;
-	max_x = INT_MIN;
-	min_y = INT_MAX;
-	max_y = INT_MIN;
-
-	for (size_t i = 0; i < count; i++) {
-		min_x = MIN(min_x, items[i]->x);
-		max_x = MAX(max_x, items[i]->x + items[i]->src.width);
-		min_y = MIN(min_y, items[i]->y);
-		max_y = MAX(max_y, items[i]->y + items[i]->src.height);
-	}
-
+	window_extents(items, count, &min_x, &max_x, &min_y, &max_y);
 	scale_x = MAX(1, max_x - min_x);
 	scale_y = MAX(1, max_y - min_y)
-		* (float) mw->width / (float) mw->height / 1.4f;
+		* screen_aspect / aspect_balance;
 
 	AabbWorld *world = aabb_world_create(count, padding, scale_x, scale_y);
 
@@ -565,9 +592,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 			.center_x = items[i]->x + items[i]->src.width / 2.0f,
 			.center_y = items[i]->y + items[i]->src.height / 2.0f,
 			.width = items[i]->src.width,
-			.height = items[i]->src.height,
-			.inverse_mass = 1.0f
-				/ ((float) items[i]->src.width * items[i]->src.height)
+			.height = items[i]->src.height
 		};
 
 		if (aabb_world_add_body(world, &definition) == AABB_BODY_INVALID) {
@@ -577,8 +602,8 @@ layout_cosmos(MainWin *mw, dlist *windows,
 		}
 	}
 
-	unsigned int expansion_iterations = run_expansion(world);
-	unsigned int contraction_iterations = run_contraction(world, count);
+	unsigned int expansion_iterations = run_expansion(world, clearance);
+	unsigned int contraction_iterations = run_contraction(world);
 	unsigned int settle_iterations = run_final_settle(world);
 
 	printfdf(false, "(): %u scatter groups", scatter_groups);
@@ -586,22 +611,15 @@ layout_cosmos(MainWin *mw, dlist *windows,
 	printfdf(false, "(): %u contraction iterations", contraction_iterations);
 	printfdf(false, "(): %u settle iterations", settle_iterations);
 
-	min_x = INT_MAX;
-	max_x = INT_MIN;
-	min_y = INT_MAX;
-	max_y = INT_MIN;
-
 	for (size_t i = 0; i < count; i++) {
 		float center_x, center_y;
 		aabb_body_get_position(world, (AabbBodyId) i, &center_x, &center_y);
 
 		items[i]->x = (int) lroundf(center_x - items[i]->src.width / 2.0f);
 		items[i]->y = (int) lroundf(center_y - items[i]->src.height / 2.0f);
-		min_x = MIN(min_x, items[i]->x);
-		max_x = MAX(max_x, items[i]->x + items[i]->src.width);
-		min_y = MIN(min_y, items[i]->y);
-		max_y = MAX(max_y, items[i]->y + items[i]->src.height);
 	}
+
+	window_extents(items, count, &min_x, &max_x, &min_y, &max_y);
 
 	for (size_t i = 0; i < count; i++) {
 		items[i]->x -= min_x;

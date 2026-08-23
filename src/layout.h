@@ -23,7 +23,5 @@
 // calculate and populate windows destination positions
 // switches to different layout algorithms based on user/default config
 void layout_run(MainWin *, dlist *, unsigned int *, unsigned int *);
-void layout_xd(MainWin *, dlist *, unsigned int *, unsigned int *);
-void layout_cosmos(MainWin *, dlist *, unsigned int *, unsigned int *);
 
 #endif /* SKIPPY_LAYOUT_H */
