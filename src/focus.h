@@ -109,12 +109,13 @@ focus_miniw_adv(session_t *ps, ClientWin *cw, bool move_ptr) {
 	XSetInputFocus(ps->dpy, cw->mini.window, RevertToParent, CurrentTime);
 	XFlush(ps->dpy);
 
-	ps->mainwin->client_to_focus = cw;
-	ps->mainwin->client_to_focus->focused = 1;
+	cw->mainwin->client_to_focus = cw;
+	cw->mainwin->client_to_focus->focused = 1;
+	ps->active_mainwin = cw->mainwin;
 	clientwin_render(cw);
 
 	printfdf(false, "(): ");
-	printfdf(false, "(): client_to_focus = %p", ps->mainwin->client_to_focus);
+	printfdf(false, "(): client_to_focus = %p", cw->mainwin->client_to_focus);
 }
 
 static inline void

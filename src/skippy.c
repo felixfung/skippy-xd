@@ -1328,10 +1328,8 @@ desktopwin_map(ClientWin *cw)
 }
 
 static void
-skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
+skippy_activate_impl(MainWin *mw, enum layoutmode layout, Window leader)
 {
-	mainwin_update(mw);
-
 	mw->client_to_focus = NULL;
 
 	count_and_filter_clients(mw);
@@ -1372,10 +1370,69 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 }
 
 static void
+skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
+{
+	mainwin_update(mw);
+	skippy_activate_impl(mw, layout, leader);
+}
+
+static inline bool
+mainloop_is_multi(session_t *ps, enum layoutmode layout, dlist *mws) {
+#ifdef CFG_XINERAMA
+	return layout == LAYOUTMODE_EXPOSE && ps->o.exposeOnAllMonitors
+		&& dlist_len(mws) > 1;
+#else
+	(void)ps; (void)layout; (void)mws;
+	return false;
+#endif
+}
+
+static bool
+mainloop_lookup(dlist *cur_mws, Window wid, enum layoutmode layout,
+		MainWin **out_mw, ClientWin **out_cw, bool *out_panel) {
+	*out_mw = NULL;
+	*out_cw = NULL;
+	*out_panel = false;
+	if (!wid)
+		return false;
+
+	for (dlist *mwi = dlist_first(cur_mws); mwi; mwi = mwi->next) {
+		MainWin *mw = (MainWin *) mwi->data;
+		if (mw->window == wid) {
+			*out_mw = mw;
+			return true;
+		}
+
+		dlist *l = (layout == LAYOUTMODE_PAGING) ? mw->dminis : mw->clientondesktop;
+		for (dlist *li = l; li; li = li->next) {
+			ClientWin *cw = (ClientWin *) li->data;
+			if (cw->mini.window == wid) {
+				*out_mw = mw;
+				*out_cw = cw;
+				return true;
+			}
+		}
+
+		for (dlist *li = mw->panels; li; li = li->next) {
+			ClientWin *cw = (ClientWin *) li->data;
+			if (cw->mini.window == wid) {
+				*out_mw = mw;
+				*out_cw = cw;
+				*out_panel = true;
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+static void
 mainloop(session_t *ps, bool activate_on_start) {
-	MainWin *mw = NULL;
+	dlist *mws = ps->mainwins;
+	dlist *cur_mws = NULL;
 	bool die = false;
 	bool activate = activate_on_start;
+	bool activated = false;
 	bool pending_damage = false;
 	long last_rendered = 0L;
 	long last_animated = 0L;
@@ -1386,6 +1443,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 	bool first_animating = false;
 	pid_t trigger_client = 0;
 	bool switchdesktop = false;
+
+	if (!mws)
+		mws = ps->mainwins = dlist_add(NULL, ps->mainwin);
+	dlist *single_mw = dlist_add(NULL, ps->mainwin);
 
 	switch (ps->o.mode) {
 		case PROGMODE_SWITCH:
@@ -1426,74 +1487,126 @@ mainloop(session_t *ps, bool activate_on_start) {
 			r_fd[i].revents = 0;
 
 		// Activation goes first, so that it won't be delayed by poll()
-		if (!mw && activate) {
+		if (!activated && activate) {
 			assert(ps->mainwin);
 			activate = false;
 
-			skippy_activate(ps->mainwin, layout, wm_get_focused(ps));
+			Window leader = wm_get_focused(ps);
+			cur_mws = mainloop_is_multi(ps, layout, mws) ? mws : single_mw;
+			if (cur_mws == mws) {
+				foreach_dlist (cur_mws) {
+					skippy_activate_impl((MainWin *) iter->data, layout, leader);
+				}
+				// Build a single focus list spanning all monitors, so that
+				// prev/next and arrow-key navigation can move across monitors.
+				if (ps->focuslist)
+					dlist_free(ps->focuslist);
+				ps->focuslist = NULL;
+				foreach_dlist (cur_mws) {
+					MainWin *mw = (MainWin *) iter->data;
+					ps->focuslist = dlist_join(ps->focuslist,
+							dlist_first(mw->focuslist));
+				}
+				foreach_dlist (cur_mws) {
+					((MainWin *) iter->data)->focuslist = ps->focuslist;
+				}
+			}
+			else {
+				skippy_activate(ps->mainwin, layout, leader);
+			}
+			ps->active_mainwin = ps->mainwin;
 			last_animated = last_rendered = time_in_millis();
-			mw = ps->mainwin;
+			activated = true;
 			pending_damage = false;
 			first_animated = time_in_millis();
 			first_animating = true;
 		}
-		if (mw)
+		if (activated)
 			activate = false;
 
 		// Main window destruction, before poll()
-		if (mw && die) {
+		if (activated && die) {
 			printfdf(false,"(): selecting/canceling and returning to background");
 
 			animating = false;
 
+			MainWin *smw = ps->active_mainwin ? ps->active_mainwin : ps->mainwin;
+
 			// Unmap the main window and all clients, to make sure focus doesn't fall out
 			// when we start setting focus on client window
-			mainwin_unmap(mw);
-			foreach_dlist(mw->clientondesktop) { clientwin_unmap((ClientWin *) iter->data); }
+			foreach_dlist (cur_mws) {
+				MainWin *mw = (MainWin *) iter->data;
+				mainwin_unmap(mw);
+				foreach_dlist(mw->clientondesktop) { clientwin_unmap((ClientWin *) iter->data); }
+			}
 			XSync(ps->dpy, False);
 
 			// Focus the client window only after the main window get unmapped and
 			// keyboard gets ungrabbed.
 
 			int selected = -1;
-			if (mw->client_to_focus && layout != LAYOUTMODE_PAGING) {
-				if (!mw->refocus) {
-					dlist *iter = dlist_find(ps->mainwin->clients,
-							clientwin_cmp_func,
-							(void *) mw->client_to_focus);
-					if (iter) {
-						childwin_focus(mw->client_to_focus);
-						selected = mw->client_to_focus->wid_client;
+			if (layout != LAYOUTMODE_PAGING) {
+				bool cancelled = false;
+				MainWin *cancel_mw = NULL;
+				foreach_dlist (cur_mws) {
+					MainWin *mw = (MainWin *) iter->data;
+					if (mw->refocus) {
+						cancelled = true;
+						if (mw->client_to_focus_on_cancel)
+							cancel_mw = mw;
+					}
+				}
+
+				if (!cancelled) {
+					if (smw->client_to_focus) {
+						dlist *it = dlist_find(smw->clients,
+								clientwin_cmp_func,
+								(void *) smw->client_to_focus);
+						if (it) {
+							childwin_focus(smw->client_to_focus);
+							selected = smw->client_to_focus->wid_client;
+						}
 					}
 				}
 				else {
-					dlist *iter = dlist_find(ps->mainwin->clients,
-							clientwin_cmp_func,
-							(void *) mw->client_to_focus_on_cancel);
-					if (iter) {
-						childwin_focus(mw->client_to_focus_on_cancel);
-						selected = mw->client_to_focus_on_cancel->wid_client;
+					if (!cancel_mw) {
+						foreach_dlist (cur_mws) {
+							MainWin *mw = (MainWin *) iter->data;
+							if (mw->client_to_focus_on_cancel) {
+								cancel_mw = mw;
+								break;
+							}
+						}
+					}
+					if (cancel_mw && cancel_mw->client_to_focus_on_cancel) {
+						dlist *it = dlist_find(cancel_mw->clients,
+								clientwin_cmp_func,
+								(void *) cancel_mw->client_to_focus_on_cancel);
+						if (it) {
+							childwin_focus(cancel_mw->client_to_focus_on_cancel);
+							selected = cancel_mw->client_to_focus_on_cancel->wid_client;
+						}
 					}
 				}
 			}
 
-			if (mw->client_to_focus && layout == LAYOUTMODE_PAGING ) {
-				if (!mw->refocus &&
-						mw->client_to_focus->slots
+			if (smw->client_to_focus && layout == LAYOUTMODE_PAGING ) {
+				if (!smw->refocus &&
+						smw->client_to_focus->slots
 						!= wm_get_current_desktop(ps)) {
-					wm_set_desktop_ewmh(ps, mw->client_to_focus->slots);
-					selected = mw->client_to_focus->slots;
+					wm_set_desktop_ewmh(ps, smw->client_to_focus->slots);
+					selected = smw->client_to_focus->slots;
 				}
 				else {
-					if (mw->client_to_focus_on_cancel){
-						childwin_focus(mw->client_to_focus_on_cancel);
+					if (smw->client_to_focus_on_cancel){
+						childwin_focus(smw->client_to_focus_on_cancel);
 					}
 					else {
 						// this trick does not work
 						// when there is only one virtual desktop
 						wm_set_desktop_ewmh(ps,
 								(wm_get_current_desktop(ps)+1)
-								% wm_get_desktops(mw->ps));
+								% wm_get_desktops(ps));
 						wm_set_desktop_ewmh(ps, wm_get_current_desktop(ps));
 					}
 					selected = wm_get_current_desktop(ps);
@@ -1507,23 +1620,26 @@ mainloop(session_t *ps, bool activate_on_start) {
 			{
 				pipe_return[0] = '\0';
 				bool firstprint = true;
-				dlist *iter = mw->clientondesktop;
-				if (layout == LAYOUTMODE_PAGING)
-					iter = mw->dminis;
-				for (; iter; iter = iter->next) {
-					ClientWin *cw = iter->data;
-					unsigned long client = cw->wid_client;
+				foreach_dlist (cur_mws) {
+					MainWin *mw = (MainWin *) iter->data;
+					dlist *iter2 = mw->clientondesktop;
 					if (layout == LAYOUTMODE_PAGING)
-						client = cw->slots;
-					if (cw->multiselect) {
-						char wid[1024];
-						if (firstprint) {
-							sprintf(pipe_return, "%lu", client);
-							firstprint = false;
-						}
-						else {
-							sprintf(wid, " %lu", client);
-							strcat(pipe_return, wid);
+						iter2 = mw->dminis;
+					for (; iter2; iter2 = iter2->next) {
+						ClientWin *cw = iter2->data;
+						unsigned long client = cw->wid_client;
+						if (layout == LAYOUTMODE_PAGING)
+							client = cw->slots;
+						if (cw->multiselect) {
+							char wid[1024];
+							if (firstprint) {
+								sprintf(pipe_return, "%lu", client);
+								firstprint = false;
+							}
+							else {
+								sprintf(wid, " %lu", client);
+								strcat(pipe_return, wid);
+							}
 						}
 					}
 				}
@@ -1535,36 +1651,47 @@ mainloop(session_t *ps, bool activate_on_start) {
 				printf("%s\n", pipe_return);
 
 			ps->o.multiselect = false;
-			mw->refocus = false;
-			mw->client_to_focus = NULL;
 			pending_damage = false;
 
 			// Cleanup
-			foreach_dlist (mw->clientondesktop) {
-				ClientWin *cw = iter->data;
-				cw->multiselect = false;
+			foreach_dlist (cur_mws) {
+				MainWin *mw = (MainWin *) iter->data;
+				mw->refocus = false;
+				mw->client_to_focus = NULL;
+
+				foreach_dlist (mw->clientondesktop) {
+					ClientWin *cw = iter->data;
+					cw->multiselect = false;
+				}
+				foreach_dlist (mw->dminis) {
+					ClientWin *cw = iter->data;
+					cw->multiselect = false;
+				}
+
+				dlist_free(mw->clientondesktop);
+				mw->clientondesktop = 0;
+				if (mw->focuslist && mw->focuslist != ps->focuslist)
+					dlist_free(mw->focuslist);
+				mw->focuslist = 0;
+
+				// free all mini desktop representations
+				dlist_free_with_func(mw->dminis, (dlist_free_func) clientwin_destroy);
+				mw->dminis = NULL;
+
+				foreach_dlist (mw->desktopwins) {
+					XDestroyWindow(ps->dpy, (Window) (iter->data));
+				}
+				dlist_free(mw->desktopwins);
+				mw->desktopwins = NULL;
+
+				foreach_dlist(mw->panels) {
+					clientwin_unmap(iter->data);
+				}
 			}
-			foreach_dlist (mw->dminis) {
-				ClientWin *cw = iter->data;
-				cw->multiselect = false;
-			}
 
-			dlist_free(mw->clientondesktop);
-			mw->clientondesktop = 0;
-			dlist_free(mw->focuslist);
-
-			// free all mini desktop representations
-			dlist_free_with_func(mw->dminis, (dlist_free_func) clientwin_destroy);
-			mw->dminis = NULL;
-
-			foreach_dlist (mw->desktopwins) {
-				XDestroyWindow(ps->dpy, (Window) (iter->data));
-			}
-			dlist_free(mw->desktopwins);
-			mw->desktopwins = NULL;
-
-			foreach_dlist(mw->panels) {
-				clientwin_unmap(iter->data);
+			if (ps->focuslist) {
+				dlist_free(ps->focuslist);
+				ps->focuslist = NULL;
 			}
 
 			// Catch all errors, but remove all events
@@ -1574,16 +1701,18 @@ mainloop(session_t *ps, bool activate_on_start) {
 			if (switchdesktop) {
 				wm_set_desktop_ewmh(ps,
 						(wm_get_current_desktop(ps) + ps->o.focus_initial)
-						% wm_get_desktops(mw->ps));
+						% wm_get_desktops(ps));
 				animating = activate = true;
 				switchdesktop = false;
 			}
 
-			mw = NULL;
+			activated = false;
+			ps->active_mainwin = NULL;
+			cur_mws = NULL;
 		}
-		if (!mw)
+		if (!activated)
 			die = false;
-		if (activate_on_start && !mw)
+		if (activate_on_start && !activated)
 			return;
 
 		// poll whether pivoting key is being pressed
@@ -1591,7 +1720,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// the placement of this code allows MainWin not to map
 		// so that previews may not show for switch
 		// when the pivot key is held for only short time
-		if (mw && !toggling)
+		if (activated && !toggling)
 		{
 			bool pivotTerminate = false;
 			char keys[32];
@@ -1605,7 +1734,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 		}
 
 		// animation!
-		if (mw && animating) {
+		if (activated && animating) {
 			int timeslice = time_in_millis() - first_animated;
 			int starttime = last_animated + (1000.0 / ps->o.animationRefresh) - first_animated;
 			int stabletime = ps->o.animationDuration;
@@ -1623,29 +1752,32 @@ mainloop(session_t *ps, bool activate_on_start) {
 				}
 			}
 			if (starttime < timeslice && timeslice < stabletime) {
-				if (!mw->mapped)
-					mainwin_map(mw);
-
-				if (first_animating) {
-					foreach_dlist (mw->clientondesktop) {
-						ClientWin *cw = iter->data;
-						clientwin_prepmove(cw);
-					}
-					foreach_dlist (mw->panels) {
-						ClientWin *cw = iter->data;
-						clientwin_map(cw);
-					}
-
-					first_animating = false;
-				}
-
 				if (layout == LAYOUTMODE_SWITCH
-				&& ps->o.switchLayout == LAYOUT_COSMOS)
+						&& ps->o.switchLayout == LAYOUT_COSMOS)
 					timeslice -= ps->o.switchWaitDuration;
 
-				anime(ps->mainwin, ps->mainwin->clients,
-					((float)timeslice)/(float)ps->o.animationDuration);
-				mainwin_render_borders(mw);
+				foreach_dlist (cur_mws) {
+					MainWin *mw = (MainWin *) iter->data;
+
+					if (!mw->mapped)
+						mainwin_map(mw);
+
+					if (first_animating) {
+						foreach_dlist (mw->clientondesktop) {
+							ClientWin *cw = iter->data;
+							clientwin_prepmove(cw);
+						}
+						foreach_dlist (mw->panels) {
+							ClientWin *cw = iter->data;
+							clientwin_map(cw);
+						}
+					}
+
+					anime(mw, mw->clients,
+						((float)timeslice)/(float)ps->o.animationDuration);
+					mainwin_render_borders(mw);
+				}
+				first_animating = false;
 				last_animated = last_rendered = time_in_millis();
 
 				if (layout == LAYOUTMODE_SWITCH
@@ -1655,78 +1787,87 @@ mainloop(session_t *ps, bool activate_on_start) {
 				XFlush(ps->dpy);
 			}
 			else if (timeslice >= stabletime) {
-				if (!mw->mapped)
-					mainwin_map(mw);
+				foreach_dlist (cur_mws) {
+					MainWin *mw = (MainWin *) iter->data;
 
-				if (first_animating) {
-					foreach_dlist (mw->clientondesktop) {
-						ClientWin *cw = iter->data;
-						clientwin_prepmove(cw);
+					if (!mw->mapped)
+						mainwin_map(mw);
+
+					if (first_animating) {
+						foreach_dlist (mw->clientondesktop) {
+							ClientWin *cw = iter->data;
+							clientwin_prepmove(cw);
+						}
+						foreach_dlist (mw->panels) {
+							ClientWin *cw = iter->data;
+							clientwin_map(cw);
+						}
 					}
-					foreach_dlist (mw->panels) {
-						ClientWin *cw = iter->data;
-						clientwin_map(cw);
-					}
 
-					first_animating = false;
-				}
-
-				if (layout == LAYOUTMODE_PAGING && mw->ps->o.preservePages) {
-					foreach_dlist (mw->dminis) {
-						ClientWin *cw = (ClientWin *) iter->data;
+					if (layout == LAYOUTMODE_PAGING && mw->ps->o.preservePages) {
+						foreach_dlist (mw->dminis) {
+							ClientWin *cw = (ClientWin *) iter->data;
 #ifdef CFG_XINERAMA
-						XineramaScreenInfo *iter = mw->xin_info;
-						for (int i = 0; i < mw->xin_screens; ++i)
-						{
-							int s_x = iter->x_org * mw->multiplier + cw->x;
-							int s_y = iter->y_org * mw->multiplier + cw->y;
-							int s_w = iter->width * mw->multiplier - ps->o.leftFrameBorder;
-							int s_h = iter->height * mw->multiplier - ps->o.topFrameBorder;
+							XineramaScreenInfo *xiter = mw->xin_info;
+							for (int i = 0; i < mw->xin_screens; ++i)
+							{
+								int s_x = xiter->x_org * mw->multiplier + cw->x;
+								int s_y = xiter->y_org * mw->multiplier + cw->y;
+								int s_w = xiter->width * mw->multiplier - ps->o.leftFrameBorder;
+								int s_h = xiter->height * mw->multiplier - ps->o.topFrameBorder;
 
+								XRoundedRectComposite(mw->ps,
+										mw->ps->o.from, mw->background,
+										s_x + mw->xoff + mw->x + ps->o.leftFrameBorder,
+										s_y + mw->yoff + mw->y + ps->o.topFrameBorder,
+										s_x + mw->xoff + ps->o.leftFrameBorder,
+										s_y + mw->yoff + ps->o.topFrameBorder,
+										s_w,
+										s_h,
+										ps->o.cornerRadius * mw->multiplier);
+								xiter++;
+							}
+#else
 							XRoundedRectComposite(mw->ps,
 									mw->ps->o.from, mw->background,
-									s_x + mw->xoff + mw->x + ps->o.leftFrameBorder,
-									s_y + mw->yoff + mw->y + ps->o.topFrameBorder,
-									s_x + mw->xoff + ps->o.leftFrameBorder,
-									s_y + mw->yoff + ps->o.topFrameBorder,
-									s_w,
-									s_h,
+									cw->x + mw->xoff + mw->x + ps->o.leftFrameBorder,
+									cw->y + mw->yoff + mw->y + ps->o.topFrameBorder,
+									cw->x + mw->xoff + ps->o.leftFrameBorder,
+									cw->y + mw->yoff + ps->o.topFrameBorder,
+									cw->src.width * mw->multiplier,
+									cw->src.height * mw->multiplier,
 									ps->o.cornerRadius * mw->multiplier);
-							iter++;
-						}
-#else
-						XRoundedRectComposite(mw->ps,
-								mw->ps->o.from, mw->background,
-								cw->x + mw->xoff + mw->x + ps->o.leftFrameBorder,
-								cw->y + mw->yoff + mw->y + ps->o.topFrameBorder,
-								cw->x + mw->xoff + ps->o.leftFrameBorder,
-								cw->y + mw->yoff + ps->o.topFrameBorder,
-								cw->src.width * mw->multiplier,
-								cw->src.height * mw->multiplier,
-								ps->o.cornerRadius * mw->multiplier);
 #endif /* CFG_XINERAMA */
-						XClearWindow(ps->dpy, mw->window);
+							XClearWindow(ps->dpy, mw->window);
+						}
 					}
-				}
 
-				anime(ps->mainwin, ps->mainwin->clients, 1);
-				mainwin_render_borders(mw);
+					anime(mw, mw->clients, 1);
+					mainwin_render_borders(mw);
+				}
+				first_animating = false;
 				animating = false;
 				last_animated = last_rendered = time_in_millis();
 
 				if (layout == LAYOUTMODE_PAGING) {
-					foreach_dlist (mw->dminis) {
-						clientwin_update2(iter->data);
-						desktopwin_map(((ClientWin *) iter->data));
+					foreach_dlist (cur_mws) {
+						MainWin *mw = (MainWin *) iter->data;
+						foreach_dlist (mw->dminis) {
+							clientwin_update2(iter->data);
+							desktopwin_map(((ClientWin *) iter->data));
+						}
+						if (!ps->o.pseudoTrans)
+							mainwin_render_borders(mw);
 					}
-					if (!ps->o.pseudoTrans)
-						mainwin_render_borders(mw);
 				}
 
 				XFlush(ps->dpy);
 
-				focus_miniw_adv(ps, mw->client_to_focus,
-						ps->o.moveMouse);
+				foreach_dlist (cur_mws) {
+					MainWin *mw = (MainWin *) iter->data;
+					focus_miniw_adv(ps, mw->client_to_focus,
+							ps->o.moveMouse);
+				}
 			}
 
 			if (layout != LAYOUTMODE_SWITCH ||
@@ -1749,23 +1890,22 @@ mainloop(session_t *ps, bool activate_on_start) {
 			XNextEvent(ps->dpy, &ev);
 
 #ifdef DEBUG_EVENTS
-			ev_dump(ps, mw, &ev);
+			ev_dump(ps, ps->active_mainwin, &ev);
 #endif
 			Window wid = ev_window(ps, &ev);
 
-			if (mw && MotionNotify == ev.type)
+			if (activated && MotionNotify == ev.type)
 			{
 				// when mouse move within a client window, focus on it
 				if (wid) {
-					dlist *iter = mw->clientondesktop;
-					if (layout == LAYOUTMODE_PAGING)
-						iter = mw->dminis;
-					for (; iter; iter = iter->next) {
-						ClientWin *cw = (ClientWin *) iter->data;
-						if (cw->mini.window == wid) {
-							if (!(POLLIN & r_fd[1].revents)) {
-								die = clientwin_handle(cw, &ev);
-							}
+					MainWin *emw = NULL;
+					ClientWin *ecw = NULL;
+					bool epanel = false;
+					if (mainloop_lookup(cur_mws, wid, layout, &emw, &ecw, &epanel)
+							&& ecw && !epanel) {
+						if (!(POLLIN & r_fd[1].revents)) {
+							die = clientwin_handle(ecw, &ev);
+							ps->active_mainwin = emw;
 						}
 					}
 				}
@@ -1789,28 +1929,37 @@ mainloop(session_t *ps, bool activate_on_start) {
 					num_events--;
 				}
 			}
-			else if (mw && ev.type == DestroyNotify) {
+			else if (activated && ev.type == DestroyNotify) {
 				printfdf(false, "(): else if (ev.type == DestroyNotify) {");
-				count_and_filter_clients(ps->mainwin);
-				if (!mw->clientondesktop) {
+				foreach_dlist (cur_mws) {
+					count_and_filter_clients((MainWin *) iter->data);
+				}
+				bool any_client = false;
+				foreach_dlist (cur_mws) {
+					if (((MainWin *) iter->data)->clientondesktop)
+						any_client = true;
+				}
+				if (!any_client) {
 					printfdf(false, "(): Last client window destroyed/unmapped, "
 							"exiting.");
 					die = true;
-					mw->client_to_focus = NULL;
+					if (ps->active_mainwin)
+						ps->active_mainwin->client_to_focus = NULL;
 				}
 			}
-			else if (!mw && (ev.type == ConfigureNotify || ev.type == PropertyNotify)) {
+			else if (!activated && (ev.type == ConfigureNotify || ev.type == PropertyNotify)) {
 				printfdf(false,
 						"(): else if (ev.type == ConfigureNotify || ev.type == PropertyNotify) {");
-				dlist *iter = (wid ? dlist_find(ps->mainwin->clients, clientwin_cmp_func, (void *) wid): NULL);
-				ClientWin *cw = NULL;
-				if (iter)
-					cw = (ClientWin *) iter->data;
-				if (cw) {
-					clientwin_update(cw);
-					if (ev.type == PropertyNotify) {
-						clientwin_update3(cw);
-						clientwin_update2(cw);
+				foreach_dlist (single_mw) {
+					MainWin *mw = (MainWin *) iter->data;
+					dlist *citer = (wid ? dlist_find(mw->clients, clientwin_cmp_func, (void *) wid): NULL);
+					if (citer) {
+						ClientWin *cw = (ClientWin *) citer->data;
+						clientwin_update(cw);
+						if (ev.type == PropertyNotify) {
+							clientwin_update3(cw);
+							clientwin_update2(cw);
+						}
 					}
 				}
 				num_events--;
@@ -1827,14 +1976,16 @@ mainloop(session_t *ps, bool activate_on_start) {
             }
 			else if (ev.type == CreateNotify || ev.type == MapNotify) {
 				printfdf(false, "(): else if (ev.type == CreateNotify || ev.type == MapNotify) {");
-				count_and_filter_clients(ps->mainwin);
-				dlist *iter = (wid ? dlist_find(ps->mainwin->clients, clientwin_cmp_func, (void *) wid): NULL);
-
-				if (iter) {
-					ClientWin *cw = (ClientWin *) iter->data;
-					clientwin_update3(cw);
-					clientwin_update2(cw);
-					cw->damaged = true;
+				foreach_dlist (cur_mws ? cur_mws : single_mw) {
+					MainWin *mw = (MainWin *) iter->data;
+					count_and_filter_clients(mw);
+					dlist *citer = (wid ? dlist_find(mw->clients, clientwin_cmp_func, (void *) wid): NULL);
+					if (citer) {
+						ClientWin *cw = (ClientWin *) citer->data;
+						clientwin_update3(cw);
+						clientwin_update2(cw);
+						cw->damaged = true;
+					}
 				}
 				num_events--;
 
@@ -1855,24 +2006,30 @@ mainloop(session_t *ps, bool activate_on_start) {
 						wid = ev_window(ps, &ev);
 						num_events--;
 
-						dlist *iter = (wid ? dlist_find(ps->mainwin->clients,
-								clientwin_cmp_func, (void *) wid): NULL);
-						if (iter) {
-							ClientWin *cw = (ClientWin *) iter->data;
-							cw->damaged = true;
+						foreach_dlist (cur_mws ? cur_mws : single_mw) {
+							MainWin *mw = (MainWin *) iter->data;
+							dlist *citer = (wid ? dlist_find(mw->clients,
+									clientwin_cmp_func, (void *) wid): NULL);
+							if (citer) {
+								ClientWin *cw = (ClientWin *) citer->data;
+								cw->damaged = true;
+							}
 						}
 					}
 				}
 
 				pending_damage = true;
 			}
-			else if (mw && (ps->xinfo.damage_ev_base + XDamageNotify == ev.type)) {
+			else if (activated && (ps->xinfo.damage_ev_base + XDamageNotify == ev.type)) {
 				//printfdf(false, "(): else if (ev.type == XDamageNotify) {");
 				pending_damage = true;
-				dlist *iter = dlist_find(ps->mainwin->clients,
-						clientwin_cmp_func, (void *) wid);
-				if (iter) {
-					((ClientWin *)iter->data)->damaged = true;
+				foreach_dlist (cur_mws) {
+					MainWin *mw = (MainWin *) iter->data;
+					dlist *citer = dlist_find(mw->clients,
+							clientwin_cmp_func, (void *) wid);
+					if (citer) {
+						((ClientWin *) citer->data)->damaged = true;
+					}
 				}
 				num_events--;
 
@@ -1892,17 +2049,20 @@ mainloop(session_t *ps, bool activate_on_start) {
 					}
 				}
 			}
-			else if (mw && wid == mw->window && !die) {
-				die = mainwin_handle(mw, &ev);
-			}
-			else if (mw && wid) {
-				bool processing = true;
-				dlist *iter = mw->clientondesktop;
-				if (layout == LAYOUTMODE_PAGING)
-					iter = mw->dminis;
-				for (; iter && processing; iter = iter->next) {
-					ClientWin *cw = (ClientWin *) iter->data;
-					if (cw->mini.window == wid) {
+			else if (activated && wid && !die) {
+				MainWin *emw = NULL;
+				ClientWin *ecw = NULL;
+				bool epanel = false;
+				if (mainloop_lookup(cur_mws, wid, layout, &emw, &ecw, &epanel)) {
+					if (!ecw) {
+						die = mainwin_handle(emw, &ev);
+						ps->active_mainwin = emw;
+					}
+					else if (epanel) {
+						die = mainwin_handle(emw, &ev);
+						ps->active_mainwin = emw;
+					}
+					else {
 						if (!(POLLIN & r_fd[1].revents)
 								&& ((layout != LAYOUTMODE_PAGING)
 								// do not process these excessive paging events
@@ -1918,78 +2078,75 @@ mainloop(session_t *ps, bool activate_on_start) {
 								 && ev.type != ReparentNotify
 								))) {
 
-							die = clientwin_handle(cw, &ev);
+							die = clientwin_handle(ecw, &ev);
 							if (layout == LAYOUTMODE_PAGING) {
-								cw->damaged = true;
+								ecw->damaged = true;
 								pending_damage = true;
 							}
 						}
-						processing = false;
-					}
-				}
-				for (iter = mw->panels; iter && processing; iter = iter->next) {
-					ClientWin *cw = (ClientWin *) iter->data;
-					if (cw->mini.window == wid) {
-						die = mainwin_handle(mw, &ev);
-						processing = false;
 					}
 				}
 			}
 		}
 
-		if (mw && ps->o.enforceFocus) {
+		if (activated && ps->o.enforceFocus) {
 			Window focus;
 			int revert;
 			XGetInputFocus(ps->dpy, &focus, &revert);
 
-			if (mw->client_to_focus) {
-				if (focus != mw->window
-				 && focus != mw->client_to_focus->mini.window) {
+			MainWin *fmw = ps->active_mainwin ? ps->active_mainwin : ps->mainwin;
+			if (fmw->client_to_focus) {
+				if (focus != fmw->window
+				 && focus != fmw->client_to_focus->mini.window) {
 					printfdf(false, "(): skippy-xd focus stolen... take back focus");
-					XSetInputFocus(ps->dpy, mw->client_to_focus->mini.window,
+					XSetInputFocus(ps->dpy, fmw->client_to_focus->mini.window,
 							RevertToParent, CurrentTime);
 					XSync(ps->dpy, False);
-					mw->client_to_focus->focused = true;
-					clientwin_render(mw->client_to_focus);
-					mainwin_render_borders(mw);
+					fmw->client_to_focus->focused = true;
+					clientwin_render(fmw->client_to_focus);
+					mainwin_render_borders(fmw);
 				}
 			}
 			else {
-				if (focus != mw->window) {
+				if (focus != fmw->window) {
 					printfdf(false, "(): skippy-xd focus stolen... take back focus");
-					XSetInputFocus(ps->dpy, mw->window, RevertToParent, CurrentTime);
+					XSetInputFocus(ps->dpy, fmw->window, RevertToParent, CurrentTime);
 				}
 			}
 		}
 
 		// Do delayed painting if it's active
-		if (mw && pending_damage && !die) {
+		if (activated && pending_damage && !die) {
 			//printfdf(false, "(): delayed painting");
 			pending_damage = false;
-			foreach_dlist(mw->clientondesktop) {
-				if (((ClientWin *) iter->data)->damaged)
-					clientwin_repair(iter->data);
-			}
+			foreach_dlist (cur_mws) {
+				MainWin *mw = (MainWin *) iter->data;
 
-			foreach_dlist(mw->panels) {
-				clientwin_repair((ClientWin *) iter->data);
-			}
+				foreach_dlist(mw->clientondesktop) {
+					if (((ClientWin *) iter->data)->damaged)
+						clientwin_repair(iter->data);
+				}
 
-			if (layout == LAYOUTMODE_PAGING) {
-				foreach_dlist (mw->dminis) {
-					ClientWin *cw = (ClientWin *) iter->data;
-					// with pseudo-transparency,
-					// some desktops never receive refresh events
-					// so we need to refresh all desktops
-					if (cw->damaged || ps->o.pseudoTrans) {
-						if (ps->o.pseudoTrans) {
-							clientwin_update2(cw);
-							desktopwin_map(cw);
+				foreach_dlist(mw->panels) {
+					clientwin_repair((ClientWin *) iter->data);
+				}
+
+				if (layout == LAYOUTMODE_PAGING) {
+					foreach_dlist (mw->dminis) {
+						ClientWin *cw = (ClientWin *) iter->data;
+						// with pseudo-transparency,
+						// some desktops never receive refresh events
+						// so we need to refresh all desktops
+						if (cw->damaged || ps->o.pseudoTrans) {
+							if (ps->o.pseudoTrans) {
+								clientwin_update2(cw);
+								desktopwin_map(cw);
+							}
+							if (ps->o.tooltip_show)
+								tooltip_draw(cw->tooltip,
+										ps->o.multiselect? cw->multiselect: cw->focused);
+							cw->damaged = false;
 						}
-						if (ps->o.tooltip_show)
-							tooltip_draw(cw->tooltip,
-									ps->o.multiselect? cw->multiselect: cw->focused);
-						cw->damaged = false;
 					}
 				}
 			}
@@ -2005,7 +2162,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 		// Poll for events
 		int timeout = -1;
-		if (mw && (!toggling || mw->pressed_key || mw->pressed_mouse)) {
+		if (activated && (!toggling
+				|| (ps->active_mainwin && (ps->active_mainwin->pressed_key || ps->active_mainwin->pressed_mouse)))) {
 			timeout = (1.0 / 60.0) * 1000.0 + time_in_millis() - last_rendered;
 			if (timeout < 0)
 				timeout = 0;
@@ -2043,18 +2201,20 @@ mainloop(session_t *ps, bool activate_on_start) {
 							free(ps->o.config_path);
 						ps->o.config_path = mstrdup(str[i]);
 						load_config_file(ps);
-						mainwin_reload(ps, ps->mainwin);
+						foreach_dlist (mws)
+							mainwin_reload(ps, (MainWin *) iter->data);
 					}
 					if (param[i] == PIPEPRM_RELOAD_CONFIG) {
 						load_config_file(ps);
-						mainwin_reload(ps, ps->mainwin);
+						foreach_dlist (mws)
+							mainwin_reload(ps, (MainWin *) iter->data);
 					}
 				}
 
 				ps->o.focus_initial = -((piped_input & PIPECMD_PREV) > 0)
 					+ ((piped_input & PIPECMD_NEXT) > 0);
 
-				if (!mw /*|| !mw->mapped*/)
+				if (!activated /*|| !ps->active_mainwin->mapped*/)
 				{
 					bool forget_activating = false;
 					if (piped_input & PIPECMD_SWITCH) {
@@ -2142,14 +2302,18 @@ mainloop(session_t *ps, bool activate_on_start) {
 				}
 				// parameter == 0, toggle
 				// otherwise shift window focus
-				else if (mw && ps->o.focus_initial == 0) {
+				else if (activated && ps->o.focus_initial == 0) {
 					if (toggling) {
 						printfdf(false, "(): toggling skippy off");
-						mw->refocus = die = true;
+						if (ps->active_mainwin)
+							ps->active_mainwin->refocus = die = true;
+						else
+							die = true;
 					}
 				}
-				else if (mw /*&& mw->mapped*/)
+				else if (activated /*&& ps->active_mainwin->mapped*/)
 				{
+					MainWin *mw = ps->active_mainwin ? ps->active_mainwin : ps->mainwin;
 					printfdf(false, "(): cycling window");
 					fflush(stdout);fflush(stderr);
 
@@ -2188,7 +2352,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				}
 
 				// if the client did not trigger activation, return to it immediately
-				if (mw) {
+				if (activated) {
 					returnToClient(ps, pid, "-1");
 				}
 
@@ -2758,6 +2922,7 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "system", "pseudoTrans", &ps->o.pseudoTrans);
 
     config_get_bool_wrap(config, "multimonitor", "showOnlyCurrentMonitor", &ps->o.showOnlyCurrentMonitor);
+    config_get_bool_wrap(config, "multimonitor", "exposeOnAllMonitors", &ps->o.exposeOnAllMonitors);
     config_get_bool_wrap(config, "multimonitor", "showOnlyCurrentScreen", &ps->o.filterxscreen);
 	{
 		const char* align_str = config_get(config, "multimonitor",
@@ -3152,6 +3317,27 @@ int main(int argc, char *argv[]) {
 		goto main_end;
 	}
 	ps->mainwin = mw;
+	ps->mainwins = dlist_add(NULL, mw);
+
+#ifdef CFG_XINERAMA
+	if (ps->o.exposeOnAllMonitors) {
+		mainwin_query_screens(mw);
+		if (mw->xin_info && mw->xin_screens > 1) {
+			mainwin_set_monitor(mw, &mw->xin_info[0]);
+			for (int i = 1; i < mw->xin_screens; ++i) {
+				MainWin *extra = mainwin_create(ps);
+				if (!extra) {
+					printfef(true, "(): FATAL: Couldn't create monitor window.");
+					ret = 1;
+					goto main_end;
+				}
+				mainwin_query_screens(extra);
+				mainwin_set_monitor(extra, &extra->xin_info[i]);
+				ps->mainwins = dlist_add(ps->mainwins, extra);
+			}
+		}
+	}
+#endif /* CFG_XINERAMA */
 
 	XSelectInput(ps->dpy, ps->root, SubstructureNotifyMask);
 
@@ -3241,8 +3427,15 @@ main_end:
 		if (ps->fd_pipe >= 0)
 			close(ps->fd_pipe);
 
-		if (ps->mainwin)
+		if (ps->mainwins) {
+			foreach_dlist (ps->mainwins) {
+				mainwin_destroy((MainWin *) iter->data);
+			}
+			dlist_free(ps->mainwins);
+		}
+		else if (ps->mainwin) {
 			mainwin_destroy(ps->mainwin);
+		}
 
 		if (ps->dpy)
 			XCloseDisplay(dpy);
