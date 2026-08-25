@@ -50,10 +50,6 @@ exposeOnAllMonitors = false
 # Filter windows by Xinerama monitor
 showOnlyCurrentMonitor = false
 
-# In expose mode, show one fullscreen overlay on every monitor,
-# each displaying only the windows that belong to that monitor
-exposeOnAllMonitors = false
-
 # Display only windows on the current XScreen
 showOnlyCurrentScreen = true
 
