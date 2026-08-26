@@ -245,8 +245,8 @@ grid_offset(size_t rank, size_t count, size_t columns,
 
 static unsigned int
 run_scatter(ClientWin **windows, size_t count,
-		float screen_width, float screen_height, float screen_aspect,
-		float padding, float clearance)
+		float screen_width, float screen_height,
+		float aspect_balance, float padding, float clearance)
 {
 	const float center_threshold = 0.10f;
 	float threshold_x = center_threshold * screen_width;
@@ -326,14 +326,13 @@ run_scatter(ClientWin **windows, size_t count,
 		float center_y = (float) (center_y_sum / member_count);
 		float cell_width = max_width + padding;
 		float cell_height = max_height + padding;
-		float window_aspect = (float) max_width / max_height;
-		size_t columns = (size_t) ceilf(sqrtf(
-			(float) member_count * screen_aspect / window_aspect));
-		if (columns < 1)
-			columns = 1;
-		if (columns > member_count)
-			columns = member_count;
+		size_t columns = (size_t) ceilf(sqrtf((float) member_count));
 		size_t rows = (member_count + columns - 1) / columns;
+
+		if ((float) max_width / max_height < aspect_balance) {
+			columns = rows;
+			rows = (member_count + columns - 1) / columns;
+		}
 
 		double offset_x_sum = 0;
 		double offset_y_sum = 0;
@@ -511,7 +510,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 	float padding = (float) mw->distance + rounding_padding;
 	unsigned int scatter_groups = run_scatter(items, count,
 			(float) mw->width, (float) mw->height,
-			screen_aspect, padding, clearance);
+			aspect_balance, padding, clearance);
 
 	int min_x, max_x, min_y, max_y;
 	window_extents(items, count, &min_x, &max_x, &min_y, &max_y);
