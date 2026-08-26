@@ -4,6 +4,7 @@ project(
 )
 
 skippy_sources = [
+  'src/aabb.c',
   'src/clientwin.c',
   'src/config.c',
   'src/dlist.c',
