@@ -28,6 +28,9 @@
 #include <libgen.h>
 #include <dirent.h>
 #include <regex.h>
+#ifdef CFG_CHIPMUNK
+#include <chipmunk/chipmunk.h>
+#endif
 
 bool debuglog = false;
 
@@ -2271,6 +2274,14 @@ xerror(Display *dpy, XErrorEvent *ev) {
 #define SKIPPYXD_VERSION "unknown"
 #endif
 
+static inline void
+chipmunk_about(void) {
+#ifdef CFG_CHIPMUNK
+	printfdf(true, "(): Chipmunk extension: Yes\n"
+			"  Compiled with chipmunk2d %s", cpVersionString);
+#endif
+}
+
 static void
 show_help() {
 	fputs("skippy-xd " SKIPPYXD_VERSION "\n"
@@ -2312,6 +2323,7 @@ show_help() {
 #ifdef CFG_LIBPNG
 	spng_about(stdout);
 #endif
+	chipmunk_about();
 }
 
 static inline bool
@@ -2326,7 +2338,7 @@ init_xexts(session_t *ps) {
 #endif /* CFG_XINERAMA */
 
 #ifdef CFG_CHIPMUNK
-	printfef(true, "(): Chipmunk extension: yes. Cosmos layout will be optimized.");
+	printfef(true, "(): Chipmunk extension: %s. Cosmos layout will be optimized.", cpVersionString);
 #else
 	printfef(true, "(): Chipmunk extension: no. Cosmos layout will be in-house implementation.");
 #endif
