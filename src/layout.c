@@ -245,12 +245,12 @@ grid_offset(size_t rank, size_t count, size_t columns,
 
 static unsigned int
 run_scatter(ClientWin **windows, size_t count,
-		float screen_width, float screen_height,
+		float monitor_width, float monitor_height,
 		float aspect_balance, float padding, float clearance)
 {
 	const float center_threshold = 0.10f;
-	float threshold_x = center_threshold * screen_width;
-	float threshold_y = center_threshold * screen_height;
+	float threshold_x = center_threshold * monitor_width;
+	float threshold_y = center_threshold * monitor_height;
 	size_t *component = calloc(count, sizeof(*component));
 	size_t *stack = calloc(count, sizeof(*stack));
 	size_t components = 0;
@@ -265,8 +265,8 @@ run_scatter(ClientWin **windows, size_t count,
 	for (size_t i = 0; i < count; i++) {
 		float center_x, center_y;
 		window_center(windows[i], &center_x, &center_y);
-		windows[i]->fx = center_x / screen_width;
-		windows[i]->fy = center_y / screen_height;
+		windows[i]->fx = center_x / monitor_width;
+		windows[i]->fy = center_y / monitor_height;
 	}
 
 	for (size_t seed = 0; seed < count; seed++) {
@@ -409,27 +409,36 @@ run_scatter(ClientWin **windows, size_t count,
 }
 
 static unsigned int
-run_expansion(AabbWorld *world, float clearance)
+run_expansion(AabbWorld *world, float clearance,
+		float span_aspect, float monitor_aspect)
 {
+	const float maximum_expansion_headroom = 5.0f;
 	float center_x, center_y;
 
+	if (aabb_world_body_count(world) <= 1)
+		return 0;
 	if (!aabb_world_center_of_mass(world, &center_x, &center_y))
 		return 0;
 
-	float expansion_scale = aabb_world_required_dilation(world, clearance);
-
-	if (expansion_scale <= 1.0f)
+	float separation_scale = aabb_world_required_dilation(world, clearance);
+	if (!isfinite(separation_scale))
 		return 0;
+	separation_scale = fmaxf(1.0f, separation_scale);
+	float aspect_mismatch = fabsf(span_aspect - monitor_aspect)
+		/ (span_aspect + monitor_aspect);
+	float expansion_headroom = 1.0f
+		+ (maximum_expansion_headroom - 1.0f) * aspect_mismatch;
+	float expansion_scale = separation_scale * expansion_headroom;
 
 	return aabb_world_dilate(world, center_x, center_y, expansion_scale) ? 1 : 0;
 }
 
 static unsigned int
-run_contraction(AabbWorld *world)
+run_contraction(AabbWorld *world, ClientWin **windows, size_t count,
+		float monitor_aspect)
 {
 	const float contraction_rate = 0.02f;
 	const float movement_tolerance = 0.01f;
-	size_t count = aabb_world_body_count(world);
 	unsigned int iteration = 0;
 
 	for (; iteration < 1000; iteration++) {
@@ -437,12 +446,36 @@ run_contraction(AabbWorld *world)
 		if (!aabb_world_center_of_mass(world, &center_x, &center_y))
 			break;
 
+		float min_x = INFINITY;
+		float max_x = -INFINITY;
+		float min_y = INFINITY;
+		float max_y = -INFINITY;
+
+		for (size_t i = 0; i < count; i++) {
+			float x, y;
+			aabb_body_get_position(world, (AabbBodyId) i, &x, &y);
+			min_x = fminf(min_x, x - windows[i]->src.width / 2.0f);
+			max_x = fmaxf(max_x, x + windows[i]->src.width / 2.0f);
+			min_y = fminf(min_y, y - windows[i]->src.height / 2.0f);
+			max_y = fmaxf(max_y, y + windows[i]->src.height / 2.0f);
+		}
+
+		float span_aspect = (max_x - min_x) / (max_y - min_y);
+		float monitor_to_span = monitor_aspect / span_aspect;
+		float rate_x = contraction_rate;
+		float rate_y = contraction_rate;
+
+		if (monitor_to_span > 1.0f)
+			rate_x /= monitor_to_span;
+		else
+			rate_y *= monitor_to_span;
+
 		for (size_t i = 0; i < count; i++) {
 			float x, y;
 			aabb_body_get_position(world, (AabbBodyId) i, &x, &y);
 			aabb_body_set_drive(world, (AabbBodyId) i,
-					contraction_rate * (center_x - x),
-					contraction_rate * (center_y - y));
+					rate_x * (center_x - x),
+					rate_y * (center_y - y));
 		}
 
 		float max_movement = aabb_world_step(world, 1.0f);
@@ -506,7 +539,7 @@ layout_cosmos(MainWin *mw, dlist *windows,
 		items[index++] = cw;
 	}
 
-	float screen_aspect = (float) mw->width / (float) mw->height;
+	float monitor_aspect = (float) mw->width / (float) mw->height;
 	float padding = (float) mw->distance + rounding_padding;
 	unsigned int scatter_groups = run_scatter(items, count,
 			(float) mw->width, (float) mw->height,
@@ -514,9 +547,12 @@ layout_cosmos(MainWin *mw, dlist *windows,
 
 	int min_x, max_x, min_y, max_y;
 	window_extents(items, count, &min_x, &max_x, &min_y, &max_y);
-	float scale_x = MAX(1, max_x - min_x);
-	float scale_y = MAX(1, max_y - min_y)
-		* screen_aspect / aspect_balance;
+	float span_width = MAX(1, max_x - min_x);
+	float span_height = MAX(1, max_y - min_y);
+	float span_aspect = span_width / span_height;
+	float scale_x = span_width;
+	float scale_y = span_height
+		* monitor_aspect / aspect_balance;
 
 	AabbWorld *world = aabb_world_create(count, padding, scale_x, scale_y);
 
@@ -540,8 +576,10 @@ layout_cosmos(MainWin *mw, dlist *windows,
 		}
 	}
 
-	unsigned int expansion_iterations = run_expansion(world, clearance);
-	unsigned int contraction_iterations = run_contraction(world);
+	unsigned int expansion_iterations = run_expansion(world, clearance,
+			span_aspect, monitor_aspect);
+	unsigned int contraction_iterations = run_contraction(world, items, count,
+			monitor_aspect);
 	unsigned int settle_iterations = run_final_settle(world);
 
 	printfdf(false, "(): %u scatter groups", scatter_groups);
