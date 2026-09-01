@@ -441,6 +441,9 @@ run_contraction(AabbWorld *world, ClientWin **windows, size_t count,
 	const float movement_tolerance = 0.01f;
 	unsigned int iteration = 0;
 
+	if (count <= 1)
+		return 0;
+
 	for (; iteration < 1000; iteration++) {
 		float center_x, center_y;
 		if (!aabb_world_center_of_mass(world, &center_x, &center_y))
@@ -454,28 +457,55 @@ run_contraction(AabbWorld *world, ClientWin **windows, size_t count,
 		for (size_t i = 0; i < count; i++) {
 			float x, y;
 			aabb_body_get_position(world, (AabbBodyId) i, &x, &y);
+			windows[i]->fx = x;
+			windows[i]->fy = y;
 			min_x = fminf(min_x, x - windows[i]->src.width / 2.0f);
 			max_x = fmaxf(max_x, x + windows[i]->src.width / 2.0f);
 			min_y = fminf(min_y, y - windows[i]->src.height / 2.0f);
 			max_y = fmaxf(max_y, y + windows[i]->src.height / 2.0f);
 		}
 
-		float span_aspect = (max_x - min_x) / (max_y - min_y);
-		float monitor_to_span = monitor_aspect / span_aspect;
-		float rate_x = contraction_rate;
-		float rate_y = contraction_rate;
-
-		if (monitor_to_span > 1.0f)
-			rate_x /= monitor_to_span;
-		else
-			rate_y *= monitor_to_span;
+		float span_center_x = (min_x + max_x) / 2.0f;
+		float span_center_y = (min_y + max_y) / 2.0f;
+		float span_width = max_x - min_x;
+		float span_height = max_y - min_y;
+		float half_span_x = span_width / 2.0f;
+		float half_span_y = span_height / 2.0f;
+		float span_aspect = span_width / span_height;
+		float span_to_monitor = span_aspect / monitor_aspect;
+		float rate_x = contraction_rate
+				* fminf(1.0f, span_to_monitor);
+		float rate_y = contraction_rate
+				* fminf(1.0f, 1.0f / span_to_monitor);
+		float balance_x = span_center_x - center_x;
+		float balance_y = span_center_y - center_y;
 
 		for (size_t i = 0; i < count; i++) {
-			float x, y;
-			aabb_body_get_position(world, (AabbBodyId) i, &x, &y);
+			float available_x = half_span_x
+					- windows[i]->src.width / 2.0f;
+			float available_y = half_span_y
+					- windows[i]->src.height / 2.0f;
+			float position_x = available_x > 0
+					? (windows[i]->fx - span_center_x) / available_x
+					: 1.0f;
+			float position_y = available_y > 0
+					? (windows[i]->fy - span_center_y) / available_y
+					: 1.0f;
+
+			position_x = fmaxf(-1.0f, fminf(1.0f, position_x));
+			position_y = fmaxf(-1.0f, fminf(1.0f, position_y));
+
+			float interior_x = 1.0f - position_x * position_x;
+			float interior_y = 1.0f - position_y * position_y;
+			float velocity_x = rate_x
+					* (span_center_x - windows[i]->fx)
+					+ contraction_rate * interior_x * balance_x;
+			float velocity_y = rate_y
+					* (span_center_y - windows[i]->fy)
+					+ contraction_rate * interior_y * balance_y;
+
 			aabb_body_set_drive(world, (AabbBodyId) i,
-					rate_x * (center_x - x),
-					rate_y * (center_y - y));
+					velocity_x, velocity_y);
 		}
 
 		float max_movement = aabb_world_step(world, 1.0f);
