@@ -440,6 +440,10 @@ run_contraction(AabbWorld *world, ClientWin **windows, size_t count,
 	const float contraction_rate = 0.02f;
 	const float movement_tolerance = 0.01f;
 	unsigned int iteration = 0;
+	float checkpoint_span_width = 0;
+	float checkpoint_span_height = 0;
+	float checkpoint_balance_x = 0;
+	float checkpoint_balance_y = 0;
 
 	if (count <= 1)
 		return 0;
@@ -479,6 +483,36 @@ run_contraction(AabbWorld *world, ClientWin **windows, size_t count,
 				* fminf(1.0f, 1.0f / span_to_monitor);
 		float balance_x = span_center_x - center_x;
 		float balance_y = span_center_y - center_y;
+		float normalized_balance_x = balance_x / half_span_x;
+		float normalized_balance_y = balance_y / half_span_y;
+
+		if (iteration == 0) {
+			checkpoint_span_width = span_width;
+			checkpoint_span_height = span_height;
+			checkpoint_balance_x = normalized_balance_x;
+			checkpoint_balance_y = normalized_balance_y;
+		}
+		else if ((size_t) iteration % count == 0) {
+			bool stagnant =
+					fabsf(span_width - checkpoint_span_width)
+						<= movement_tolerance
+					&& fabsf(span_height - checkpoint_span_height)
+						<= movement_tolerance
+					&& fabsf(normalized_balance_x
+							- checkpoint_balance_x) * half_span_x
+						<= movement_tolerance
+					&& fabsf(normalized_balance_y
+							- checkpoint_balance_y) * half_span_y
+						<= movement_tolerance;
+
+			if (stagnant)
+				break;
+
+			checkpoint_span_width = span_width;
+			checkpoint_span_height = span_height;
+			checkpoint_balance_x = normalized_balance_x;
+			checkpoint_balance_y = normalized_balance_y;
+		}
 
 		for (size_t i = 0; i < count; i++) {
 			float available_x = half_span_x
