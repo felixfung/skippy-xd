@@ -16,6 +16,15 @@
 #define SGIF_THREADSAFE_510
 #endif
 
+void
+sgif_about(FILE *os) {
+	fprintf(os, "\nGIF support: Yes\n"
+			"  Compiled with giflib %d.%d.%d.\n",
+			GIFLIB_MAJOR,
+			GIFLIB_MINOR,
+			GIFLIB_RELEASE);
+}
+
 pictw_t *
 sgif_read(session_t *ps, const char *path) {
 	assert(path);

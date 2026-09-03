@@ -18,15 +18,27 @@
  */
 
 #include "skippy.h"
+#include "layout.h"
+#include "aabb.h"
 
-// this function redirects to different functions
-// which performs the expose layout
-// by calaculating cw->x, cw->y (new coordinates)
-// and total_width, total_height
-// given cw->src.x, cw->src.y (original coordinates)
+#include <limits.h>
+#include <math.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdlib.h>
 
-void layout_run(MainWin *mw, dlist *windows,
-		unsigned int *total_width, unsigned int *total_height) {
+static void layout_xd(MainWin *mw, dlist *windows,
+		unsigned int *total_width, unsigned int *total_height);
+static void layout_cosmos(MainWin *mw, dlist *windows,
+		unsigned int *total_width, unsigned int *total_height);
+
+// Redirect to the configured expose layout.  The selected implementation
+// calculates cw->x, cw->y and the total dimensions from cw->src.x, cw->src.y.
+
+void
+layout_run(MainWin *mw, dlist *windows,
+		unsigned int *total_width, unsigned int *total_height)
+{
 	if ((mw->ps->o.mode == PROGMODE_EXPOSE && mw->ps->o.exposeLayout == LAYOUT_COSMOS)
 	|| (mw->ps->o.mode == PROGMODE_SWITCH && mw->ps->o.switchLayout == LAYOUT_COSMOS)) {
 		foreach_dlist (dlist_first(windows)) {
@@ -77,11 +89,11 @@ void layout_run(MainWin *mw, dlist *windows,
 // original legacy layout
 //
 //
-void
+static void
 layout_xd(MainWin *mw, dlist *windows,
 		unsigned int *total_width, unsigned int *total_height)
 {
-	int sum_w = 0, max_h = 0, max_w = 0;
+	int sum_w = 0, max_h = 0;
 
 	dlist *slots = NULL;
 
@@ -91,16 +103,13 @@ layout_xd(MainWin *mw, dlist *windows,
 	// Get total window width and max window width/height
 	foreach_dlist (windows) {
 		ClientWin *cw = (ClientWin *) iter->data;
-		if (!cw->mode) continue;
 		sum_w += cw->src.width;
-		max_w = MAX(max_w, cw->src.width);
 		max_h = MAX(max_h, cw->src.height);
 	}
 
 	// Vertical layout
 	foreach_dlist (windows) {
 		ClientWin *cw = (ClientWin*) iter->data;
-		if (!cw->mode) continue;
 		dlist *slot_iter = NULL;
 		if ((mw->ps->o.mode == PROGMODE_SWITCH && mw->ps->o.switch_compact)
 		 || (mw->ps->o.mode == PROGMODE_EXPOSE && mw->ps->o.expose_compact))
@@ -182,322 +191,484 @@ layout_xd(MainWin *mw, dlist *windows,
 	dlist_free(rows);
 }
 
-float
-intersectArea(ClientWin *cw1, ClientWin *cw2,
-		unsigned int *total_width, unsigned int *total_height) {
-	int dis = cw1->mainwin->distance / 2;
-	float disx = (float)dis / (float) *total_width;
-	float disy = (float)dis / (float) *total_height;
-	float x1 = cw1->fx - disx, x2 = cw2->fx - disx;
-	float y1 = cw1->fy - disy, y2 = cw2->fy - disy;
-	float w1 = (float)cw1->src.width / (float) *total_width + 2*disx,
-		  w2 = (float)cw2->src.width / (float) *total_width + 2*disx;
-	float h1 = (float)cw1->src.height / (float) *total_height + 2*disy,
-		  h2 = (float)cw2->src.height / (float) *total_height + 2*disy;
+static void
+window_extents(ClientWin **windows, size_t count,
+		int *min_x, int *max_x, int *min_y, int *max_y)
+{
+	*min_x = INT_MAX;
+	*max_x = INT_MIN;
+	*min_y = INT_MAX;
+	*max_y = INT_MIN;
 
-	float left   = MAX(x1, x2);
-	float top    = MAX(y1, y2);
-	float right  = MIN(x1 + w1, x2 + w2);
-	float bottom = MIN(y1 + h1, y2 + h2);
-
-	if (right < left || bottom < top)
-		return 0;
-
-	return (right - left) * (bottom - top);
-}
-
-static inline float
-ABS(float x) {
-	if (x < 0)
-		return -x;
-	return x;
+	for (size_t i = 0; i < count; i++) {
+		*min_x = MIN(*min_x, windows[i]->x);
+		*max_x = MAX(*max_x,
+				windows[i]->x + windows[i]->src.width);
+		*min_y = MIN(*min_y, windows[i]->y);
+		*max_y = MAX(*max_y,
+				windows[i]->y + windows[i]->src.height);
+	}
 }
 
 static void
-com(ClientWin *cw, float *x, float *y,
-		unsigned int *total_width, unsigned int *total_height) {
-	*x = cw->fx + (float)cw->src.width / 2.0 / *total_width;
-	*y = cw->fy + (float)cw->src.height / 2.0 / *total_height;
+window_center(const ClientWin *window, float *center_x, float *center_y)
+{
+	*center_x = window->x + window->src.width / 2.0f;
+	*center_y = window->y + window->src.height / 2.0f;
 }
 
-static inline void
-inverse2(float dx, float dy, float *ax, float *ay) {
-	float dist = sqrt(dx*dx + dy*dy);
-	if (dist < 0.01) {
-		*ax = *ay = 0;
-		return;
+static void
+set_window_center(ClientWin *window, float center_x, float center_y)
+{
+	window->x = (int) lroundf(center_x - window->src.width / 2.0f);
+	window->y = (int) lroundf(center_y - window->src.height / 2.0f);
+}
+
+static void
+grid_offset(size_t rank, size_t count, size_t columns,
+		float cell_width, float cell_height,
+		float *offset_x, float *offset_y)
+{
+	size_t rows = (count + columns - 1) / columns;
+	size_t row = rank / columns;
+	size_t column = rank % columns;
+	size_t row_count = count - row * columns;
+
+	if (row_count > columns)
+		row_count = columns;
+
+	*offset_x = cell_width
+		* ((float) column - ((float) row_count - 1.0f) / 2.0f);
+	*offset_y = cell_height
+		* ((float) row - ((float) rows - 1.0f) / 2.0f);
+}
+
+static unsigned int
+run_scatter(ClientWin **windows, size_t count,
+		float monitor_width, float monitor_height,
+		float aspect_balance, float padding, float clearance)
+{
+	const float center_threshold = 0.10f;
+	float threshold_x = center_threshold * monitor_width;
+	float threshold_y = center_threshold * monitor_height;
+	size_t *component = calloc(count, sizeof(*component));
+	size_t *stack = calloc(count, sizeof(*stack));
+	size_t components = 0;
+	unsigned int groups = 0;
+
+	if (!component || !stack) {
+		free(stack);
+		free(component);
+		return groups;
 	}
 
-	float acc = 1.0 / dist / dist;
+	for (size_t i = 0; i < count; i++) {
+		float center_x, center_y;
+		window_center(windows[i], &center_x, &center_y);
+		windows[i]->fx = center_x / monitor_width;
+		windows[i]->fy = center_y / monitor_height;
+	}
 
-	*ax = acc * dx / dist;
-	*ay = acc * dy / dist;
+	for (size_t seed = 0; seed < count; seed++) {
+		if (component[seed])
+			continue;
+
+		size_t component_id = ++components;
+		size_t stack_size = 0;
+		component[seed] = component_id;
+		stack[stack_size++] = seed;
+
+		while (stack_size) {
+			size_t member = stack[--stack_size];
+
+			for (size_t i = 0; i < count; i++) {
+				if (component[i])
+					continue;
+				if (fabsf(windows[i]->fx - windows[member]->fx)
+						> center_threshold
+						|| fabsf(windows[i]->fy - windows[member]->fy)
+						> center_threshold)
+					continue;
+
+				component[i] = component_id;
+				stack[stack_size++] = i;
+			}
+		}
+	}
+
+	for (size_t component_id = 1;
+			component_id <= components; component_id++) {
+		double center_x_sum = 0;
+		double center_y_sum = 0;
+		int max_width = 0;
+		int max_height = 0;
+		size_t member_count = 0;
+
+		for (size_t i = 0; i < count; i++) {
+			float x, y;
+
+			if (component[i] != component_id)
+				continue;
+
+			window_center(windows[i], &x, &y);
+			center_x_sum += x;
+			center_y_sum += y;
+			max_width = MAX(max_width, windows[i]->src.width);
+			max_height = MAX(max_height, windows[i]->src.height);
+			member_count++;
+		}
+
+		if (member_count <= 1)
+			continue;
+
+		groups++;
+		float center_x = (float) (center_x_sum / member_count);
+		float center_y = (float) (center_y_sum / member_count);
+		float cell_width = max_width + padding;
+		float cell_height = max_height + padding;
+		size_t columns = (size_t) ceilf(sqrtf((float) member_count));
+		size_t rows = (member_count + columns - 1) / columns;
+
+		if ((float) max_width / max_height < aspect_balance) {
+			columns = rows;
+			rows = (member_count + columns - 1) / columns;
+		}
+
+		double offset_x_sum = 0;
+		double offset_y_sum = 0;
+		for (size_t rank = 0; rank < member_count; rank++) {
+			float offset_x, offset_y;
+			grid_offset(rank, member_count, columns,
+					cell_width, cell_height, &offset_x, &offset_y);
+			offset_x_sum += offset_x;
+			offset_y_sum += offset_y;
+		}
+
+		float mean_offset_x = (float) (offset_x_sum / member_count);
+		float mean_offset_y = (float) (offset_y_sum / member_count);
+		float center_half_x = (columns - 1) * cell_width / 2.0f
+			+ fabsf(mean_offset_x);
+		float center_half_y = (rows - 1) * cell_height / 2.0f
+			+ fabsf(mean_offset_y);
+
+		float outsider_scale = 1.0f;
+		for (size_t i = 0; i < count; i++) {
+			if (component[i] == component_id)
+				continue;
+
+			float x, y;
+			window_center(windows[i], &x, &y);
+			float distance_x = fabsf(x - center_x);
+			float distance_y = fabsf(y - center_y);
+			float required_x = MAX(
+				center_half_x + threshold_x + padding,
+				center_half_x
+					+ (max_width + windows[i]->src.width) / 2.0f
+					+ padding + clearance);
+			float required_y = MAX(
+				center_half_y + threshold_y + padding,
+				center_half_y
+					+ (max_height + windows[i]->src.height) / 2.0f
+					+ padding + clearance);
+			float scale_for_x = distance_x > 0
+				? required_x / distance_x : INFINITY;
+			float scale_for_y = distance_y > 0
+				? required_y / distance_y : INFINITY;
+			float scale_for_window = fminf(scale_for_x, scale_for_y);
+
+			if (scale_for_window > outsider_scale)
+				outsider_scale = scale_for_window;
+		}
+
+		size_t rank = 0;
+		for (size_t i = 0; i < count; i++) {
+			float x, y;
+			window_center(windows[i], &x, &y);
+
+			if (component[i] == component_id) {
+				float offset_x, offset_y;
+				grid_offset(rank, member_count, columns,
+						cell_width, cell_height,
+						&offset_x, &offset_y);
+				set_window_center(windows[i],
+						center_x + offset_x - mean_offset_x,
+						center_y + offset_y - mean_offset_y);
+				rank++;
+			} else if (outsider_scale > 1.0f
+					&& isfinite(outsider_scale)) {
+				set_window_center(windows[i],
+						center_x + outsider_scale * (x - center_x),
+						center_y + outsider_scale * (y - center_y));
+			}
+		}
+	}
+
+	free(stack);
+	free(component);
+	return groups;
 }
 
-void
+static unsigned int
+run_expansion(AabbWorld *world, float clearance,
+		float span_aspect, float monitor_aspect)
+{
+	const float maximum_expansion_headroom = 5.0f;
+	float center_x, center_y;
+
+	if (aabb_world_body_count(world) <= 1)
+		return 0;
+	if (!aabb_world_center_of_mass(world, &center_x, &center_y))
+		return 0;
+
+	float separation_scale = aabb_world_required_dilation(world, clearance);
+	if (!isfinite(separation_scale))
+		return 0;
+	separation_scale = fmaxf(1.0f, separation_scale);
+	float aspect_mismatch = fabsf(span_aspect - monitor_aspect)
+		/ (span_aspect + monitor_aspect);
+	float expansion_headroom = 1.0f
+		+ (maximum_expansion_headroom - 1.0f) * aspect_mismatch;
+	float expansion_scale = separation_scale * expansion_headroom;
+
+	return aabb_world_dilate(world, center_x, center_y, expansion_scale) ? 1 : 0;
+}
+
+static unsigned int
+run_contraction(AabbWorld *world, ClientWin **windows, size_t count,
+		float monitor_aspect)
+{
+	const float contraction_rate = 0.02f;
+	const float movement_tolerance = 0.01f;
+	unsigned int iteration = 0;
+	float checkpoint_span_width = 0;
+	float checkpoint_span_height = 0;
+	float checkpoint_balance_x = 0;
+	float checkpoint_balance_y = 0;
+
+	if (count <= 1)
+		return 0;
+
+	for (; iteration < 1000; iteration++) {
+		float center_x, center_y;
+		if (!aabb_world_center_of_mass(world, &center_x, &center_y))
+			break;
+
+		float min_x = INFINITY;
+		float max_x = -INFINITY;
+		float min_y = INFINITY;
+		float max_y = -INFINITY;
+
+		for (size_t i = 0; i < count; i++) {
+			float x, y;
+			aabb_body_get_position(world, (AabbBodyId) i, &x, &y);
+			windows[i]->fx = x;
+			windows[i]->fy = y;
+			min_x = fminf(min_x, x - windows[i]->src.width / 2.0f);
+			max_x = fmaxf(max_x, x + windows[i]->src.width / 2.0f);
+			min_y = fminf(min_y, y - windows[i]->src.height / 2.0f);
+			max_y = fmaxf(max_y, y + windows[i]->src.height / 2.0f);
+		}
+
+		float span_center_x = (min_x + max_x) / 2.0f;
+		float span_center_y = (min_y + max_y) / 2.0f;
+		float span_width = max_x - min_x;
+		float span_height = max_y - min_y;
+		float half_span_x = span_width / 2.0f;
+		float half_span_y = span_height / 2.0f;
+		float span_aspect = span_width / span_height;
+		float span_to_monitor = span_aspect / monitor_aspect;
+		float rate_x = contraction_rate
+				* fminf(1.0f, span_to_monitor);
+		float rate_y = contraction_rate
+				* fminf(1.0f, 1.0f / span_to_monitor);
+		float balance_x = span_center_x - center_x;
+		float balance_y = span_center_y - center_y;
+		float normalized_balance_x = balance_x / half_span_x;
+		float normalized_balance_y = balance_y / half_span_y;
+
+		if (iteration == 0) {
+			checkpoint_span_width = span_width;
+			checkpoint_span_height = span_height;
+			checkpoint_balance_x = normalized_balance_x;
+			checkpoint_balance_y = normalized_balance_y;
+		}
+		else if ((size_t) iteration % count == 0) {
+			bool stagnant =
+					fabsf(span_width - checkpoint_span_width)
+						<= movement_tolerance
+					&& fabsf(span_height - checkpoint_span_height)
+						<= movement_tolerance
+					&& fabsf(normalized_balance_x
+							- checkpoint_balance_x) * half_span_x
+						<= movement_tolerance
+					&& fabsf(normalized_balance_y
+							- checkpoint_balance_y) * half_span_y
+						<= movement_tolerance;
+
+			if (stagnant)
+				break;
+
+			checkpoint_span_width = span_width;
+			checkpoint_span_height = span_height;
+			checkpoint_balance_x = normalized_balance_x;
+			checkpoint_balance_y = normalized_balance_y;
+		}
+
+		for (size_t i = 0; i < count; i++) {
+			float available_x = half_span_x
+					- windows[i]->src.width / 2.0f;
+			float available_y = half_span_y
+					- windows[i]->src.height / 2.0f;
+			float position_x = available_x > 0
+					? (windows[i]->fx - span_center_x) / available_x
+					: 1.0f;
+			float position_y = available_y > 0
+					? (windows[i]->fy - span_center_y) / available_y
+					: 1.0f;
+
+			position_x = fmaxf(-1.0f, fminf(1.0f, position_x));
+			position_y = fmaxf(-1.0f, fminf(1.0f, position_y));
+
+			float interior_x = 1.0f - position_x * position_x;
+			float interior_y = 1.0f - position_y * position_y;
+			float velocity_x = rate_x
+					* (span_center_x - windows[i]->fx)
+					+ contraction_rate * interior_x * balance_x;
+			float velocity_y = rate_y
+					* (span_center_y - windows[i]->fy)
+					+ contraction_rate * interior_y * balance_y;
+
+			aabb_body_set_drive(world, (AabbBodyId) i,
+					velocity_x, velocity_y);
+		}
+
+		float max_movement = aabb_world_step(world, 1.0f);
+
+		if (max_movement <= movement_tolerance) {
+			iteration++;
+			break;
+		}
+	}
+
+	aabb_world_clear_drives(world);
+	return iteration;
+}
+
+static unsigned int
+run_final_settle(AabbWorld *world)
+{
+	const float penetration_tolerance = 0.02f;
+	unsigned int iteration = 0;
+
+	aabb_world_clear_drives(world);
+	for (; iteration < 256; iteration++) {
+		if (aabb_world_max_penetration(world) <= penetration_tolerance)
+			break;
+
+		aabb_world_step(world, 1.0f);
+		if (aabb_world_max_penetration(world) <= penetration_tolerance) {
+			iteration++;
+			break;
+		}
+	}
+
+	return iteration;
+}
+
+static void
 layout_cosmos(MainWin *mw, dlist *windows,
 		unsigned int *total_width, unsigned int *total_height)
 {
-	// convert pixel coordinates (x,y) to float coordinates (fx,fy)
-	// 0 <= fx, fy <= 1
-	// normalized by screen width/height
-	{
-		int minx = INT_MAX, maxx = INT_MIN;
-		int miny = INT_MAX, maxy = INT_MIN;
-		foreach_dlist (dlist_first(windows)) {
-			ClientWin *cw = iter->data;
-			minx = MIN(minx, cw->x);
-			maxx = MAX(maxx, cw->x + cw->src.width);
-			miny = MIN(miny, cw->y);
-			maxy = MAX(maxy, cw->y + cw->src.height);
-		}
+	const float aspect_balance = 1.4f;
+	const float clearance = 0.02f;
+	const float rounding_padding = 1.0f;
 
-		foreach_dlist (dlist_first(windows)) {
-			ClientWin *cw = iter->data;
-			cw->x -= minx;
-			cw->y -= miny;
-		}
+	windows = dlist_first(windows);
+	size_t count = (size_t) dlist_len(windows);
 
-		*total_width = maxx - minx;
-		*total_height = maxy - miny;
+	*total_width = 0;
+	*total_height = 0;
+	if (count == 0)
+		return;
 
-		foreach_dlist (dlist_first(windows)) {
-			ClientWin *cw = iter->data;
-			cw->fx = (float)cw->x / (float)*total_width;
-			cw->fy = (float)cw->y / (float)*total_height;
+	ClientWin **items = calloc(count, sizeof(*items));
+
+	if (!items)
+		return;
+
+	size_t index = 0;
+
+	foreach_dlist (windows) {
+		ClientWin *cw = iter->data;
+		items[index++] = cw;
+	}
+
+	float monitor_aspect = (float) mw->width / (float) mw->height;
+	float padding = (float) mw->distance + rounding_padding;
+	unsigned int scatter_groups = run_scatter(items, count,
+			(float) mw->width, (float) mw->height,
+			aspect_balance, padding, clearance);
+
+	int min_x, max_x, min_y, max_y;
+	window_extents(items, count, &min_x, &max_x, &min_y, &max_y);
+	float span_width = MAX(1, max_x - min_x);
+	float span_height = MAX(1, max_y - min_y);
+	float span_aspect = span_width / span_height;
+	float scale_x = span_width;
+	float scale_y = span_height
+		* monitor_aspect / aspect_balance;
+
+	AabbWorld *world = aabb_world_create(count, padding, scale_x, scale_y);
+
+	if (!world) {
+		free(items);
+		return;
+	}
+
+	for (size_t i = 0; i < count; i++) {
+		AabbBodyDef definition = {
+			.center_x = items[i]->x + items[i]->src.width / 2.0f,
+			.center_y = items[i]->y + items[i]->src.height / 2.0f,
+			.width = items[i]->src.width,
+			.height = items[i]->src.height
+		};
+
+		if (aabb_world_add_body(world, &definition) == AABB_BODY_INVALID) {
+			aabb_world_destroy(world);
+			free(items);
+			return;
 		}
 	}
 
-	// scatter windows with identical centre of mass
-	{
-		srand(0);
-		int iterations = -1;
-		bool colliding = true;
-		while (colliding && iterations <= 1000) {
-			colliding = false;
+	unsigned int expansion_iterations = run_expansion(world, clearance,
+			span_aspect, monitor_aspect);
+	unsigned int contraction_iterations = run_contraction(world, items, count,
+			monitor_aspect);
+	unsigned int settle_iterations = run_final_settle(world);
 
-			for (dlist *iter1 = dlist_first(windows);
-					iter1; iter1=iter1->next) {
-				for (dlist *iter2 = dlist_first(windows);
-						iter2; iter2=iter2->next) {
-					ClientWin *cw1 = iter1->data;
-					ClientWin *cw2 = iter2->data;
-					if (cw1 == cw2)
-						continue;
+	printfdf(false, "(): %u scatter groups", scatter_groups);
+	printfdf(false, "(): %u expansion iterations", expansion_iterations);
+	printfdf(false, "(): %u contraction iterations", contraction_iterations);
+	printfdf(false, "(): %u settle iterations", settle_iterations);
 
-					float x1, y1, x2, y2;
-					com(cw1, &x1, &y1, total_width, total_height);
-					com(cw2, &x2, &y2, total_width, total_height);
-					float dx = x2 - x1;
-					float dy = y2 - y1;
-					float delta = 0.1;
-					if (ABS(dx) <= delta && ABS(dy) <= delta) {
-						colliding = true;
-						float randx = (float)rand()/(float)(RAND_MAX/delta/2) - delta;
-						float randy = (float)rand()/(float)(RAND_MAX/delta/2) - delta;
-						cw1->fx += randx;
-						cw1->fy += randy;
-					}
-				}
-			}
-			iterations++;
-		}
-		printfdf(false, "(): %d iterations to resolve identical COM", iterations);
-		printfdf(false, "():");
+	for (size_t i = 0; i < count; i++) {
+		float center_x, center_y;
+		aabb_body_get_position(world, (AabbBodyId) i, &center_x, &center_y);
+
+		items[i]->x = (int) lroundf(center_x - items[i]->src.width / 2.0f);
+		items[i]->y = (int) lroundf(center_y - items[i]->src.height / 2.0f);
 	}
 
-	// cosmic expansion
-	{
-		foreach_dlist (dlist_first(windows)) {
-			ClientWin *cw = iter->data;
-			cw->vx = cw->vy = 0;
-		}
+	window_extents(items, count, &min_x, &max_x, &min_y, &max_y);
 
-		int iterations = 0;
-		float deltat = 1e-1;
-		float aratio = (float)mw->width / (float)mw->height;
-		bool colliding = true;
-		while (colliding && iterations < 1000) {
-			colliding = false;
-
-			for (dlist *iter1 = dlist_first(windows);
-					iter1; iter1=iter1->next) {
-				for (dlist *iter2 = dlist_first(windows);
-						iter2; iter2=iter2->next) {
-					ClientWin *cw1 = iter1->data;
-					ClientWin *cw2 = iter2->data;
-					if (cw1 == cw2)
-						continue;
-
-					if (intersectArea(cw1, cw2, total_width, total_height) > 0) {
-						colliding = true;
-						float m1 = cw1->src.width * cw1->src.height
-								/ (float)*total_width / (float)*total_height,
-							  m2 = cw2->src.width * cw2->src.height
-								/ (float)*total_width / (float)*total_height;
-						float x1, x2, y1, y2;
-						com(cw1, &x1, &y1, total_width, total_height);
-						com(cw2, &x2, &y2, total_width, total_height);
-						float dx = x2 - x1;
-						float dy = y2 - y1;
-						float vx=0, vy=0;
-						inverse2(dx, dy, &vx, &vy);
-						cw1->vx -= 1e-1 * m2 * vx;
-						cw1->vy -= 1e-1 * m2 * vy / aratio /* * 2.0*/;
-						float speed = sqrt(cw1->vx * cw1->vx + cw1->vy * cw1->vy);
-						if (speed > 1) {
-							cw1->vx /= speed;
-							cw1->vy /= speed;
-						}
-					}
-				}
-			}
-
-			foreach_dlist (dlist_first(windows)) {
-				ClientWin *cw = iter->data;
-				cw->fx += cw->vx * deltat;
-				cw->fy += cw->vy * deltat;
-				cw->vx = 0;
-				cw->vy = 0;
-			}
-			printfdf(false,"():");
-
-			iterations++;
-		}
-		printfdf(false, "(): %d expansion iterations", iterations);
-		printfdf(false, "():");
+	for (size_t i = 0; i < count; i++) {
+		items[i]->x -= min_x;
+		items[i]->y -= min_y;
 	}
 
-	// gravitational collapse
-	{
-		int iterations = 0;
-		float deltat = 1e-1;
-		float aratio = (float)mw->width / (float)mw->height;
-		bool stable = false;
-		int dis = mw->distance;
-		float disx = (float) dis / (float) *total_width;
-		float disy = (float) dis / (float) *total_height;
-		while (!stable && iterations < 10000) {
-			stable = true;
+	*total_width = (unsigned int) (max_x - min_x);
+	*total_height = (unsigned int) (max_y - min_y);
 
-			for (dlist *iter1 = dlist_first(windows);
-					iter1; iter1=iter1->next) {
-				for (dlist *iter2 = dlist_first(windows);
-						iter2; iter2=iter2->next) {
-					ClientWin *cw1 = iter1->data;
-					ClientWin *cw2 = iter2->data;
-					if (cw1 == cw2)
-						continue;
-
-					float m1 = (float) cw1->src.width * (float) cw1->src.height
-							/ (float)*total_width / (float)*total_height,
-						  m2 = (float) cw2->src.width * (float) cw2->src.height
-							/ (float)*total_width / (float)*total_height;
-					float x1, x2, y1, y2;
-					com(cw1, &x1, &y1, total_width, total_height);
-					com(cw2, &x2, &y2, total_width, total_height);
-					float dx = x2 - x1;
-					float dy = y2 - y1;
-					float vx=0, vy=0;
-					inverse2(dx, dy, &vx, &vy);
-					cw1->vx += 1e-1 * m2 * vx;
-					cw1->vy += 1e-1 * m2 * vy / aratio /* * 2.0*/;
-				}
-			}
-
-			foreach_dlist (dlist_first(windows)) {
-				ClientWin *cw1 = iter->data;
-				cw1->fx2 = cw1->fx;
-				cw1->fy2 = cw1->fy;
-
-				float speed = sqrt(cw1->vx * cw1->vx + cw1->vy * cw1->vy);
-				float vx = 0, vy = 0;
-				while (speed > 0) {
-					vx = cw1->vx / speed * disx;
-					vy = cw1->vy / speed * disy;
-
-					cw1->fx += vx * deltat;
-					cw1->fy += vy * deltat;
-
-					for (dlist *iter2 = dlist_first(windows);
-							iter2; iter2=iter2->next) {
-						ClientWin *cw2 = iter2->data;
-						if (cw1 == cw2 || intersectArea(cw1, cw2, total_width, total_height) == 0)
-							continue;
-
-						float left1 = cw1->fx - disx/2.0;
-						float left2 = cw2->fx - disx/2.0;
-						float right1 = cw1->fx + (float)cw1->src.width / (float)*total_width + disx/2.0;
-						float right2 = cw2->fx + (float)cw2->src.width / (float)*total_width + disx/2.0;
-
-						float top1 = cw1->fy - disy/2.0;
-						float top2 = cw2->fy - disy/2.0;
-						float bottom1 = cw1->fy + (float)cw1->src.height / (float)*total_height + disy/2.0;
-						float bottom2 = cw2->fy + (float)cw2->src.height / (float)*total_height + disy/2.0;
-
-						float overlapX = fmin(right1, right2) - fmax(left1, left2);
-						float overlapY = fmin(bottom1, bottom2) - fmax(top1, top2);
-
-						if (overlapY < overlapX) {
-							if (top1 < top2)
-								cw1->fy -= overlapY; // push up
-							else
-								cw1->fy += overlapY; // push down
-						} else {
-							if (left1 < left2)
-								cw1->fx -= overlapX; // push left
-							else
-								cw1->fx += overlapX; // push right
-						}
-					}
-
-					float newspeed = speed - disx;
-					cw1->vx *= newspeed / speed;
-					cw1->vy *= newspeed / speed;
-					speed = newspeed;
-				}
-			}
-
-			foreach_dlist (dlist_first(windows)) {
-				ClientWin *cw = iter->data;
-				cw->vx = 0;
-				cw->vy = 0;
-			}
-
-			foreach_dlist (dlist_first(windows)) {
-				ClientWin *cw1 = iter->data;
-				if (ABS(cw1->fx - cw1->fx2) > 0.01 / *total_width
-				 || ABS(cw1->fy - cw1->fy2) > 0.01 / *total_height)
-					stable = false;
-			}
-			iterations++;
-		}
-		printfdf(false, "(): %d collapse iterations", iterations);
-		printfdf(false, "():");
-	}
-
-	// calculate final coordinates
-	{
-		int minx = INT_MAX, maxx = INT_MIN;
-		int miny = INT_MAX, maxy = INT_MIN;
-		foreach_dlist (dlist_first(windows)) {
-			ClientWin *cw = iter->data;
-			cw->x = (float)cw->fx * (float)*total_width;
-			cw->y = (float)cw->fy * (float)*total_height;
-
-			minx = MIN(minx, cw->x);
-			maxx = MAX(maxx, cw->x + cw->src.width);
-			miny = MIN(miny, cw->y);
-			maxy = MAX(maxy, cw->y + cw->src.height);
-		}
-
-		foreach_dlist (dlist_first(windows)) {
-			ClientWin *cw = iter->data;
-			cw->x -= minx;
-			cw->y -= miny;
-		}
-
-		*total_width = maxx - minx;
-		*total_height = maxy - miny;
-	}
+	aabb_world_destroy(world);
+	free(items);
 }
