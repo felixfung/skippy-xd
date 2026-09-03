@@ -1103,7 +1103,7 @@ init_layout(MainWin *mw, enum layoutmode layout, Window leader)
 {
 	unsigned int newwidth = 100, newheight = 100;
 	if (mw->clientondesktop)
-		layout_run(mw, mw->clientondesktop, &newwidth, &newheight, layout);
+		layout_run(mw, mw->clientondesktop, &newwidth, &newheight);
 
 	init_multiplier(mw, newwidth, newheight, mw->ps->o.upscaleWindows, 2);
 	init_focus(mw, layout, leader);
@@ -1387,20 +1387,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 	pid_t trigger_client = 0;
 	bool switchdesktop = false;
 
-	switch (ps->o.mode) {
-		case PROGMODE_SWITCH:
-			layout = LAYOUTMODE_SWITCH;
-		case PROGMODE_EXPOSE:
-			layout = LAYOUTMODE_EXPOSE;
-			break;
-		case PROGMODE_PAGING:
-			layout = LAYOUTMODE_PAGING;
-			break;
-		default:
-			ps->o.mode = PROGMODE_EXPOSE;
-			layout = LAYOUTMODE_EXPOSE;
-			break;
-	}
+	ps->o.mode = PROGMODE_EXPOSE;
 
 	struct pollfd r_fd[2] = {
 		{
