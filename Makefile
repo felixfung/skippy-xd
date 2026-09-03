@@ -19,6 +19,11 @@ ifeq "${CFG_NO_XINERAMA}" ""
 	PACKAGES += xinerama
 endif
 
+ifeq "${CFG_NO_XRANDR}" ""
+	CPPFLAGS += -DCFG_XRANDR
+	PACKAGES += xrandr
+endif
+
 ifeq "${CFG_NO_CHIPMUNK}" ""
 	CPPFLAGS += -DCFG_CHIPMUNK
 	LIBS += -lchipmunk

@@ -49,6 +49,10 @@
 # include <X11/extensions/Xinerama.h>
 #endif
 
+#ifdef CFG_XRANDR
+# include <X11/extensions/Xrandr.h>
+#endif
+
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/poll.h>

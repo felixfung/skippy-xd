@@ -2276,9 +2276,14 @@ xerror(Display *dpy, XErrorEvent *ev) {
 
 static inline void
 multimonitor_about(FILE *os) {
+#if defined(CFG_XINERAMA) || defined(CFG_XRANDR)
+	fprintf(os, "\nMulti-monitor support: Yes\n");
+#endif
 #ifdef CFG_XINERAMA
-	fprintf(os, "\nMulti-monitor support: Yes\n"
-			"  Compiled with xinerama.\n");
+	fprintf(os, "  Compiled with xinerama.\n");
+#endif
+#ifdef CFG_XRANDR
+	fprintf(os, "  Compiled with xrandr.\n");
 #endif
 }
 
@@ -2355,6 +2360,16 @@ init_xexts(session_t *ps) {
 			printfef(false, "(): Xinerama extension: %d.%d.", major, minor);
 	}
 #endif /* CFG_XINERAMA */
+
+#ifdef CFG_XRANDR
+	//ps->xinfo.xinerama_exist = XineramaQueryExtension(dpy,
+			//&ps->xinfo.xinerama_ev_base, &ps->xinfo.xinerama_err_base);
+	{
+		int major, minor;
+		if (XRRQueryVersion(ps->dpy, &major, &minor))
+			printfef(false, "(): XRandR extension: %d.%d.", major, minor);
+	}
+#endif /* CFG_XRANDR */
 
 #ifdef CFG_CHIPMUNK
 	printfef(false, "(): Chipmunk extension: %s. Cosmos layout will be optimized.", cpVersionString);
