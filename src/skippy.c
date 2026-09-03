@@ -2328,6 +2328,14 @@ show_help() {
 			"  --next              - focus on the next window.\n"
 			, stdout);
 
+#ifdef CFG_JPEG
+	sjpeg_about(stdout);
+#endif
+
+#ifdef CFG_GIFLIB
+	sgif_about(stdout);
+#endif
+
 #ifdef CFG_LIBPNG
 	spng_about(stdout);
 #endif
