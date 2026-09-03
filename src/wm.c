@@ -519,13 +519,7 @@ wm_get_stack_sub(session_t *ps, Window root) {
 
 dlist *
 wm_get_stack(session_t *ps) {
-	if (!ps->o.filterxscreen) {
-		dlist *l = NULL;
-		for (int i = 0; i < ScreenCount(ps->dpy); ++i)
-			l = dlist_join(l, wm_get_stack_sub(ps, RootWindow(ps->dpy, i)));
-		return l;
-	}
-	else return wm_get_stack_sub(ps, ps->root);
+	return wm_get_stack_sub(ps, ps->root);
 }
 
 Pixmap
