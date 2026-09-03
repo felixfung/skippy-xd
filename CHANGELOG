@@ -1,5 +1,14 @@
 Skippy-XD changelog
 
+0.11.0 -- "Chipmunk" (6 Sep 2026) ~/felixfung
+ - Much improved cosmos layout:
+     - Scattering into grid layout. This improves max windows most
+     - Expansion formula updated. Windows do not fly past one another
+     - Contraction formula updated
+     - Screen aspect ratio awareness
+     - Optional dependency chipmunk-2d to optimize collision detection
+ - Layout more intuitive, more compact, more screen optimal
+
 0.10.7.1 -- "Bruh" (24 Jun 2026) ~/felixfung
  - Layout "xd" -> "rect", "compactrect"
  - panel/reserveSpace calculation fix in multi-monitor settings
