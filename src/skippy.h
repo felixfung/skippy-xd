@@ -208,7 +208,6 @@ typedef struct {
 	bool pseudoTrans;
 
 	bool showOnlyCurrentMonitor;
-	bool filterxscreen;
 	enum align horizontalPanelAlignment;
 	enum align verticalPanelAlignment;
 	char *wm_class;
@@ -309,7 +308,6 @@ typedef struct {
 	.pseudoTrans = true, \
 \
 	.showOnlyCurrentMonitor = false, \
-	.filterxscreen = true, \
 	.horizontalPanelAlignment = 1, \
 	.verticalPanelAlignment = 1, \
 	.wm_status = NULL, \
