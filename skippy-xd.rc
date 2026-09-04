@@ -45,9 +45,6 @@ pseudoTrans = true
 
 [multimonitor]
 
-# Filter windows by Xinerama monitor
-showOnlyCurrentMonitor = false
-
 # In multi-monitor environment,
 # Panels are displayed on the active monitor
 # Control how horizontal panels are aligned (left/mid/right)

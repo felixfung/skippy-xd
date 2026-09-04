@@ -2795,7 +2795,6 @@ load_config_file(session_t *ps)
 	}
     config_get_bool_wrap(config, "system", "pseudoTrans", &ps->o.pseudoTrans);
 
-    config_get_bool_wrap(config, "multimonitor", "showOnlyCurrentMonitor", &ps->o.showOnlyCurrentMonitor);
 	{
 		const char* align_str = config_get(config, "multimonitor",
 				"horizontalPanelAlignment", "mid");
