@@ -113,16 +113,6 @@ clientwin_filter_func(dlist *l, void *data) {
 	MainWin *mw = cw->mainwin;
 	session_t *ps = mw->ps;
 
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
-	if (mw->nmonitors > 0 && !INTERSECTS(
-			cw->src0.x, cw->src0.y, cw->src0.width, cw->src0.height,
-			mw->monitor[mw->active_monitor].x, mw->monitor[mw->active_monitor].y,
-			mw->monitor[mw->active_monitor].width, mw->monitor[mw->active_monitor].height)
-			&& ps->o.showOnlyCurrentMonitor
-			&& ps->o.mode != PROGMODE_PAGING)
-		return false;
-#endif
-
 	CARD32 current_desktop = (*(CARD32 *)data);
 	CARD32 w_desktop = wm_get_window_desktop(ps, cw->wid_client);
 	bool filtered_in = true;
