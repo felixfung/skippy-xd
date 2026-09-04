@@ -207,8 +207,6 @@ typedef struct {
 	int clientList;
 	bool pseudoTrans;
 
-	enum align horizontalPanelAlignment;
-	enum align verticalPanelAlignment;
 	char *wm_class;
 	char *wm_title;
 	char *wm_status;
@@ -306,8 +304,6 @@ typedef struct {
 	.clientList = 0, \
 	.pseudoTrans = true, \
 \
-	.horizontalPanelAlignment = 1, \
-	.verticalPanelAlignment = 1, \
 	.wm_status = NULL, \
 \
 	.switchLayout = LAYOUT_XD, \
