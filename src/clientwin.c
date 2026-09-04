@@ -596,20 +596,18 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 					topborder = ps->o.topFrameBorder;
 				}
 
-#ifdef CFG_XINERAMA
-				XineramaScreenInfo *iter = mw->xin_info;
-				for (int i = 0; i < mw->xin_screens; ++i)
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+				for (int i = 0; i < mw->nmonitors; ++i)
 				{
-					int x = dwin->mini.x + iter->x_org - cw->mini.x + leftborder;
-					int y = dwin->mini.y + iter->y_org - cw->mini.y + topborder;
-					int width = iter->width * mw->multiplier;
-					int height = iter->height * mw->multiplier;
+					int x = dwin->mini.x + mw->monitor[i].x - cw->mini.x + leftborder;
+					int y = dwin->mini.y + mw->monitor[i].y - cw->mini.y + topborder;
+					int width = mw->monitor[i].width * mw->multiplier;
+					int height = mw->monitor[i].height * mw->multiplier;
 
 					XRoundedRectComposite(mw->ps,
 							source, cw->destination,
 							x, y, x, y, width, height,
 							ps->o.cornerRadius * mw->multiplier);
-					iter++;
 				}
 #else
 				int x = dwin->mini.x - cw->mini.x + leftborder;
@@ -621,7 +619,7 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 						source, cw->destination,
 						x, y, x, y, width, height,
 						ps->o.cornerRadius * mw->multiplier);
-#endif /* CFG_XINERAMA */
+#endif
 			}
 		}
 
@@ -660,33 +658,31 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 			}
 
 			if (tint && tint->alpha && tint_window) {
-#ifdef CFG_XINERAMA
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
 				if (cw->mode == CLIDISP_DESKTOP)
 				{
-					XineramaScreenInfo *iter = mw->xin_info;
-					for (int i = 0; i < mw->xin_screens; ++i)
+					for (int i = 0; i < mw->nmonitors; ++i)
 					{
-						s_x = iter->x_org * mw->multiplier;
-						s_y = iter->y_org * mw->multiplier;
-						s_w = iter->width * mw->multiplier;
-						s_h = iter->height * mw->multiplier;
+						s_x = mw->monitor[i].x * mw->multiplier;
+						s_y = mw->monitor[i].y * mw->multiplier;
+						s_w = mw->monitor[i].width * mw->multiplier;
+						s_h = mw->monitor[i].height * mw->multiplier;
 
 						XRoundedRectTint(mw->ps,
 								cw->destination, tint,
 								s_x, s_y, s_w, s_h, ps->o.cornerRadius * mw->multiplier);
 
 						XClearArea(mw->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
-						iter++;
 					}
 				}
 				else {
-#endif /* CFG_XINERAMA */
+#endif
 					XRenderFillRectangle(mw->ps->dpy, PictOpOver,
 							cw->destination, tint, s_x, s_y, s_w, s_h);
 					XClearArea(mw->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
-#ifdef CFG_XINERAMA
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
 				}
-#endif /* CFG_XINERAMA */
+#endif
 			}
 		}
 

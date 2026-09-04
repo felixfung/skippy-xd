@@ -973,22 +973,22 @@ calculatePanelBorders(MainWin *mw,
 		if (cw->paneltype != WINTYPE_PANEL)
 			continue;
 
-#ifdef CFG_XINERAMA
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
 			int midx = cw->src.x + cw->src.width / 2;
 			int midy = cw->src.y + cw->src.height / 2;
 
-			XineramaScreenInfo *xiter = mw->xin_info;
-			for (int i=0; i<mw->xin_screens; i++)
+			for (int i=0; i<mw->nmonitors; i++)
 			{
-				if(xiter->x_org <= midx && midx < xiter->x_org + xiter->width &&
-				   xiter->y_org <= midy && midy < xiter->y_org + xiter->height)
+				if(mw->monitor[i].x <= midx && midx
+						< mw->monitor[i].x + mw->monitor[i].width &&
+				   mw->monitor[i].y <= midy && midy
+						< mw->monitor[i].y + mw->monitor[i].height)
 				{
-					cw->src.x -= xiter->x_org;
-					cw->src.y -= xiter->y_org;
+					cw->src.x -= mw->monitor[i].x;
+					cw->src.y -= mw->monitor[i].y;
 				}
-				xiter++;
 			}
-#endif /* CFG_XINERAMA */
+#endif
 
 		// assumed horizontal panel
 		if (cw->src.width >= cw->src.height) {
@@ -1023,28 +1023,27 @@ calculatePanelBorders(MainWin *mw,
 static void
 transportPanelToActiveMonitor(ClientWin *cw)
 {
-#ifdef CFG_XINERAMA
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
 	int midx = cw->src.x + cw->src.width / 2;
 	int midy = cw->src.y + cw->src.height / 2;
 	MainWin *mw = cw->mainwin;
-	XineramaScreenInfo *xiter = mw->xin_info;
 
-	for (int i = 0; i < mw->xin_screens; ++i) {
-		if (xiter->x_org <= midx && midx < xiter->x_org + xiter->width
-				&& xiter->y_org <= midy && midy < xiter->y_org + xiter->height) {
-			break;
+	for (int i = 0; i < mw->nmonitors; ++i) {
+		if (mw->monitor[i].x <= midx && midx
+					< mw->monitor[i].x + mw->monitor[i].width
+				&& mw->monitor[i].y <= midy && midy
+					< mw->monitor[i].y + mw->monitor[i].height) {
+			if (i < mw->active_monitor) {
+				cw->src.x -= mw->monitor[i].x;
+				cw->src.y -= mw->monitor[i].y;
+			}
+
 		}
-		xiter++;
 	}
 
-	if (xiter < mw->xin_info + mw->xin_screens) {
-		cw->src.x -= xiter->x_org;
-		cw->src.y -= xiter->y_org;
-	}
-
-	if (xiter < mw->xin_info + mw->xin_screens
+	/*if (xiter < mw->xin_info + mw->xin_screens
 			&& xiter->x_org == mw->x && xiter->y_org == mw->y)
-		return;
+		return;*/
 
 	if (cw->src.width >= cw->src.height) {
 		switch (mw->ps->o.horizontalPanelAlignment) {
@@ -1070,7 +1069,7 @@ transportPanelToActiveMonitor(ClientWin *cw)
 				break;
 		}
 	}
-#endif /* CFG_XINERAMA */
+#endif
 }
 
 static void
@@ -1123,9 +1122,9 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 	int desktop_width = mw->width;
 	int desktop_height = mw->height;
 
-#ifdef CFG_XINERAMA
-	printfdf(false,"(): detecting %d screens and %d virtual desktops",
-			mw->xin_screens, screencount);
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+	printfdf(false,"(): detecting %d monitors and %d virtual desktops",
+			mw->nmonitors, screencount);
 
 	int minx = INT_MAX;
 	int miny = INT_MAX;
@@ -1133,21 +1132,18 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 	int maxy = INT_MIN;
 
 	{
-		XineramaScreenInfo *iter = mw->xin_info;
-		for (int i = 0; i < mw->xin_screens; ++i)
+		for (int i = 0; i < mw->nmonitors; ++i)
 		{
-			minx = MIN(minx, iter->x_org);
-			miny = MIN(miny, iter->y_org);
-			maxx = MAX(maxx, iter->x_org + iter->width);
-			maxy = MAX(maxy,  iter->y_org +iter->height);
-
-			iter++;
+			minx = MIN(minx, mw->monitor[i].x);
+			miny = MIN(miny, mw->monitor[i].x);
+			maxx = MAX(maxx, mw->monitor[i].x + mw->monitor[i].width);
+			maxy = MAX(maxy, mw->monitor[i].y + mw->monitor[i].height);
 		}
 	}
 
 	desktop_width = maxx - minx;
 	desktop_height = maxy - miny;
-#endif /* CFG_XINERAMA */
+#endif
 
 	// the paging layout is rectangular
 	// such that screenwidth == ceil(sqrt(screencount))
@@ -1664,14 +1660,13 @@ mainloop(session_t *ps, bool activate_on_start) {
 				if (layout == LAYOUTMODE_PAGING && mw->ps->o.preservePages) {
 					foreach_dlist (mw->dminis) {
 						ClientWin *cw = (ClientWin *) iter->data;
-#ifdef CFG_XINERAMA
-						XineramaScreenInfo *iter = mw->xin_info;
-						for (int i = 0; i < mw->xin_screens; ++i)
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+						for (int i = 0; i < mw->nmonitors; ++i)
 						{
-							int s_x = iter->x_org * mw->multiplier + cw->x;
-							int s_y = iter->y_org * mw->multiplier + cw->y;
-							int s_w = iter->width * mw->multiplier - ps->o.leftFrameBorder;
-							int s_h = iter->height * mw->multiplier - ps->o.topFrameBorder;
+							int s_x = mw->monitor[i].x * mw->multiplier + cw->x;
+							int s_y = mw->monitor[i].y * mw->multiplier + cw->y;
+							int s_w = mw->monitor[i].width * mw->multiplier - ps->o.leftFrameBorder;
+							int s_h = mw->monitor[i].height * mw->multiplier - ps->o.topFrameBorder;
 
 							XRoundedRectComposite(mw->ps,
 									mw->ps->o.from, mw->background,
@@ -1682,7 +1677,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 									s_w,
 									s_h,
 									ps->o.cornerRadius * mw->multiplier);
-							iter++;
 						}
 #else
 						XRoundedRectComposite(mw->ps,
@@ -1694,7 +1688,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 								cw->src.width * mw->multiplier,
 								cw->src.height * mw->multiplier,
 								ps->o.cornerRadius * mw->multiplier);
-#endif /* CFG_XINERAMA */
+#endif
 						XClearWindow(ps->dpy, mw->window);
 					}
 				}
@@ -2352,18 +2346,14 @@ static inline bool
 init_xexts(session_t *ps) {
 	Display * const dpy = ps->dpy;
 #ifdef CFG_XINERAMA
-	ps->xinfo.xinerama_exist = XineramaQueryExtension(dpy,
-			&ps->xinfo.xinerama_ev_base, &ps->xinfo.xinerama_err_base);
-	{
-		int major, minor;
-		if (XineramaQueryVersion(ps->dpy, &major, &minor))
-			printfef(false, "(): Xinerama extension: %d.%d.", major, minor);
-	}
+	int dummy_1, dummy_2;
+	int major, minor;
+	XineramaQueryExtension(dpy, &dummy_1, &dummy_2);
+	if (XineramaQueryVersion(ps->dpy, &major, &minor))
+		printfef(false, "(): Xinerama extension: %d.%d.", major, minor);
 #endif /* CFG_XINERAMA */
 
 #ifdef CFG_XRANDR
-	//ps->xinfo.xinerama_exist = XineramaQueryExtension(dpy,
-			//&ps->xinfo.xinerama_ev_base, &ps->xinfo.xinerama_err_base);
 	{
 		int major, minor;
 		if (XRRQueryVersion(ps->dpy, &major, &minor))

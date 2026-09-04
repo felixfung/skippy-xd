@@ -380,15 +380,7 @@ typedef struct {
 	int render_err_base;
 	int fixes_ev_base;
 	int fixes_err_base;
-
-	bool xinerama_exist;
-	int xinerama_err_base;
-	int xinerama_ev_base;
 } xinfo_t;
-
-#define XINFOT_INIT { \
-	.xinerama_exist = false, \
-}
 
 typedef struct _clientwin_t ClientWin;
 typedef struct _mainwin_t MainWin;
@@ -423,7 +415,6 @@ typedef struct {
 
 #define SESSIONT_INIT { \
 	.o = OPTIONST_INIT, \
-	.xinfo = XINFOT_INIT, \
 	.time_start = { .tv_sec = 0, .tv_usec = 0 }, \
 	.fd_pipe = -1, \
 	.fd_pipe2 = -1, \

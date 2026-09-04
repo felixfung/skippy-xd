@@ -20,6 +20,8 @@
 #ifndef SKIPPY_MAINWIN_H
 #define SKIPPY_MAINWIN_H
 
+#include "clientwin.h"
+
 struct _mainwin_t {
 	session_t *ps;
 	Visual *visual;
@@ -77,10 +79,10 @@ struct _mainwin_t {
 	bool refocus;
 	bool mapped;
 
-#ifdef CFG_XINERAMA
-	int xin_screens;
-	XineramaScreenInfo *xin_info, *xin_active;
-#endif /* CFG_XINERAMA */
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+	int nmonitors, active_monitor;
+	SkippyWindow *monitor;
+#endif
 
 	/// @brief The client window to eventually focus.
 	ClientWin *client_to_focus;
