@@ -202,12 +202,6 @@ mainwin_create(session_t *ps) {
 	mw->focuslist = 0;
 	mw->refocus = false;
 
-	XWindowAttributes rootattr;
-	XGetWindowAttributes(dpy, ps->root, &rootattr);
-	mw->x = mw->y = 0;
-	mw->width = rootattr.width;
-	mw->height = rootattr.height;
-
 	if (!ps->o.pseudoTrans) {
 		mw->depth  = 32;
 		mw->visual = ps->argb_visual;
@@ -223,6 +217,8 @@ mainwin_create(session_t *ps) {
 
 	mw->colormap = XCreateColormap(dpy, ps->root, mw->visual, AllocNone);
 	mw->format = XRenderFindVisualFormat(dpy, mw->visual);
+
+	mainwin_update(mw);
 
 	mw = mainwin_reload(ps, mw);
 	if (!mw)
@@ -550,11 +546,21 @@ mainwin_update(MainWin *mw)
 			mw->monitor[i].height = iter1->height;
 			iter1++;
 		}
+
+		monitors_loaded = true;
 		XFree(iter0);
 
 		printfdf(false, "(): Xinerama is enabled (%d monitors).", mw->nmonitors);
 	}
 #endif
+
+	if (!monitors_loaded) {
+		XWindowAttributes rootattr;
+		XGetWindowAttributes(ps->dpy, ps->root, &rootattr);
+		mw->x = mw->y = 0;
+		mw->width = rootattr.width;
+		mw->height = rootattr.height;
+	}
 
 #if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
 	Window dummy_w;
@@ -576,10 +582,27 @@ mainwin_update(MainWin *mw)
 		}
 	}
 
-	mw->x = mw->monitor[mw->active_monitor].x;
-	mw->y = mw->monitor[mw->active_monitor].y;
-	mw->width = mw->monitor[mw->active_monitor].width;
-	mw->height = mw->monitor[mw->active_monitor].height;
+	if ((ps->o.mode == PROGMODE_SWITCH && ps->o.switchOnCurrentMonitor)
+	 || (ps->o.mode == PROGMODE_EXPOSE && ps->o.exposeOnCurrentMonitor)
+	 || (ps->o.mode == PROGMODE_PAGING && ps->o.pagingOnCurrentMonitor)) {
+		mw->x = mw->monitor[mw->active_monitor].x;
+		mw->y = mw->monitor[mw->active_monitor].y;
+		mw->width = mw->monitor[mw->active_monitor].width;
+		mw->height = mw->monitor[mw->active_monitor].height;
+	}
+	else {
+		int minx=INT_MAX, miny=INT_MAX, maxx=INT_MIN, maxy=INT_MIN;
+		for (int i = 0; i < mw->nmonitors; ++i) {
+			minx = MIN(minx, mw->monitor[i].x);
+			miny = MIN(miny, mw->monitor[i].y);
+			maxx = MAX(maxx, mw->monitor[i].x + mw->monitor[i].width);
+			maxy = MAX(maxy, mw->monitor[i].y + mw->monitor[i].height);
+		}
+		mw->x = minx;
+		mw->y = miny;
+		mw->width = maxx - minx;
+		mw->height = maxy - miny;
+	}
 #endif
 
 	XMoveResizeWindow(ps->dpy, mw->window, mw->x, mw->y, mw->width, mw->height);

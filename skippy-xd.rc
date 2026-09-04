@@ -49,6 +49,12 @@ pseudoTrans = true
 # Options are xrandr or xinerama
 multimonLib = xrandr
 
+# Whether windows stay within their original monitor
+# Or squish all windows into the current monitor
+switchOnCurrentMonitor = true
+exposeOnCurrentMonitor = false
+PagingOnCurrentMonitor = false
+
 [layout]
 
 # cosmos: position preserving layout

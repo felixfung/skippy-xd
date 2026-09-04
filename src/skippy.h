@@ -213,6 +213,10 @@ typedef struct {
 	bool pseudoTrans;
 
 	enum mmonlib multimonlib;
+	bool switchOnCurrentMonitor;
+	bool exposeOnCurrentMonitor;
+	bool pagingOnCurrentMonitor;
+
 	char *wm_class;
 	char *wm_title;
 	char *wm_status;
@@ -311,6 +315,10 @@ typedef struct {
 	.pseudoTrans = true, \
 \
 	.multimonlib = MULTIMON_XRANDR, \
+	.switchOnCurrentMonitor = true, \
+	.exposeOnCurrentMonitor = false, \
+	.pagingOnCurrentMonitor = false, \
+\
 	.wm_status = NULL, \
 \
 	.switchLayout = LAYOUT_XD, \

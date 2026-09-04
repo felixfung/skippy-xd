@@ -2754,6 +2754,13 @@ load_config_file(session_t *ps)
 		}
 	}
 
+    config_get_bool_wrap(config, "multimonitor",
+			"switchOnCurrentMonitor", &ps->o.switchOnCurrentMonitor);
+    config_get_bool_wrap(config, "multimonitor",
+			"exposeOnCurrentMonitor", &ps->o.exposeOnCurrentMonitor);
+    config_get_bool_wrap(config, "multimonitor",
+			"pagingOnCurrentMonitor", &ps->o.pagingOnCurrentMonitor);
+
 	{
 		const char *s = config_get(config, "layout", "switchLayout", NULL);
 		if (s) {
