@@ -1021,58 +1021,6 @@ calculatePanelBorders(MainWin *mw,
 }
 
 static void
-transportPanelToActiveMonitor(ClientWin *cw)
-{
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
-	int midx = cw->src.x + cw->src.width / 2;
-	int midy = cw->src.y + cw->src.height / 2;
-	MainWin *mw = cw->mainwin;
-
-	for (int i = 0; i < mw->nmonitors; ++i) {
-		if (mw->monitor[i].x <= midx && midx
-					< mw->monitor[i].x + mw->monitor[i].width
-				&& mw->monitor[i].y <= midy && midy
-					< mw->monitor[i].y + mw->monitor[i].height) {
-			if (i < mw->active_monitor) {
-				cw->src.x -= mw->monitor[i].x;
-				cw->src.y -= mw->monitor[i].y;
-			}
-
-		}
-	}
-
-	/*if (xiter < mw->xin_info + mw->xin_screens
-			&& xiter->x_org == mw->x && xiter->y_org == mw->y)
-		return;*/
-
-	if (cw->src.width >= cw->src.height) {
-		switch (mw->ps->o.horizontalPanelAlignment) {
-			case ALIGN_LEFT:
-				break;
-			case ALIGN_RIGHT:
-				cw->src.x = mw->width - cw->src.width - cw->src.x;
-				break;
-			case ALIGN_MID:
-				cw->src.x = (mw->width - cw->src.width) / 2;
-				break;
-		}
-	}
-	else {
-		switch (mw->ps->o.verticalPanelAlignment) {
-			case ALIGN_LEFT:
-				break;
-			case ALIGN_RIGHT:
-				cw->src.y = mw->height - cw->src.height - cw->src.y;
-				break;
-			case ALIGN_MID:
-				cw->src.y = (mw->height - cw->src.height) / 2;
-				break;
-		}
-	}
-#endif
-}
-
-static void
 init_multiplier(MainWin *mw, unsigned int newwidth, unsigned int newheight,
 		bool upscaleWindows, int gap)
 {
@@ -1359,9 +1307,8 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 
 	foreach_dlist(mw->panels) {
 		ClientWin *cw = iter->data;
-		if (cw->paneltype == WINTYPE_PANEL)
-			transportPanelToActiveMonitor(cw);
-		if (cw->paneltype == WINTYPE_DESKTOP) {
+		if (cw->paneltype == WINTYPE_PANEL
+                || cw->paneltype == WINTYPE_DESKTOP) {
 			cw->src.x -= mw->x;
 			cw->src.y -= mw->y;
 		}
@@ -2805,17 +2752,6 @@ load_config_file(session_t *ps)
 			printfdf(false, "(): xrandr lib not compiled, using xinerama");
 #endif
 		}
-	}
-
-	{
-		const char* align_str = config_get(config, "multimonitor",
-				"horizontalPanelAlignment", "mid");
-		parse_align(ps, align_str, &ps->o.horizontalPanelAlignment);
-	}
-	{
-		const char* align_str = config_get(config, "multimonitor",
-				"verticalPanelAlignment", "mid");
-		parse_alignv(ps, align_str, &ps->o.verticalPanelAlignment);
 	}
 
 	{

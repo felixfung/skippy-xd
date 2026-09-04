@@ -213,8 +213,6 @@ typedef struct {
 	bool pseudoTrans;
 
 	enum mmonlib multimonlib;
-	enum align horizontalPanelAlignment;
-	enum align verticalPanelAlignment;
 	char *wm_class;
 	char *wm_title;
 	char *wm_status;
@@ -313,8 +311,6 @@ typedef struct {
 	.pseudoTrans = true, \
 \
 	.multimonlib = MULTIMON_XRANDR, \
-	.horizontalPanelAlignment = 1, \
-	.verticalPanelAlignment = 1, \
 	.wm_status = NULL, \
 \
 	.switchLayout = LAYOUT_XD, \

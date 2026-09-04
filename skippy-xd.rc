@@ -49,13 +49,6 @@ pseudoTrans = true
 # Options are xrandr or xinerama
 multimonLib = xrandr
 
-# In multi-monitor environment,
-# Panels are displayed on the active monitor
-# Control how horizontal panels are aligned (left/mid/right)
-# And how vertical panels are aligned (top/mid/bottom)
-horizontalPanelAlignment = mid
-verticalPanelAlignment = mid
-
 [layout]
 
 # cosmos: position preserving layout
