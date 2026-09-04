@@ -45,6 +45,10 @@ pseudoTrans = true
 
 [multimonitor]
 
+# Library to access multimonitor information
+# Options are xrandr or xinerama
+multimonLib = xrandr
+
 # In multi-monitor environment,
 # Panels are displayed on the active monitor
 # Control how horizontal panels are aligned (left/mid/right)

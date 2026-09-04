@@ -2786,6 +2786,28 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "system", "pseudoTrans", &ps->o.pseudoTrans);
 
 	{
+		const char * multimonlib = config_get(config, "multimonitor", "multimonLib", "xrandr");
+		if (strcmp(multimonlib, "xinerama") == 0) {
+#ifdef CFG_XINERAMA
+			ps->o.multimonlib = MULTIMON_XINERAMA;
+			printfdf(false, "(): xinerama lib compiled and picked");
+#elif CFG_XRANDR
+			ps->o.multimonlib = MULTIMON_XRANDR;
+			printfdf(false, "(): xinerama lib not compiled, using xrandr");
+#endif
+		}
+		else {
+#ifdef CFG_XRANDR
+			ps->o.multimonlib = MULTIMON_XRANDR;
+			printfdf(false, "(): xrandr lib compiled and picked");
+#elif CFG_XINERAMA
+			ps->o.multimonlib = MULTIMON_XINERAMA;
+			printfdf(false, "(): xrandr lib not compiled, using xinerama");
+#endif
+		}
+	}
+
+	{
 		const char* align_str = config_get(config, "multimonitor",
 				"horizontalPanelAlignment", "mid");
 		parse_align(ps, align_str, &ps->o.horizontalPanelAlignment);

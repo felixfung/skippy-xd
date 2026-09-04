@@ -516,7 +516,7 @@ mainwin_update(MainWin *mw)
 	XRRMonitorInfo *xrr_monitors =
 		XRRGetMonitors(ps->dpy, ps->root, True, &mw->nmonitors);
 
-	if (xrr_monitors && mw->nmonitors > 0) {
+	if (ps->o.multimonlib == MULTIMON_XRANDR && xrr_monitors && mw->nmonitors > 0) {
 		if(mw->monitor)
 			XFree(mw->monitor);
 		mw->monitor = calloc(mw->nmonitors, sizeof(*mw->monitor));
@@ -536,20 +536,21 @@ mainwin_update(MainWin *mw)
 
 #ifdef CFG_XINERAMA
 	if (!monitors_loaded && XineramaIsActive(ps->dpy)) {
-		XineramaScreenInfo *iter = XineramaQueryScreens(ps->dpy, &mw->nmonitors);
+		XineramaScreenInfo *iter0, *iter1;
+		iter0 = iter1 = XineramaQueryScreens(ps->dpy, &mw->nmonitors);
 		if(mw->monitor)
 			XFree(mw->monitor);
 		mw->monitor = calloc(mw->nmonitors, sizeof(*mw->monitor));
 
 		for(int i = 0; i < mw->nmonitors; ++i)
 		{
-			mw->monitor[i].x = iter->x_org;
-			mw->monitor[i].y = iter->y_org;
-			mw->monitor[i].width = iter->width;
-			mw->monitor[i].height = iter->height;
-			iter++;
+			mw->monitor[i].x = iter1->x_org;
+			mw->monitor[i].y = iter1->y_org;
+			mw->monitor[i].width = iter1->width;
+			mw->monitor[i].height = iter1->height;
+			iter1++;
 		}
-		XFree(iter);
+		XFree(iter0);
 
 		printfdf(false, "(): Xinerama is enabled (%d monitors).", mw->nmonitors);
 	}

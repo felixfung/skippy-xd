@@ -73,6 +73,11 @@ extern bool debuglog;
 
 /// @brief Possible return values.
 
+enum mmonlib {
+	MULTIMON_XRANDR,
+	MULTIMON_XINERAMA,
+};
+
 enum {
 	LAYOUT_XD,
 	LAYOUT_COSMOS,
@@ -207,6 +212,7 @@ typedef struct {
 	int clientList;
 	bool pseudoTrans;
 
+	enum mmonlib multimonlib;
 	enum align horizontalPanelAlignment;
 	enum align verticalPanelAlignment;
 	char *wm_class;
@@ -306,6 +312,7 @@ typedef struct {
 	.clientList = 0, \
 	.pseudoTrans = true, \
 \
+	.multimonlib = MULTIMON_XRANDR, \
 	.horizontalPanelAlignment = 1, \
 	.verticalPanelAlignment = 1, \
 	.wm_status = NULL, \
