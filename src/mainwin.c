@@ -557,12 +557,32 @@ mainwin_update(MainWin *mw)
 	if (!monitors_loaded) {
 		XWindowAttributes rootattr;
 		XGetWindowAttributes(ps->dpy, ps->root, &rootattr);
-		mw->x = mw->y = 0;
-		mw->width = rootattr.width;
-		mw->height = rootattr.height;
+		mw->nmonitors = 1;
+		mw->active_monitor = 0;
+		if(mw->monitor)
+			XFree(mw->monitor);
+		mw->monitor = calloc(mw->nmonitors, sizeof(*mw->monitor));
+		mw->x = mw->monitor[0].x = 0;
+		mw->y = mw->monitor[0].y = 0;
+		mw->width = mw->monitor[0].width = rootattr.width;
+		mw->height = mw->monitor[0].height = rootattr.height;
 	}
 
 #if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+	{
+		int minx=INT_MAX, miny=INT_MAX, maxx=INT_MIN, maxy=INT_MIN;
+		for (int i = 0; i < mw->nmonitors; ++i) {
+			minx = MIN(minx, mw->monitor[i].x);
+			miny = MIN(miny, mw->monitor[i].y);
+			maxx = MAX(maxx, mw->monitor[i].x + mw->monitor[i].width);
+			maxy = MAX(maxy, mw->monitor[i].y + mw->monitor[i].height);
+		}
+		mw->x = minx;
+		mw->y = miny;
+		mw->width = maxx - minx;
+		mw->height = maxy - miny;
+	}
+
 	Window dummy_w;
 	int root_x, root_y, dummy_i;
 	unsigned int dummy_u;
@@ -580,28 +600,6 @@ mainwin_update(MainWin *mw)
 			mw->active_monitor = i;
 			break;
 		}
-	}
-
-	if ((ps->o.mode == PROGMODE_SWITCH && ps->o.switchOnCurrentMonitor)
-	 || (ps->o.mode == PROGMODE_EXPOSE && ps->o.exposeOnCurrentMonitor)
-	 || (ps->o.mode == PROGMODE_PAGING && ps->o.pagingOnCurrentMonitor)) {
-		mw->x = mw->monitor[mw->active_monitor].x;
-		mw->y = mw->monitor[mw->active_monitor].y;
-		mw->width = mw->monitor[mw->active_monitor].width;
-		mw->height = mw->monitor[mw->active_monitor].height;
-	}
-	else {
-		int minx=INT_MAX, miny=INT_MAX, maxx=INT_MIN, maxy=INT_MIN;
-		for (int i = 0; i < mw->nmonitors; ++i) {
-			minx = MIN(minx, mw->monitor[i].x);
-			miny = MIN(miny, mw->monitor[i].y);
-			maxx = MAX(maxx, mw->monitor[i].x + mw->monitor[i].width);
-			maxy = MAX(maxy, mw->monitor[i].y + mw->monitor[i].height);
-		}
-		mw->x = minx;
-		mw->y = miny;
-		mw->width = maxx - minx;
-		mw->height = maxy - miny;
 	}
 #endif
 
