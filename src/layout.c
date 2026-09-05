@@ -27,13 +27,46 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-static void layout_xd(MainWin *mw, dlist *windows,
-		unsigned int *total_width, unsigned int *total_height);
-static void layout_cosmos(MainWin *mw, dlist *windows,
-		unsigned int *total_width, unsigned int *total_height);
+static void layout_xd(session_t *ps, SkippyWindow monitor, dlist *windows,
+		int distance, unsigned int *total_width, unsigned int *total_height);
+static void layout_cosmos(session_t *ps, SkippyWindow monitor, dlist *windows,
+		int distance, unsigned int *total_width, unsigned int *total_height);
 
-// Redirect to the configured expose layout.  The selected implementation
-// calculates cw->x, cw->y and the total dimensions from cw->src.x, cw->src.y.
+int layout_filter_monitor(dlist *list, void *data) {
+	ClientWin *cw = list->data;
+	SkippyWindow *monitor = (SkippyWindow*) data;
+
+#define INTERSECTS(x1, y1, w1, h1, x2, y2, w2, h2) \
+	(((x1 >= x2 && x1 < (x2 + w2)) || (x2 >= x1 && x2 < (x1 + w1))) && \
+	 ((y1 >= y2 && y1 < (y2 + h2)) || (y2 >= y1 && y2 < (y1 + h1))))
+
+	return INTERSECTS(
+			cw->src.x, cw->src.y, cw->src.width, cw->src.height,
+			monitor->x, monitor->y, monitor->width, monitor->height);
+}
+
+static void layout_exec(session_t *ps, MainWin *mw, dlist *windows,
+		unsigned int *total_width, unsigned int *total_height,
+		void (*layout)(session_t*, SkippyWindow, dlist*, int, unsigned int*, unsigned int*)) {
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+		if ((ps->o.mode == PROGMODE_SWITCH && ps->o.switchOnCurrentMonitor)
+		 || (ps->o.mode == PROGMODE_EXPOSE && ps->o.exposeOnCurrentMonitor)
+		 || (ps->o.mode == PROGMODE_PAGING && ps->o.pagingOnCurrentMonitor)) {
+			layout(ps, mw->monitor[mw->active_monitor], windows,
+					mw->distance, total_width, total_height);
+		}
+		else {
+			for (int i=0; i<mw->nmonitors; i++) {
+				dlist *tmp = dlist_first(dlist_find_all(windows,
+						(dlist_match_func) layout_filter_monitor, &mw->monitor[i]));
+				layout(ps, mw->monitor[i], tmp,
+						mw->distance, total_width, total_height);
+			}
+		}
+#else
+		layout(ps, mw->monitor[0], windows, mw->distance, total_width, total_height);
+#endif
+}
 
 void
 layout_run(MainWin *mw, dlist *windows,
@@ -73,25 +106,22 @@ layout_run(MainWin *mw, dlist *windows,
 		dlist *sorted_windows = dlist_dup(windows);
 		dlist_sort(sorted_windows, sort_cw_by_id, 0);
 		dlist_sort(sorted_windows, sort_cw_by_row, 0);
-		layout_cosmos(mw, sorted_windows, total_width, total_height);
+		layout_exec(mw->ps, mw, windows, total_width, total_height, layout_cosmos);
 		dlist_free(sorted_windows);
 	}
 	else {
 		// to get the proper z-order based window ordering,
 		// reversing the list of windows is needed
 		dlist_reverse(windows);
-		layout_xd(mw, windows, total_width, total_height);
+		layout_exec(mw->ps, mw, windows, total_width, total_height, layout_xd);
 		// reversing the linked list again for proper focus ordering
 		dlist_reverse(windows);
 	}
 }
 
-// original legacy layout
-//
-//
 static void
-layout_xd(MainWin *mw, dlist *windows,
-		unsigned int *total_width, unsigned int *total_height)
+layout_xd(session_t *ps, SkippyWindow monitor, dlist *windows,
+		int distance, unsigned int *total_width, unsigned int *total_height)
 {
 	int sum_w = 0, max_h = 0;
 
@@ -111,20 +141,20 @@ layout_xd(MainWin *mw, dlist *windows,
 	foreach_dlist (windows) {
 		ClientWin *cw = (ClientWin*) iter->data;
 		dlist *slot_iter = NULL;
-		if ((mw->ps->o.mode == PROGMODE_SWITCH && mw->ps->o.switch_compact)
-		 || (mw->ps->o.mode == PROGMODE_EXPOSE && mw->ps->o.expose_compact))
+		if ((ps->o.mode == PROGMODE_SWITCH && ps->o.switch_compact)
+		 || (ps->o.mode == PROGMODE_EXPOSE && ps->o.expose_compact))
 			slot_iter = dlist_first(slots);
 		for (; slot_iter; slot_iter = slot_iter->next) {
 			dlist *slot = (dlist *) slot_iter->data;
 			// Calculate current total height of slot
-			int slot_h = - mw->distance;
+			int slot_h = - distance;
 			foreach_dlist_vn(slot_cw_iter, slot) {
 				ClientWin *slot_cw = (ClientWin *) slot_cw_iter->data;
-				slot_h = slot_h + slot_cw->src.height + mw->distance;
+				slot_h = slot_h + slot_cw->src.height + distance;
 			}
 			// Add window to slot if the slot height after adding the window
 			// doesn't exceed max window height
-			if (slot_h + mw->distance + cw->src.height < max_h) {
+			if (slot_h + distance + cw->src.height < max_h) {
 				slot_iter->data = dlist_add(slot, cw);
 				break;
 			}
@@ -151,12 +181,12 @@ layout_xd(MainWin *mw, dlist *windows,
 				ClientWin *cw = (ClientWin *) slot_cw_iter->data;
 				cw->x = x + (slot_max_w - cw->src.width) / 2;
 				cw->y = y;
-				y += cw->src.height + mw->distance;
+				y += cw->src.height + distance;
 				rows->data = dlist_add(rows->data, cw);
 			}
 			row_h = MAX(row_h, y - row_y);
 			*total_height = MAX(*total_height, y);
-			x += slot_max_w + mw->distance;
+			x += slot_max_w + distance;
 			*total_width = MAX(*total_width, x);
 			if (x > max_row_w) {
 				x = 0;
@@ -170,8 +200,8 @@ layout_xd(MainWin *mw, dlist *windows,
 		slots = NULL;
 	}
 
-	*total_width -= mw->distance;
-	*total_height -= mw->distance;
+	*total_width -= distance;
+	*total_height -= distance;
 
 	foreach_dlist (rows) {
 		dlist *row = (dlist *) iter->data;
@@ -576,8 +606,8 @@ run_final_settle(AabbWorld *world)
 }
 
 static void
-layout_cosmos(MainWin *mw, dlist *windows,
-		unsigned int *total_width, unsigned int *total_height)
+layout_cosmos(session_t *ps, SkippyWindow monitor, dlist *windows,
+		int distance, unsigned int *total_width, unsigned int *total_height)
 {
 	const float aspect_balance = 1.4f;
 	const float clearance = 0.02f;
@@ -603,10 +633,10 @@ layout_cosmos(MainWin *mw, dlist *windows,
 		items[index++] = cw;
 	}
 
-	float monitor_aspect = (float) mw->width / (float) mw->height;
-	float padding = (float) mw->distance + rounding_padding;
+	float monitor_aspect = (float) monitor.width / (float) monitor.height;
+	float padding = (float) distance + rounding_padding;
 	unsigned int scatter_groups = run_scatter(items, count,
-			(float) mw->width, (float) mw->height,
+			(float) monitor.width, (float) monitor.height,
 			aspect_balance, padding, clearance);
 
 	int min_x, max_x, min_y, max_y;
