@@ -36,7 +36,7 @@ struct _clientwin_t {
 
 	client_disp_mode_t mode;
 	Window wid_client;
-	SkippyWindow src, src0;
+	SkippyWindow src;
 	bool redirected;
 	Pixmap cpixmap;
 	pictw_t *pict_filled;

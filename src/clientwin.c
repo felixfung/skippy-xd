@@ -315,10 +315,8 @@ clientwin_update(ClientWin *cw) {
 
 	cw->src.width = wattr.width;
 	cw->src.height = wattr.height;
-	cw->x = cw->src0.x = cw->src.x;
-	cw->y = cw->src0.y = cw->src.y;
-	cw->src0.width = cw->src.width;
-	cw->src0.height = cw->src.height;
+	cw->x = cw->src.x;
+	cw->y = cw->src.y;
 
 	return true;
 }
