@@ -19,10 +19,6 @@
 
 #include "skippy.h"
 
-#define INTERSECTS(x1, y1, w1, h1, x2, y2, w2, h2) \
-	(((x1 >= x2 && x1 < (x2 + w2)) || (x2 >= x1 && x2 < (x1 + w1))) && \
-	 ((y1 >= y2 && y1 < (y2 + h2)) || (y2 >= y1 && y2 < (y1 + h1))))
-
 static int
 clientwin_action(ClientWin *cw, enum cliop action);
 
@@ -53,8 +49,8 @@ clientwin_render_desktop_cover_tint_border(ClientWin *cover, ClientWin *cw,
 	if (!tint || !tint->alpha || border <= 0 || !cw->mapped || !cover->destination)
 		return;
 
-	int x = cw->mini.x - border - cover->src.x + mw->x - ps->o.leftFrameBorder;
-	int y = cw->mini.y - border - cover->src.y + mw->y - ps->o.topFrameBorder;
+	int x = cw->mini.x - border - cover->src.x + ps->o.leftFrameBorder;
+	int y = cw->mini.y - border - cover->src.y + ps->o.topFrameBorder;
 	int w = cw->mini.width + border * 2 - ps->o.leftFrameBorder;
 	int h = cw->mini.height + border * 2 - ps->o.topFrameBorder;
 	if (x >= cover->mini.width || y >= cover->mini.height || x + w <= 0 || y + h <= 0)
@@ -228,9 +224,7 @@ clientwin_create(MainWin *mw, Window client) {
 			.override_redirect = !ps->o.pseudoTrans,
 		};
 		cw->mini.window = XCreateWindow(ps->dpy,
-				ps->o.pseudoTrans ? mw->window : ps->root,
-				ps->o.pseudoTrans ? mw->x : 0, ps->o.pseudoTrans ? mw->y : 0,
-				1, 1, 0,
+				ps->root, 0, 0, 1, 1, 0,
 				mw->depth, InputOutput, mw->visual,
 				CWColormap | CWBackPixel | CWBorderPixel | CWEventMask | CWOverrideRedirect, &sattr);
 	}
@@ -819,10 +813,6 @@ clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 
 	cw->mini.x = cw->src.x + (cw->x - cw->src.x + x) * timeslice;
 	cw->mini.y = cw->src.y + (cw->y - cw->src.y + y) * timeslice;
-	if (!ps->o.pseudoTrans) {
-		cw->mini.x += mw->x;
-		cw->mini.y += mw->y;
-	}
 
 	cw->factor = f;
 	cw->mini.width = cw->src.width * f;

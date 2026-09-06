@@ -103,10 +103,6 @@ mainwin_render_tint_border(ClientWin *cw, XRenderColor *tint, int border)
 
 	int x = cw->mini.x - border;
 	int y = cw->mini.y - border;
-	if (!ps->o.pseudoTrans) {
-		x -= mw->x;
-		y -= mw->y;
-	}
 
 	int w = cw->mini.width + border * 2;
 	int h = cw->mini.height + border * 2;
@@ -132,8 +128,8 @@ mainwin_render_tint_border(ClientWin *cw, XRenderColor *tint, int border)
 			local_y = y - cover->src.y + mw->y;
 		}
 		else {
-			int cover_x = cover->mini.x - (ps->o.pseudoTrans ? 0 : mw->x);
-			int cover_y = cover->mini.y - (ps->o.pseudoTrans ? 0 : mw->y);
+			int cover_x = cover->mini.x;
+			int cover_y = cover->mini.y;
 			local_x = x - cover_x;
 			local_y = y - cover_y;
 		}

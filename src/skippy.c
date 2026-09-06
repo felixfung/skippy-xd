@@ -1297,8 +1297,6 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 
 	foreach_dlist(mw->clientondesktop) {
 		ClientWin *cw = iter->data;
-		cw->src.x -= mw->x;
-		cw->src.y -= mw->y;
 		cw->x *= mw->multiplier;
 		cw->y *= mw->multiplier;
 		if (cw->paneltype != WINTYPE_PANEL && cw->paneltype != WINTYPE_DESKTOP)
@@ -1307,11 +1305,6 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 
 	foreach_dlist(mw->panels) {
 		ClientWin *cw = iter->data;
-		if (cw->paneltype == WINTYPE_PANEL
-                || cw->paneltype == WINTYPE_DESKTOP) {
-			cw->src.x -= mw->x;
-			cw->src.y -= mw->y;
-		}
 		clientwin_prepmove(cw);
 		clientwin_move(cw, 1, 0, 0, 0);
 	}

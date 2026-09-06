@@ -81,9 +81,7 @@ tooltip_create(MainWin *mw) {
 		};
 		
 		tt->window = XCreateWindow(ps->dpy,
-				ps->o.pseudoTrans ? mw->window : ps->root,
-				ps->o.pseudoTrans ? mw->x : 0, ps->o.pseudoTrans ? mw->y : 0,
-				1, 1, 0,
+				ps->root, 0, 0, 1, 1, 0,
 				mw->depth, InputOutput, mw->visual,
 				CWBorderPixel|CWBackPixel|CWOverrideRedirect|CWEventMask|CWColormap,
 				&attr);
