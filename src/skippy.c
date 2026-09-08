@@ -28,6 +28,9 @@
 #include <libgen.h>
 #include <dirent.h>
 #include <regex.h>
+#ifdef CFG_CHIPMUNK
+#include <chipmunk/chipmunk.h>
+#endif
 
 bool debuglog = false;
 
@@ -2271,6 +2274,22 @@ xerror(Display *dpy, XErrorEvent *ev) {
 #define SKIPPYXD_VERSION "unknown"
 #endif
 
+static inline void
+multimonitor_about(FILE *os) {
+#ifdef CFG_XINERAMA
+	fprintf(os, "\nMulti-monitor support: Yes\n"
+			"  Compiled with xinerama.\n");
+#endif
+}
+
+static inline void
+chipmunk_about(FILE *os) {
+#ifdef CFG_CHIPMUNK
+	fprintf(os, "\nCosmos support: Yes\n"
+			"  Compiled with chipmunk2d %s.\n", cpVersionString);
+#endif
+}
+
 static void
 show_help() {
 	fputs("skippy-xd " SKIPPYXD_VERSION "\n"
@@ -2307,11 +2326,21 @@ show_help() {
 			"\n"
 			"  --prev              - focus on the previous window.\n"
 			"  --next              - focus on the next window.\n"
-			"\n"
 			, stdout);
+
+#ifdef CFG_JPEG
+	sjpeg_about(stdout);
+#endif
+
+#ifdef CFG_GIFLIB
+	sgif_about(stdout);
+#endif
+
 #ifdef CFG_LIBPNG
 	spng_about(stdout);
 #endif
+	multimonitor_about(stdout);
+	chipmunk_about(stdout);
 }
 
 static inline bool
@@ -2320,10 +2349,18 @@ init_xexts(session_t *ps) {
 #ifdef CFG_XINERAMA
 	ps->xinfo.xinerama_exist = XineramaQueryExtension(dpy,
 			&ps->xinfo.xinerama_ev_base, &ps->xinfo.xinerama_err_base);
-	if (ps->o.runAsDaemon)
-		printfef(true, "(): Xinerama extension: %s",
-			(ps->xinfo.xinerama_exist ? "yes": "no"));
+	{
+		int major, minor;
+		if (XineramaQueryVersion(ps->dpy, &major, &minor))
+			printfef(false, "(): Xinerama extension: %d.%d.", major, minor);
+	}
 #endif /* CFG_XINERAMA */
+
+#ifdef CFG_CHIPMUNK
+	printfef(false, "(): Chipmunk extension: %s. Cosmos layout will be optimized.", cpVersionString);
+#else
+	printfef(false, "(): Chipmunk extension: no. Cosmos layout will be in-house implementation.");
+#endif
 
 	if(!XDamageQueryExtension(dpy,
 				&ps->xinfo.damage_ev_base, &ps->xinfo.damage_err_base)) {
@@ -2690,8 +2727,7 @@ load_config_file(session_t *ps)
         if (!ps->o.config_path)
             ps->o.config_path = get_cfg_path();
 
-		if (ps->o.runAsDaemon)
-			printfef(true, "(): using \"%s\"", ps->o.config_path);
+		printfef(true, "(): using \"%s\"", ps->o.config_path);
 
         if (ps->o.config_path) {
             config = config_load(ps->o.config_path);

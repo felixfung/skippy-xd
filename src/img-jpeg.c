@@ -1,6 +1,24 @@
 #include "skippy.h"
 #include <jpeglib.h>
 
+#define SKIPPY_STRINGIFY_INNER(x) #x
+#define SKIPPY_STRINGIFY(x) SKIPPY_STRINGIFY_INNER(x)
+
+void
+sjpeg_about(FILE *os) {
+#ifdef LIBJPEG_TURBO_VERSION
+	fprintf(os, "\nJPEG support: Yes\n"
+			"  Compiled with libjpeg-turbo %s.\n"
+			"  JPEG API compatibility level: %d.\n",
+			SKIPPY_STRINGIFY(LIBJPEG_TURBO_VERSION),
+			JPEG_LIB_VERSION);
+#else
+	fprintf(os, "\nJPEG support: Yes\n"
+			"  Compiled with libjpeg API compatibility level %d.\n",
+			JPEG_LIB_VERSION);
+#endif
+}
+
 pictw_t *
 sjpg_read(session_t *ps, const char *path) {
 	pictw_t *pictw = NULL;

@@ -10,11 +10,11 @@
 
 void
 spng_about(FILE *os) {
-	printfdf(true, "(): PNG support: Yes\n"
-			"  Compiled with libpng %s, using %s.\n"
-			"  Compiled with zlib %s, using %s.\n",
-			PNG_LIBPNG_VER_STRING, png_libpng_ver,
-			ZLIB_VERSION, zlib_version);
+	fprintf(os, "\nPNG support: Yes\n"
+			"  Compiled with libpng %s.\n"
+			"  Compiled with zlib %s.\n",
+			PNG_LIBPNG_VER_STRING,/* png_libpng_ver,*/
+			ZLIB_VERSION/*, zlib_version*/);
 }
 
 pictw_t *
