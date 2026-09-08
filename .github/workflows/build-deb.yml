@@ -61,6 +61,7 @@ jobs:
             libgif-dev
             libpng-dev
             libxinerama-dev
+            libchipmunk-dev
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

@@ -15,7 +15,8 @@ Build-Depends:
  libjpeg-dev,
  libgif-dev,
  libpng-dev,
- libxinerama-dev
+ libxinerama-dev,
+ libchipmunk-dev
 Standards-Version: 4.6.0
 Homepage: https://github.com/musqz/skippy-xd
 

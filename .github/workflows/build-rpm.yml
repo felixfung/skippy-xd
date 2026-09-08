@@ -33,7 +33,8 @@ jobs:
             libX11-devel libXft-devel libXrender-devel \
             libXcomposite-devel libXdamage-devel libXfixes-devel \
             libXext-devel libXinerama-devel \
-            libjpeg-turbo-devel giflib-devel libpng-devel
+            libjpeg-turbo-devel giflib-devel libpng-devel \
+            chipmunk-devel
 
       - name: Set up rpmbuild tree
         run: |
