@@ -907,6 +907,200 @@ count_and_filter_clients(MainWin *mw)
 	return;
 }
 
+static int
+sort_cw_by_x(dlist *dlist1, dlist *dlist2, void *data)
+{
+	ClientWin *cw1 = (ClientWin *) dlist1->data;
+	ClientWin *cw2 = (ClientWin *) dlist2->data;
+	long x1 = (long) cw1->x * 2 + cw1->src.width;
+	long x2 = (long) cw2->x * 2 + cw2->src.width;
+	long y1 = (long) cw1->y * 2 + cw1->src.height;
+	long y2 = (long) cw2->y * 2 + cw2->src.height;
+	if (x1 < x2)
+		return -1;
+	else if (x1 > x2)
+		return 1;
+	else if (y1 < y2)
+		return -1;
+	else if (y1 > y2)
+		return 1;
+	else if (cw1->wid_client < cw2->wid_client)
+		return -1;
+	else if (cw1->wid_client > cw2->wid_client)
+		return 1;
+	else
+		return 0;
+}
+
+static int
+sort_cw_by_y(dlist *dlist1, dlist *dlist2, void *data)
+{
+	ClientWin *cw1 = (ClientWin *) dlist1->data;
+	ClientWin *cw2 = (ClientWin *) dlist2->data;
+	long y1 = (long) cw1->y * 2 + cw1->src.height;
+	long y2 = (long) cw2->y * 2 + cw2->src.height;
+	long x1 = (long) cw1->x * 2 + cw1->src.width;
+	long x2 = (long) cw2->x * 2 + cw2->src.width;
+	if (y1 < y2)
+		return -1;
+	else if (y1 > y2)
+		return 1;
+	else if (x1 < x2)
+		return -1;
+	else if (x1 > x2)
+		return 1;
+	else if (cw1->wid_client < cw2->wid_client)
+		return -1;
+	else if (cw1->wid_client > cw2->wid_client)
+		return 1;
+	else
+		return 0;
+}
+
+static dlist *
+sort_focuslist_cosmos(dlist *list, int width, int height)
+{
+	list = dlist_first(list);
+	unsigned int len = dlist_len(list);
+	if (len < 2)
+		return list;
+
+	unsigned int split_x = 0, split_y = 0;
+	long long score_x = LLONG_MAX, score_y = LLONG_MAX;
+	int balance_x = INT_MAX, balance_y = INT_MAX;
+	long cut_x = 0, cut_y = 0;
+	const float column_preference = 0.15;
+	long long column_allowance = 2.0 * column_preference * MIN(width, height);
+
+	dlist_sort(list, sort_cw_by_x, 0);
+	for (unsigned int count = 1; count < len; count++) {
+		long left_center = 0, right_center = 0;
+		unsigned int i = 0;
+		for (dlist *iter = dlist_first(list); iter; iter = iter->next, i++) {
+			ClientWin *cw = (ClientWin *) iter->data;
+			if (i == count - 1)
+				left_center = (long) cw->x * 2 + cw->src.width;
+			else if (i == count) {
+				right_center = (long) cw->x * 2 + cw->src.width;
+				break;
+			}
+		}
+		if (left_center >= right_center)
+			continue;
+		for (int candidate = -1; candidate < (int)len * 2; candidate++) {
+			long cut;
+			if (candidate < 0)
+				cut = (left_center + right_center) / 2;
+			else {
+				dlist *iter = dlist_first(list);
+				for (int j = 0; iter && j < candidate / 2; j++)
+					iter = iter->next;
+				if (!iter)
+					continue;
+				ClientWin *cw = (ClientWin *) iter->data;
+				cut = candidate % 2
+					? (long)(cw->x + cw->src.width) * 2
+					: (long)cw->x * 2;
+			}
+			if (cut <= left_center || cut >= right_center)
+				continue;
+			long long current_score = 0;
+			for (dlist *iter = dlist_first(list); iter; iter = iter->next) {
+				ClientWin *cw = (ClientWin *) iter->data;
+				long x1 = (long) cw->x * 2;
+				long x2 = (long)(cw->x + cw->src.width) * 2;
+				if (x1 < cut && cut < x2)
+					current_score += MIN(cut - x1, x2 - cut);
+			}
+			int current_balance = abs((int)len - (int)(count * 2));
+			if (score_x == LLONG_MAX
+					|| current_score < score_x
+					|| (current_score == score_x && current_balance < balance_x)) {
+				split_x = count;
+				score_x = current_score;
+				balance_x = current_balance;
+				cut_x = cut;
+			}
+		}
+	}
+
+	dlist_sort(list, sort_cw_by_y, 0);
+	for (unsigned int count = 1; count < len; count++) {
+		long top_center = 0, bottom_center = 0;
+		unsigned int i = 0;
+		for (dlist *iter = dlist_first(list); iter; iter = iter->next, i++) {
+			ClientWin *cw = (ClientWin *) iter->data;
+			if (i == count - 1)
+				top_center = (long) cw->y * 2 + cw->src.height;
+			else if (i == count) {
+				bottom_center = (long) cw->y * 2 + cw->src.height;
+				break;
+			}
+		}
+		if (top_center >= bottom_center)
+			continue;
+		for (int candidate = -1; candidate < (int)len * 2; candidate++) {
+			long cut;
+			if (candidate < 0)
+				cut = (top_center + bottom_center) / 2;
+			else {
+				dlist *iter = dlist_first(list);
+				for (int j = 0; iter && j < candidate / 2; j++)
+					iter = iter->next;
+				if (!iter)
+					continue;
+				ClientWin *cw = (ClientWin *) iter->data;
+				cut = candidate % 2
+					? (long)(cw->y + cw->src.height) * 2
+					: (long)cw->y * 2;
+			}
+			if (cut <= top_center || cut >= bottom_center)
+				continue;
+			long long current_score = 0;
+			for (dlist *iter = dlist_first(list); iter; iter = iter->next) {
+				ClientWin *cw = (ClientWin *) iter->data;
+				long y1 = (long) cw->y * 2;
+				long y2 = (long)(cw->y + cw->src.height) * 2;
+				if (y1 < cut && cut < y2)
+					current_score += MIN(cut - y1, y2 - cut);
+			}
+			int current_balance = abs((int)len - (int)(count * 2));
+			if (score_y == LLONG_MAX
+					|| current_score < score_y
+					|| (current_score == score_y && current_balance < balance_y)) {
+				split_y = count;
+				score_y = current_score;
+				balance_y = current_balance;
+				cut_y = cut;
+			}
+		}
+	}
+
+	if (!split_x && !split_y) {
+		printfdf(false, "(): cosmos focus fallback column sort n=%u", len);
+		dlist_sort(list, sort_cw_by_column, 0);
+		return dlist_first(list);
+	}
+
+	if (split_x && (!split_y || score_x <= score_y + column_allowance)) {
+		printfdf(false, "(): cosmos focus vertical n=%u split=%u cut2=%ld score=%lld balance=%d",
+				len, split_x, cut_x, score_x, balance_x);
+		dlist_sort(list, sort_cw_by_x, 0);
+		dlist *second = dlist_split_nth(list, split_x);
+		list = sort_focuslist_cosmos(list, width, height);
+		second = sort_focuslist_cosmos(second, width, height);
+		return dlist_join(list, second);
+	}
+
+	printfdf(false, "(): cosmos focus horizontal n=%u split=%u cut2=%ld score=%lld balance=%d",
+			len, split_y, cut_y, score_y, balance_y);
+	dlist_sort(list, sort_cw_by_y, 0);
+	dlist *second = dlist_split_nth(list, split_y);
+	list = sort_focuslist_cosmos(list, width, height);
+	second = sort_focuslist_cosmos(second, width, height);
+	return dlist_join(list, second);
+}
+
 static void
 init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 	session_t *ps = mw->ps;
@@ -915,8 +1109,13 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 	// is important for prev/next window selection
 	mw->focuslist = dlist_dup(mw->clientondesktop);
 
-	if (layout == LAYOUTMODE_EXPOSE && ps->o.exposeLayout != LAYOUT_XD)
-		dlist_sort(mw->focuslist, sort_cw_by_column, 0);
+	if ((ps->o.mode == PROGMODE_EXPOSE
+	  && ps->o.exposeLayout == LAYOUT_COSMOS)
+	 || (ps->o.mode == PROGMODE_SWITCH
+	  && ps->o.switchLayout == LAYOUT_COSMOS))
+		mw->focuslist = sort_focuslist_cosmos(mw->focuslist,
+				(int)(mw->width / mw->multiplier),
+				(int)(mw->height / mw->multiplier));
 	else
 		dlist_reverse(mw->focuslist);
 
@@ -950,9 +1149,6 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 			XFlush(ps->dpy);
 		}
 	}
-
-	if (layout == LAYOUTMODE_SWITCH && ps->o.switchLayout == LAYOUT_COSMOS)
-		dlist_sort(mw->focuslist, sort_cw_by_column, 0);
 }
 
 static void
