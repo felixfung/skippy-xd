@@ -2279,6 +2279,8 @@ multimonitor_about(FILE *os) {
 #ifdef CFG_XINERAMA
 	fprintf(os, "\nMulti-monitor support: Yes\n"
 			"  Compiled with xinerama.\n");
+#else
+	fprintf(os, "\nMulti-monitor support: No\n");
 #endif
 }
 
@@ -2287,6 +2289,8 @@ chipmunk_about(FILE *os) {
 #ifdef CFG_CHIPMUNK
 	fprintf(os, "\nCosmos support: Yes\n"
 			"  Compiled with chipmunk2d %s.\n", cpVersionString);
+#else
+	fprintf(os, "\nCosmos support: No\n");
 #endif
 }
 
@@ -2328,16 +2332,22 @@ show_help() {
 			"  --next              - focus on the next window.\n"
 			, stdout);
 
-#ifdef CFG_JPEG
-	sjpeg_about(stdout);
-#endif
-
 #ifdef CFG_GIFLIB
 	sgif_about(stdout);
+#else
+	fprintf(stdout, "\nGIF support: No\n");
+#endif
+
+#ifdef CFG_JPEG
+	sjpeg_about(stdout);
+#else
+	fprintf(stdout, "\nJPEG support: No\n");
 #endif
 
 #ifdef CFG_LIBPNG
 	spng_about(stdout);
+#else
+	fprintf(stdout, "\nPNG support: No\n");
 #endif
 	multimonitor_about(stdout);
 	chipmunk_about(stdout);
