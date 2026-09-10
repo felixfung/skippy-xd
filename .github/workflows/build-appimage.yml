@@ -33,7 +33,7 @@ jobs:
             libx11-dev libxft-dev libxrender-dev \
             libxcomposite-dev libxdamage-dev libxfixes-dev \
             libxext-dev libxinerama-dev \
-            libjpeg-dev libgif-dev libpng-dev \
+            libjpeg-dev libgif-dev libpng-dev libchipmunk-dev \
             desktop-file-utils
 
       - name: Build skippy-xd binary

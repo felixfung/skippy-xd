@@ -19,6 +19,7 @@ BuildRequires:  libXinerama-devel
 BuildRequires:  libjpeg-turbo-devel
 BuildRequires:  giflib-devel
 BuildRequires:  libpng-devel
+BuildRequires:  chipmunk-devel
 
 %description
 Skippy-XD is a full-screen task switcher for X11 with live thumbnails
