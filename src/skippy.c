@@ -1109,10 +1109,8 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 	// is important for prev/next window selection
 	mw->focuslist = dlist_dup(mw->clientondesktop);
 
-	if ((ps->o.mode == PROGMODE_EXPOSE
+	if (ps->o.mode == PROGMODE_EXPOSE
 	  && ps->o.exposeLayout == LAYOUT_COSMOS)
-	 || (ps->o.mode == PROGMODE_SWITCH
-	  && ps->o.switchLayout == LAYOUT_COSMOS))
 		mw->focuslist = sort_focuslist_cosmos(mw->focuslist,
 				(int)(mw->width / mw->multiplier),
 				(int)(mw->height / mw->multiplier));
@@ -1149,6 +1147,12 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 			XFlush(ps->dpy);
 		}
 	}
+
+	if (ps->o.mode == PROGMODE_SWITCH
+	  && ps->o.switchLayout == LAYOUT_COSMOS)
+		mw->focuslist = sort_focuslist_cosmos(mw->focuslist,
+				(int)(mw->width / mw->multiplier),
+				(int)(mw->height / mw->multiplier));
 }
 
 static void
