@@ -3,7 +3,7 @@
 	dh $@
 
 override_dh_auto_build:
-	$(MAKE) CFG_REQUIRE_CHIPMUNK=1
+	$(MAKE)
 
 override_dh_auto_install:
 	mkdir -p $(CURDIR)/debian/skippy-xd/usr/share/man/man1

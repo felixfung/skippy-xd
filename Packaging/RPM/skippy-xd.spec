@@ -30,7 +30,7 @@ It is window-manager agnostic and works with any EWMH-compliant WM.
 %autosetup
 
 %build
-%make_build CFG_REQUIRE_CHIPMUNK=1
+%make_build
 
 %install
 mkdir -p %{buildroot}%{_mandir}/man1

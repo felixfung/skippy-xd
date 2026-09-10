@@ -37,7 +37,7 @@ jobs:
             desktop-file-utils
 
       - name: Build skippy-xd binary
-        run: make CFG_REQUIRE_CHIPMUNK=1
+        run: make
 
       - name: Create AppDir structure
         run: |

@@ -19,18 +19,9 @@ ifeq "${CFG_NO_XINERAMA}" ""
 	PACKAGES += xinerama
 endif
 
-# Chipmunk2D (optional) optimizes the "cosmos" layout physics. Auto-detected
-# from its header + library; the in-house solver is used when it is absent.
-# CFG_NO_CHIPMUNK=1 forces it off; CFG_REQUIRE_CHIPMUNK=1 turns a missing
-# Chipmunk2D into a hard build error (the release pipelines set this).
 ifeq "${CFG_NO_CHIPMUNK}" ""
-CFG_HAVE_CHIPMUNK := $(shell printf 'int main(void){return 0;}' | ${CC} -include chipmunk/chipmunk.h -xc - -lchipmunk -o /dev/null 2>/dev/null && echo 1)
-ifeq "${CFG_HAVE_CHIPMUNK}" "1"
 	CPPFLAGS += -DCFG_CHIPMUNK
 	LIBS += -lchipmunk
-else ifneq "${CFG_REQUIRE_CHIPMUNK}" ""
-$(error Chipmunk2D not found: need chipmunk/chipmunk.h and -lchipmunk, or unset CFG_REQUIRE_CHIPMUNK to use the in-house solver)
-endif
 endif
 
 ifeq "${CFG_NO_PNG}" ""
