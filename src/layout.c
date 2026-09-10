@@ -230,17 +230,17 @@ grid_offset(size_t rank, size_t count, size_t columns,
 		float *offset_x, float *offset_y)
 {
 	size_t rows = (count + columns - 1) / columns;
-	size_t row = rank / columns;
-	size_t column = rank % columns;
-	size_t row_count = count - row * columns;
+	size_t column = rank / rows;
+	size_t row = rank % rows;
+	size_t column_count = count - column * rows;
 
-	if (row_count > columns)
-		row_count = columns;
+	if (column_count > rows)
+		column_count = rows;
 
 	*offset_x = cell_width
-		* ((float) column - ((float) row_count - 1.0f) / 2.0f);
+		* ((float) column - ((float) columns - 1.0f) / 2.0f);
 	*offset_y = cell_height
-		* ((float) row - ((float) rows - 1.0f) / 2.0f);
+		* ((float) row - ((float) column_count - 1.0f) / 2.0f);
 }
 
 static unsigned int
