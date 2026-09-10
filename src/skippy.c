@@ -1078,7 +1078,7 @@ sort_focuslist_cosmos(dlist *list, int width, int height)
 
 	if (!split_x && !split_y) {
 		printfdf(false, "(): cosmos focus fallback column sort n=%u", len);
-		dlist_sort(list, sort_cw_by_column, 0);
+		dlist_sort(list, sort_cw_by_x, 0);
 		return dlist_first(list);
 	}
 
