@@ -971,7 +971,17 @@ sort_focuslist_cosmos(dlist *list, int width, int height)
 	long cut_x = 0, cut_y = 0;
 	const float column_preference = 0.20;
 	const int focus_grain_divisor = 128;
-	long long column_allowance = 2.0 * column_preference * MIN(width, height);
+	long min_x = LONG_MAX, min_y = LONG_MAX;
+	long max_x = LONG_MIN, max_y = LONG_MIN;
+	foreach_dlist(list) {
+		ClientWin *cw = (ClientWin *) iter->data;
+		min_x = MIN(min_x, cw->x);
+		min_y = MIN(min_y, cw->y);
+		max_x = MAX(max_x, cw->x + cw->src.width);
+		max_y = MAX(max_y, cw->y + cw->src.height);
+	}
+	long long column_allowance = 2.0 * column_preference
+		* MIN(max_x - min_x, max_y - min_y);
 	long grain = MAX(1, MIN(width, height) / focus_grain_divisor);
 
 	dlist_sort(list, sort_cw_by_x, 0);
