@@ -204,6 +204,7 @@ typedef struct {
 	bool pseudoTrans;
 
 	bool showOnlyCurrentMonitor;
+	bool exposeOnAllMonitors;
 	bool filterxscreen;
 	enum align horizontalPanelAlignment;
 	enum align verticalPanelAlignment;
@@ -305,6 +306,7 @@ typedef struct {
 	.pseudoTrans = true, \
 \
 	.showOnlyCurrentMonitor = false, \
+	.exposeOnAllMonitors = false, \
 	.filterxscreen = true, \
 	.horizontalPanelAlignment = 1, \
 	.verticalPanelAlignment = 1, \
@@ -419,6 +421,12 @@ typedef struct {
 	int fd_pipe2;
 	/// @brief Main window.
 	MainWin *mainwin;
+	/// @brief List of main windows, one per monitor.
+	dlist *mainwins;
+	/// @brief Shared focus list spanning all monitors (multi-monitor expose).
+	dlist *focuslist;
+	/// @brief The main window currently holding keyboard focus.
+	MainWin *active_mainwin;
 } session_t;
 
 #define SESSIONT_INIT { \
@@ -427,6 +435,10 @@ typedef struct {
 	.time_start = { .tv_sec = 0, .tv_usec = 0 }, \
 	.fd_pipe = -1, \
 	.fd_pipe2 = -1, \
+	.mainwin = NULL, \
+	.mainwins = NULL, \
+	.focuslist = NULL, \
+	.active_mainwin = NULL, \
 }
 
 /// @brief Print out a debug message with function name.

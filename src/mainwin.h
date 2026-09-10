@@ -98,6 +98,10 @@ void mainwin_update_background_config(MainWin *mw);
 void mainwin_update_background(MainWin *mw);
 void mainwin_restore_background(MainWin *mw);
 void mainwin_update(MainWin *mw);
+void mainwin_query_screens(MainWin *mw);
+#ifdef CFG_XINERAMA
+void mainwin_set_monitor(MainWin *mw, XineramaScreenInfo *info);
+#endif
 MainWin *mainwin_create_pixmap(MainWin *mw);
 void mainwin_transform(MainWin *mw, float f);
 void mainwin_render_borders(MainWin *mw);

@@ -507,6 +507,40 @@ mainwin_render_borders(MainWin *mw)
 }
 
 void
+mainwin_query_screens(MainWin *mw)
+{
+#ifdef CFG_XINERAMA
+	session_t * const ps = mw->ps;
+
+	if (mw->xin_info)
+		XFree(mw->xin_info);
+	mw->xin_info = NULL;
+	mw->xin_screens = 0;
+
+	if (ps->xinfo.xinerama_exist && XineramaIsActive(ps->dpy)) {
+		mw->xin_info = XineramaQueryScreens(ps->dpy, &mw->xin_screens);
+		printfdf(false, "(): Xinerama is enabled (%d screens).", mw->xin_screens);
+	}
+#endif /* CFG_XINERAMA */
+}
+
+#ifdef CFG_XINERAMA
+void
+mainwin_set_monitor(MainWin *mw, XineramaScreenInfo *info)
+{
+	session_t * const ps = mw->ps;
+
+	mw->xin_active = info;
+	mw->x = info->x_org;
+	mw->y = info->y_org;
+	mw->width = info->width;
+	mw->height = info->height;
+	XMoveResizeWindow(ps->dpy, mw->window, mw->x, mw->y, mw->width, mw->height);
+	mainwin_update_background(mw);
+}
+#endif /* CFG_XINERAMA */
+
+void
 mainwin_update(MainWin *mw)
 {
 #ifdef CFG_XINERAMA
@@ -518,13 +552,8 @@ mainwin_update(MainWin *mw)
 	int root_x, root_y, dummy_i;
 	unsigned int dummy_u;
 
-	if (ps->xinfo.xinerama_exist && XineramaIsActive(ps->dpy)) {
-		if(mw->xin_info)
-			XFree(mw->xin_info);
-		mw->xin_info = XineramaQueryScreens(ps->dpy, &mw->xin_screens);
-		printfdf(false, "(): Xinerama is enabled (%d screens).", mw->xin_screens);
-	}
-	
+	mainwin_query_screens(mw);
+
 	if(! mw->xin_info || ! mw->xin_screens)
 	{
 		mainwin_update_background(mw);
