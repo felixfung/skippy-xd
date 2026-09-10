@@ -969,8 +969,10 @@ sort_focuslist_cosmos(dlist *list, int width, int height)
 	long long score_x = LLONG_MAX, score_y = LLONG_MAX;
 	int balance_x = INT_MAX, balance_y = INT_MAX;
 	long cut_x = 0, cut_y = 0;
-	const float column_preference = 0.15;
+	const float column_preference = 0.20;
+	const int focus_grain_divisor = 128;
 	long long column_allowance = 2.0 * column_preference * MIN(width, height);
+	long grain = MAX(1, MIN(width, height) / focus_grain_divisor);
 
 	dlist_sort(list, sort_cw_by_x, 0);
 	for (unsigned int count = 1; count < len; count++) {
@@ -985,7 +987,7 @@ sort_focuslist_cosmos(dlist *list, int width, int height)
 				break;
 			}
 		}
-		if (left_center >= right_center)
+		if (right_center - left_center <= grain * 2)
 			continue;
 		for (int candidate = -1; candidate < (int)len * 2; candidate++) {
 			long cut;
@@ -1037,7 +1039,7 @@ sort_focuslist_cosmos(dlist *list, int width, int height)
 				break;
 			}
 		}
-		if (top_center >= bottom_center)
+		if (bottom_center - top_center <= grain * 2)
 			continue;
 		for (int candidate = -1; candidate < (int)len * 2; candidate++) {
 			long cut;
