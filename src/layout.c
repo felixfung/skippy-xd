@@ -225,22 +225,41 @@ set_window_center(ClientWin *window, float center_x, float center_y)
 }
 
 static void
-grid_offset(size_t rank, size_t count, size_t columns,
+grid_offset(size_t rank, size_t count, size_t columns, bool row_major,
 		float cell_width, float cell_height,
 		float *offset_x, float *offset_y)
 {
 	size_t rows = (count + columns - 1) / columns;
-	size_t row = rank / columns;
-	size_t column = rank % columns;
-	size_t row_count = count - row * columns;
 
-	if (row_count > columns)
-		row_count = columns;
+	// Scatter is column-major by default.  Row-major transposes selected
+	// incomplete grids so later Cosmos contraction reinforces columns rather
+	// than accidentally compacting them into strong horizontal rows.
+	if (row_major) {
+		size_t row = rank / columns;
+		size_t column = rank % columns;
+		size_t row_count = count - row * columns;
 
-	*offset_x = cell_width
-		* ((float) column - ((float) row_count - 1.0f) / 2.0f);
-	*offset_y = cell_height
-		* ((float) row - ((float) rows - 1.0f) / 2.0f);
+		if (row_count > columns)
+			row_count = columns;
+
+		*offset_x = cell_width
+			* ((float) column - ((float) row_count - 1.0f) / 2.0f);
+		*offset_y = cell_height
+			* ((float) row - ((float) rows - 1.0f) / 2.0f);
+	}
+	else {
+		size_t column = rank / rows;
+		size_t row = rank % rows;
+		size_t column_count = count - column * rows;
+
+		if (column_count > rows)
+			column_count = rows;
+
+		*offset_x = cell_width
+			* ((float) column - ((float) columns - 1.0f) / 2.0f);
+		*offset_y = cell_height
+			* ((float) row - ((float) column_count - 1.0f) / 2.0f);
+	}
 }
 
 static unsigned int
@@ -334,11 +353,25 @@ run_scatter(ClientWin **windows, size_t count,
 			rows = (member_count + columns - 1) / columns;
 		}
 
+		// The incomplete last column is centered independently by grid_offset().
+		// If its missing-cell count is even, it lies on the same row lattice as
+		// the full columns and contraction can make those rows visually dominant.
+		// Scatter those cases row-major instead, which transposes the ambiguity
+		// and favors emergent column structure.  A lone last-column window in a
+		// wider grid of at least four rows is the remaining staggered case seen
+		// to compact into rows (for example 17 equal maximized windows).
+		size_t partial_column = member_count - (columns - 1) * rows;
+		bool row_major = partial_column < rows
+			&& ((rows - partial_column) % 2 == 0
+				|| (partial_column == 1
+					&& columns > rows
+					&& rows >= 4));
+
 		double offset_x_sum = 0;
 		double offset_y_sum = 0;
 		for (size_t rank = 0; rank < member_count; rank++) {
 			float offset_x, offset_y;
-			grid_offset(rank, member_count, columns,
+			grid_offset(rank, member_count, columns, row_major,
 					cell_width, cell_height, &offset_x, &offset_y);
 			offset_x_sum += offset_x;
 			offset_y_sum += offset_y;
@@ -387,7 +420,7 @@ run_scatter(ClientWin **windows, size_t count,
 
 			if (component[i] == component_id) {
 				float offset_x, offset_y;
-				grid_offset(rank, member_count, columns,
+				grid_offset(rank, member_count, columns, row_major,
 						cell_width, cell_height,
 						&offset_x, &offset_y);
 				set_window_center(windows[i],
