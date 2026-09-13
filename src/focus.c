@@ -19,64 +19,96 @@
 
 #include "skippy.h"
 
-typedef float (*dist_func)(SkippyWindow *, SkippyWindow *);
-typedef int (*match_func)(dlist *, SkippyWindow *);
+#define HALF_H(w) ((w).x + (w).width / 2)
+#define HALF_V(w) ((w).y + (w).height / 2)
+#define SQR(x) ((x) * (x))
+
+enum {
+	DIR_UP,
+	DIR_DOWN,
+	DIR_LEFT,
+	DIR_RIGHT,
+};
 
 /**
- * @brief Focus the mini window of a client window.
+ * @brief Return the absolute (root) geometry of a client window's mini window.
+ *
+ * When pseudo-transparency is used, the mini window is a child of the main
+ * window, so its coordinates are relative to the monitor it belongs to. For
+ * spatial focus navigation to work across monitors we always need root
+ * coordinates.
  */
+static inline SkippyWindow
+cw_abs(ClientWin *cw) {
+	SkippyWindow w = cw->mini;
+	if (cw->mainwin->ps->o.pseudoTrans) {
+		w.x += cw->mainwin->x;
+		w.y += cw->mainwin->y;
+	}
+	return w;
+}
+
 static void
-focus_miniw_dir(ClientWin *cw, match_func match, dist_func func) {
-	float diff = 0.0;
-	ClientWin *candidate = NULL;
+focus_dir(ClientWin *cw, int dir) {
 	session_t * const ps = cw->mainwin->ps;
+	SkippyWindow base = cw_abs(cw);
 
-	dlist *candidates = dlist_first(dlist_find_all(cw->mainwin->focuslist, (dlist_match_func) match, &cw->mini));
-	if (!candidates) return;
+	ClientWin *candidate = NULL;
+	float best = 0.0;
 
-	foreach_dlist (candidates) {
+	foreach_dlist (cw->mainwin->focuslist) {
 		ClientWin *win = (ClientWin *) iter->data;
-		float distance = func(&cw->mini, &win->mini);
-		if (!candidate || distance < diff) {
+		if (win == cw)
+			continue;
+
+		SkippyWindow w = cw_abs(win);
+
+		bool qualifies = false;
+		float dx = 0.0, dy = 0.0;
+		switch (dir) {
+			case DIR_UP:
+				qualifies = w.y + w.height <= base.y;
+				dx = HALF_H(w) - HALF_H(base);
+				dy = (float) base.y - w.y - w.height;
+				break;
+			case DIR_DOWN:
+				qualifies = base.y + base.height <= w.y;
+				dx = HALF_H(w) - HALF_H(base);
+				dy = (float) w.y - base.y - base.height;
+				break;
+			case DIR_LEFT:
+				qualifies = w.x + w.width <= base.x;
+				dx = (float) base.x - w.x - w.width;
+				dy = HALF_V(w) - HALF_V(base);
+				break;
+			case DIR_RIGHT:
+				qualifies = base.x + base.width <= w.x;
+				dx = (float) w.x - base.x - base.width;
+				dy = HALF_V(w) - HALF_V(base);
+				break;
+		}
+
+		if (!qualifies)
+			continue;
+
+		float distance = sqrtf(SQR(dx) + SQR(dy));
+		if (!candidate || distance < best) {
 			candidate = win;
-			diff = distance;
+			best = distance;
 		}
 	}
+
+	if (!candidate)
+		return;
 
 	cw->focused = false;
 	clientwin_render(cw);
 	XFlush(ps->dpy);
 
 	focus_miniw(ps, candidate);
-	dlist_free(candidates);
 }
 
-#define HALF_H(w) (w->x + (int)w->width / 2)
-#define HALF_V(w) (w->y + (int)w->height / 2)
-#define SQR(x) pow(x, 2)
-
-#define DISTFUNC(name, d_x, d_y) \
-static float name (SkippyWindow *a, SkippyWindow *b) \
-{ return sqrt(SQR(d_x) + SQR(d_y)); }
-
-#define QUALFUNC(name, expr) \
-static int name(dlist *l, SkippyWindow *b) \
-{ SkippyWindow *a = &((ClientWin*)l->data)->mini; return expr; }
-
-#define FOCUSFUNC(name, qual, dist) \
-void name(ClientWin *cw) { focus_miniw_dir(cw, qual, dist); }
-
-DISTFUNC(dist_top_bottom, HALF_H(a) - HALF_H(b), a->y - b->y - (int)b->height)
-DISTFUNC(dist_bottom_top, HALF_H(a) - HALF_H(b), b->y - a->y - (int)a->height)
-DISTFUNC(dist_left_right, HALF_V(a) - HALF_V(b), a->x - b->x - (int)b->width)
-DISTFUNC(dist_right_left, HALF_V(a) - HALF_V(b), b->x - a->x - (int)a->width)
-
-QUALFUNC(win_above, a->y + a->height < b->y)
-QUALFUNC(win_below, b->y + b->height < a->y)
-QUALFUNC(win_left, a->x + a->width < b->x)
-QUALFUNC(win_right, b->x + b->width < a->x)
-
-FOCUSFUNC(focus_up, win_above, dist_top_bottom)
-FOCUSFUNC(focus_down, win_below, dist_bottom_top)
-FOCUSFUNC(focus_left, win_left, dist_left_right)
-FOCUSFUNC(focus_right, win_right, dist_right_left)
+void focus_up(ClientWin *cw) { focus_dir(cw, DIR_UP); }
+void focus_down(ClientWin *cw) { focus_dir(cw, DIR_DOWN); }
+void focus_left(ClientWin *cw) { focus_dir(cw, DIR_LEFT); }
+void focus_right(ClientWin *cw) { focus_dir(cw, DIR_RIGHT); }
