@@ -907,6 +907,289 @@ count_and_filter_clients(MainWin *mw)
 	return;
 }
 
+static int
+sort_cw_by_x(dlist *dlist1, dlist *dlist2, void *data)
+{
+	ClientWin *cw1 = (ClientWin *) dlist1->data;
+	ClientWin *cw2 = (ClientWin *) dlist2->data;
+	long x1 = (long) cw1->x * 2 + cw1->src.width;
+	long x2 = (long) cw2->x * 2 + cw2->src.width;
+	long y1 = (long) cw1->y * 2 + cw1->src.height;
+	long y2 = (long) cw2->y * 2 + cw2->src.height;
+	if (x1 < x2)
+		return -1;
+	else if (x1 > x2)
+		return 1;
+	else if (y1 < y2)
+		return -1;
+	else if (y1 > y2)
+		return 1;
+	else if (cw1->wid_client < cw2->wid_client)
+		return -1;
+	else if (cw1->wid_client > cw2->wid_client)
+		return 1;
+	else
+		return 0;
+}
+
+static int
+sort_cw_by_y(dlist *dlist1, dlist *dlist2, void *data)
+{
+	ClientWin *cw1 = (ClientWin *) dlist1->data;
+	ClientWin *cw2 = (ClientWin *) dlist2->data;
+	long y1 = (long) cw1->y * 2 + cw1->src.height;
+	long y2 = (long) cw2->y * 2 + cw2->src.height;
+	long x1 = (long) cw1->x * 2 + cw1->src.width;
+	long x2 = (long) cw2->x * 2 + cw2->src.width;
+	if (y1 < y2)
+		return -1;
+	else if (y1 > y2)
+		return 1;
+	else if (x1 < x2)
+		return -1;
+	else if (x1 > x2)
+		return 1;
+	else if (cw1->wid_client < cw2->wid_client)
+		return -1;
+	else if (cw1->wid_client > cw2->wid_client)
+		return 1;
+	else
+		return 0;
+}
+
+static dlist *
+sort_focuslist_cosmos(dlist *list)
+{
+	list = dlist_first(list);
+	unsigned int len = dlist_len(list);
+	if (len < 2)
+		return list;
+
+	const float grain = 0.05;
+	const long long horizontal_penalty_numerator = 4;
+	const long long horizontal_penalty_denominator = 5;
+	long min_x = LONG_MAX, min_y = LONG_MAX;
+	long max_x = LONG_MIN, max_y = LONG_MIN;
+	foreach_dlist(list) {
+		ClientWin *cw = (ClientWin *) iter->data;
+		min_x = MIN(min_x, cw->x);
+		min_y = MIN(min_y, cw->y);
+		max_x = MAX(max_x, cw->x + cw->src.width);
+		max_y = MAX(max_y, cw->y + cw->src.height);
+	}
+
+	unsigned int edge_count = len * 2;
+	long horizontal_edges[edge_count];
+	long vertical_edges[edge_count];
+	unsigned int edge_index = 0;
+	foreach_dlist(list) {
+		ClientWin *cw = (ClientWin *) iter->data;
+		horizontal_edges[edge_index] = (long) cw->y * 2;
+		vertical_edges[edge_index] = (long) cw->x * 2;
+		edge_index++;
+		horizontal_edges[edge_index] =
+			(long)(cw->y + cw->src.height) * 2;
+		vertical_edges[edge_index] =
+			(long)(cw->x + cw->src.width) * 2;
+		edge_index++;
+	}
+
+	for (unsigned int i = 1; i < edge_count; i++) {
+		long value = horizontal_edges[i];
+		unsigned int j = i;
+		while (j && horizontal_edges[j - 1] > value) {
+			horizontal_edges[j] = horizontal_edges[j - 1];
+			j--;
+		}
+		horizontal_edges[j] = value;
+	}
+	for (unsigned int i = 1; i < edge_count; i++) {
+		long value = vertical_edges[i];
+		unsigned int j = i;
+		while (j && vertical_edges[j - 1] > value) {
+			vertical_edges[j] = vertical_edges[j - 1];
+			j--;
+		}
+		vertical_edges[j] = value;
+	}
+
+	long span_x = max_x - min_x;
+	long span_y = max_y - min_y;
+	long horizontal_grain = grain * span_y * 2;
+	long vertical_grain = grain * span_x * 2;
+	unsigned int horizontal_edge_count = 0;
+	unsigned int vertical_edge_count = 0;
+
+	for (unsigned int i = 0; i < edge_count; ) {
+		unsigned int end = i + 1;
+		while (end < edge_count
+				&& horizontal_edges[end] - horizontal_edges[i]
+				<= horizontal_grain)
+			end++;
+		horizontal_edges[horizontal_edge_count++] =
+			horizontal_edges[(i + end - 1) / 2];
+		i = end;
+	}
+	for (unsigned int i = 0; i < edge_count; ) {
+		unsigned int end = i + 1;
+		while (end < edge_count
+				&& vertical_edges[end] - vertical_edges[i]
+				<= vertical_grain)
+			end++;
+		vertical_edges[vertical_edge_count++] =
+			vertical_edges[(i + end - 1) / 2];
+		i = end;
+	}
+
+	bool best_horizontal = false;
+	unsigned int best_split = 0;
+	unsigned int best_outer_rank = UINT_MAX;
+	unsigned int best_side_rank = UINT_MAX;
+	long best_outer_depth = LONG_MAX;
+	long long best_penalty = LLONG_MAX;
+	long long best_adjusted_penalty = LLONG_MAX;
+	long best_cut = 0;
+
+	// Rank coarse-grained horizontal edges by normalized adjusted penalty,
+	// then from the outside inward. Horizontal penalties are weighted by 4/5.
+	for (unsigned int candidate = 0;
+			candidate < horizontal_edge_count; candidate++) {
+		long cut = horizontal_edges[candidate];
+		unsigned int split = 0;
+
+		foreach_dlist(list) {
+			ClientWin *cw = (ClientWin *) iter->data;
+			long center = (long) cw->y * 2 + cw->src.height;
+			if (center < cut)
+				split++;
+		}
+
+		if (!split || split == len)
+			continue;
+
+		long long penalty = 0;
+		foreach_dlist(list) {
+			ClientWin *cw = (ClientWin *) iter->data;
+			long y1 = (long) cw->y * 2;
+			long y2 = (long)(cw->y + cw->src.height) * 2;
+			if (y1 < cut && cut < y2)
+				penalty += MIN(cut - y1, y2 - cut);
+		}
+
+		long long adjusted_penalty =
+			penalty * horizontal_penalty_numerator * span_y;
+		unsigned int outer_rank = MIN(split, len - split);
+		long outer_depth = MIN(cut - min_y * 2, max_y * 2 - cut);
+		unsigned int side_rank = split <= len - split ? 0 : 1;
+
+		if (best_adjusted_penalty == LLONG_MAX
+				|| adjusted_penalty < best_adjusted_penalty
+				|| (adjusted_penalty == best_adjusted_penalty
+					&& !best_horizontal)
+				|| (adjusted_penalty == best_adjusted_penalty
+					&& best_horizontal
+					&& outer_rank < best_outer_rank)
+				|| (adjusted_penalty == best_adjusted_penalty
+					&& best_horizontal
+					&& outer_rank == best_outer_rank
+					&& outer_depth < best_outer_depth)
+				|| (adjusted_penalty == best_adjusted_penalty
+					&& best_horizontal
+					&& outer_rank == best_outer_rank
+					&& outer_depth == best_outer_depth
+					&& side_rank < best_side_rank)) {
+			best_horizontal = true;
+			best_split = split;
+			best_outer_rank = outer_rank;
+			best_outer_depth = outer_depth;
+			best_side_rank = side_rank;
+			best_penalty = penalty;
+			best_adjusted_penalty = adjusted_penalty;
+			best_cut = cut;
+		}
+	}
+
+	// Rank coarse-grained vertical edges the same way. Cross multiplication
+	// normalizes horizontal penalty by span_x and vertical penalty by span_y.
+	// An exact adjusted-penalty tie stays horizontal.
+	for (unsigned int candidate = 0;
+			candidate < vertical_edge_count; candidate++) {
+		long cut = vertical_edges[candidate];
+		unsigned int split = 0;
+
+		foreach_dlist(list) {
+			ClientWin *cw = (ClientWin *) iter->data;
+			long center = (long) cw->x * 2 + cw->src.width;
+			if (center < cut)
+				split++;
+		}
+
+		if (!split || split == len)
+			continue;
+
+		long long penalty = 0;
+		foreach_dlist(list) {
+			ClientWin *cw = (ClientWin *) iter->data;
+			long x1 = (long) cw->x * 2;
+			long x2 = (long)(cw->x + cw->src.width) * 2;
+			if (x1 < cut && cut < x2)
+				penalty += MIN(cut - x1, x2 - cut);
+		}
+
+		long long adjusted_penalty =
+			penalty * horizontal_penalty_denominator * span_x;
+		unsigned int outer_rank = MIN(split, len - split);
+		long outer_depth = MIN(cut - min_x * 2, max_x * 2 - cut);
+		unsigned int side_rank = split <= len - split ? 0 : 1;
+
+		if (best_adjusted_penalty == LLONG_MAX
+				|| adjusted_penalty < best_adjusted_penalty
+				|| (adjusted_penalty == best_adjusted_penalty
+					&& !best_horizontal
+					&& outer_rank < best_outer_rank)
+				|| (adjusted_penalty == best_adjusted_penalty
+					&& !best_horizontal
+					&& outer_rank == best_outer_rank
+					&& outer_depth < best_outer_depth)
+				|| (adjusted_penalty == best_adjusted_penalty
+					&& !best_horizontal
+					&& outer_rank == best_outer_rank
+					&& outer_depth == best_outer_depth
+					&& side_rank < best_side_rank)) {
+			best_horizontal = false;
+			best_split = split;
+			best_outer_rank = outer_rank;
+			best_outer_depth = outer_depth;
+			best_side_rank = side_rank;
+			best_penalty = penalty;
+			best_adjusted_penalty = adjusted_penalty;
+			best_cut = cut;
+		}
+	}
+
+	if (!best_split) {
+		printfdf(false, "(): cosmos focus fallback row sort n=%u", len);
+		dlist_sort(list, sort_cw_by_y, 0);
+		return dlist_first(list);
+	}
+
+	if (best_horizontal) {
+		printfdf(false, "(): cosmos focus horizontal n=%u split=%u cut2=%ld penalty=%lld outer=%u",
+				len, best_split, best_cut, best_penalty, best_outer_rank);
+		dlist_sort(list, sort_cw_by_y, 0);
+	}
+	else {
+		printfdf(false, "(): cosmos focus vertical n=%u split=%u cut2=%ld penalty=%lld outer=%u",
+				len, best_split, best_cut, best_penalty, best_outer_rank);
+		dlist_sort(list, sort_cw_by_x, 0);
+	}
+
+	dlist *second = dlist_split_nth(list, best_split);
+	list = sort_focuslist_cosmos(list);
+	second = sort_focuslist_cosmos(second);
+	return dlist_join(list, second);
+}
+
 static void
 init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 	session_t *ps = mw->ps;
@@ -915,8 +1198,9 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 	// is important for prev/next window selection
 	mw->focuslist = dlist_dup(mw->clientondesktop);
 
-	if (layout == LAYOUTMODE_EXPOSE && ps->o.exposeLayout != LAYOUT_XD)
-		dlist_sort(mw->focuslist, sort_cw_by_column, 0);
+	if (ps->o.mode == PROGMODE_EXPOSE
+	  && ps->o.exposeLayout == LAYOUT_COSMOS)
+		mw->focuslist = sort_focuslist_cosmos(mw->focuslist);
 	else
 		dlist_reverse(mw->focuslist);
 
@@ -951,8 +1235,9 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 		}
 	}
 
-	if (layout == LAYOUTMODE_SWITCH && ps->o.switchLayout == LAYOUT_COSMOS)
-		dlist_sort(mw->focuslist, sort_cw_by_column, 0);
+	if (ps->o.mode == PROGMODE_SWITCH
+	  && ps->o.switchLayout == LAYOUT_COSMOS)
+		mw->focuslist = sort_focuslist_cosmos(mw->focuslist);
 }
 
 static void
