@@ -66,10 +66,10 @@ static int name(dlist *l, SkippyWindow *b) \
 #define FOCUSFUNC(name, qual, dist) \
 void name(ClientWin *cw) { focus_miniw_dir(cw, qual, dist); }
 
-DISTFUNC(dist_top_bottom, HALF_H(a) - HALF_H(b), a->y - b->y - (int)b->height)
-DISTFUNC(dist_bottom_top, HALF_H(a) - HALF_H(b), b->y - a->y - (int)a->height)
-DISTFUNC(dist_left_right, HALF_V(a) - HALF_V(b), a->x - b->x - (int)b->width)
-DISTFUNC(dist_right_left, HALF_V(a) - HALF_V(b), b->x - a->x - (int)a->width)
+DISTFUNC(dist_top_bottom, HALF_H(a) - HALF_H(b), (a->y - b->y - (int)b->height)*2)
+DISTFUNC(dist_bottom_top, HALF_H(a) - HALF_H(b), (b->y - a->y - (int)a->height)*2)
+DISTFUNC(dist_left_right, HALF_V(a) - HALF_V(b), (a->x - b->x - (int)b->width)*2)
+DISTFUNC(dist_right_left, HALF_V(a) - HALF_V(b), (b->x - a->x - (int)a->width)*2)
 
 QUALFUNC(win_above, a->y + a->height < b->y)
 QUALFUNC(win_below, b->y + b->height < a->y)
