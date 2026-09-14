@@ -14,6 +14,14 @@ SRCS_RAW = skippy wm dlist mainwin clientwin layout aabb focus config tooltip im
 PACKAGES = x11 xft xrender xcomposite xdamage xfixes xext
 
 # === Options ===
+ifeq "${CFG_NO_XRANDR}" ""
+	ifeq ($(shell pkg-config --atleast-version=1.5.0 xrandr >/dev/null 2>&1 && echo dummy),)
+		$(error libXrandr >= 1.5.0 is required)
+	endif
+	CPPFLAGS += -DCFG_XRANDR
+	PACKAGES += xrandr
+endif
+
 ifeq "${CFG_NO_XINERAMA}" ""
 	CPPFLAGS += -DCFG_XINERAMA
 	PACKAGES += xinerama

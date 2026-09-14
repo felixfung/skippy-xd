@@ -191,11 +191,11 @@ mainwin_create(session_t *ps) {
 	mw->bg_pixmap = None;
 	mw->background = None;
 
-#ifdef CFG_XINERAMA
-	mw->xin_info = mw->xin_active = 0;
-	mw->xin_screens = 0;
-#endif /* CFG_XINERAMA */
-	
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+	mw->nmonitors = mw->active_monitor = 0;
+	mw->monitor = NULL;
+#endif
+
 	// mw->pressed = mw->focus = 0;
 	mw->pressed = mw->client_to_focus = 0;
 	mw->clientondesktop = 0;
@@ -509,57 +509,119 @@ mainwin_render_borders(MainWin *mw)
 void
 mainwin_update(MainWin *mw)
 {
-#ifdef CFG_XINERAMA
 	session_t * const ps = mw->ps;
+	bool queried_monitor = false;
 
-	XineramaScreenInfo *iter;
-	int i;
+#ifdef CFG_XRANDR
+	XRRMonitorInfo *xrr_monitors =
+		XRRGetMonitors(ps->dpy, ps->root, True, &mw->nmonitors);
+
+	if (xrr_monitors && mw->nmonitors > 0) {
+		if (mw->monitor)
+			XFree(mw->monitor);
+		mw->monitor = calloc(mw->nmonitors, sizeof(*mw->monitor));
+		for (int i = 0; i < mw->nmonitors; ++i) {
+			mw->monitor[i].x = xrr_monitors[i].x;
+			mw->monitor[i].y = xrr_monitors[i].y;
+			mw->monitor[i].width = xrr_monitors[i].width;
+			mw->monitor[i].height = xrr_monitors[i].height;
+		}
+
+		queried_monitor = true;
+		XRRFreeMonitors(xrr_monitors);
+
+		printfdf(false, "(): XRandR is enabled (%d monitors).", mw->nmonitors);
+	}
+#endif
+
+#ifdef CFG_XINERAMA
+	if (!queried_monitor && XineramaIsActive(ps->dpy)) {
+		XineramaScreenInfo *iter0, *iter1;
+		iter0 = iter1 = XineramaQueryScreens(ps->dpy, &mw->nmonitors);
+		if (iter1 && mw->nmonitors) {
+			if (mw->monitor)
+				XFree(mw->monitor);
+			mw->monitor = calloc(mw->nmonitors, sizeof(*mw->monitor));
+
+			for(int i = 0; i < mw->nmonitors; ++i)
+			{
+				mw->monitor[i].x = iter1->x_org;
+				mw->monitor[i].y = iter1->y_org;
+				mw->monitor[i].width = iter1->width;
+				mw->monitor[i].height = iter1->height;
+				iter1++;
+			}
+
+			queried_monitor = true;
+			XFree(iter0);
+
+			printfdf(false, "(): Xinerama is enabled (%d monitors).", mw->nmonitors);
+		}
+	}
+#endif
+
+	if (!queried_monitor) {
+		XWindowAttributes rootattr;
+		XGetWindowAttributes(ps->dpy, ps->root, &rootattr);
+
+		mw->x = 0;
+		mw->y = 0;
+		mw->width = rootattr.width;
+		mw->height = rootattr.height;
+
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+		mw->nmonitors = 1;
+		mw->active_monitor = 0;
+		if(mw->monitor)
+			XFree(mw->monitor);
+		mw->monitor = calloc(mw->nmonitors, sizeof(*mw->monitor));
+
+		mw->monitor[0].x = 0;
+		mw->monitor[0].y = 0;
+		mw->monitor[0].width = rootattr.width;
+		mw->monitor[0].height = rootattr.height;
+#endif
+	}
+
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+	{
+		int minx=INT_MAX, miny=INT_MAX, maxx=INT_MIN, maxy=INT_MIN;
+		for (int i = 0; i < mw->nmonitors; ++i) {
+			minx = MIN(minx, mw->monitor[i].x);
+			miny = MIN(miny, mw->monitor[i].y);
+			maxx = MAX(maxx, mw->monitor[i].x + mw->monitor[i].width);
+			maxy = MAX(maxy, mw->monitor[i].y + mw->monitor[i].height);
+		}
+		mw->x = minx;
+		mw->y = miny;
+		mw->width = maxx - minx;
+		mw->height = maxy - miny;
+	}
+
 	Window dummy_w;
 	int root_x, root_y, dummy_i;
 	unsigned int dummy_u;
-
-	if (ps->xinfo.xinerama_exist && XineramaIsActive(ps->dpy)) {
-		if(mw->xin_info)
-			XFree(mw->xin_info);
-		mw->xin_info = XineramaQueryScreens(ps->dpy, &mw->xin_screens);
-		printfdf(false, "(): Xinerama is enabled (%d screens).", mw->xin_screens);
-	}
-	
-	if(! mw->xin_info || ! mw->xin_screens)
-	{
-		mainwin_update_background(mw);
-		return;
-	}
-	
-	printfdf(false, "(): XINERAMA --> querying pointer... ");
 	XQueryPointer(ps->dpy, ps->root, &dummy_w, &dummy_w, &root_x, &root_y, &dummy_i, &dummy_i, &dummy_u);
-	printfdf(false, "(): XINERAMA +%i+%i\n", root_x, root_y);
+	printfdf(false, "(): Multi-monitor --> querying pointer... +%i+%i\n", root_x, root_y);
 	
-	printfdf(false, "(): XINERAMA --> figuring out which screen we're on... ");
-	iter = mw->xin_info;
-	for(i = 0; i < mw->xin_screens; ++i)
+	for (int i = 0; i < mw->nmonitors; ++i)
 	{
-		if(root_x >= iter->x_org && root_x < iter->x_org + iter->width &&
-		   root_y >= iter->y_org && root_y < iter->y_org + iter->height)
+		if (root_x >= mw->monitor[i].x && root_x < mw->monitor[i].x + mw->monitor[i].width &&
+			root_y >= mw->monitor[i].y && root_y < mw->monitor[i].y + mw->monitor[i].height)
 		{
-			printfdf(false, "(): XINERAMA screen %i %ix%i+%i+%i\n", iter->screen_number, iter->width, iter->height, iter->x_org, iter->y_org);
+			printfdf(false, "(): Multi-monitor --> %i %ix%i+%i+%i\n",
+					i, mw->monitor[i].width, mw->monitor[i].height, mw->monitor[i].x, mw->monitor[i].y);
+			mw->active_monitor = i;
+			mw->x = mw->monitor[i].x;
+			mw->y = mw->monitor[i].y;
+			mw->width = mw->monitor[i].width;
+			mw->height = mw->monitor[i].height;
 			break;
 		}
-		iter++;
 	}
-	if(i == mw->xin_screens)
-	{
-		printfdf(false, "(): XINERAMA unknown\n");
-		return;
-	}
-	mw->x = iter->x_org;
-	mw->y = iter->y_org;
-	mw->width = iter->width;
-	mw->height = iter->height;
-	XMoveResizeWindow(ps->dpy, mw->window, iter->x_org, iter->y_org, mw->width, mw->height);
+#endif
 
-	mw->xin_active = iter;
-#endif /* CFG_XINERAMA */
+	XMoveResizeWindow(ps->dpy, mw->window, mw->x, mw->y, mw->width, mw->height);
 	mainwin_update_background(mw);
 }
 
@@ -631,11 +693,11 @@ mainwin_destroy(MainWin *mw) {
 
 	XDestroyWindow(ps->dpy, mw->window);
 	
-#ifdef CFG_XINERAMA
-	if(mw->xin_info)
-		XFree(mw->xin_info);
-#endif /* CFG_XINERAMA */
-	
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+	if (mw->monitor)
+		XFree(mw->monitor);
+#endif
+
 	free(mw->keysyms_Up);
 	free(mw->keysyms_Down);
 	free(mw->keysyms_Left);

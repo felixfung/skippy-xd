@@ -53,6 +53,12 @@ if libpng_dep.found() and zlib_dep.found()
   skippy_sources += ['src/img-png.c']
 endif
 
+xrandr_dep = dependency('xrandr', version: '>=1.5', required: get_option('skippy_xrandr'))
+if xrandr_dep.found()
+  add_project_arguments('-DCFG_XRANDR', language: 'c')
+  add_project_dependencies(xrandr_dep, language: 'c')
+endif
+
 xinerama_dep = dependency('xinerama', required: get_option('skippy_xinerama'))
 if xinerama_dep.found()
   add_project_arguments('-DCFG_XINERAMA', language: 'c')
