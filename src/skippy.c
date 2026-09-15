@@ -1250,35 +1250,29 @@ calculatePanelBorders(MainWin *mw,
 	// e.g. a panel on the bottom
 	*x1 = 0;
 	*y1 = 0;
-	*x2 = mw->width;
-	*y2 = mw->height;
+	*x2 = mw->monitor[mw->active_monitor].width;
+	*y2 = mw->monitor[mw->active_monitor].height;
 
 	foreach_dlist(mw->panels) {
 		ClientWin *cw = iter->data;
 		if (cw->paneltype != WINTYPE_PANEL)
 			continue;
 
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
-			int midx = cw->src.x + cw->src.width / 2;
-			int midy = cw->src.y + cw->src.height / 2;
+		int midx = cw->src.x + cw->src.width / 2;
+		int midy = cw->src.y + cw->src.height / 2;
 
-			for (int i=0; i<mw->nmonitors; i++)
-			{
-				if(mw->monitor[i].x <= midx && midx
-						< mw->monitor[i].x + mw->monitor[i].width &&
-				   mw->monitor[i].y <= midy && midy
-						< mw->monitor[i].y + mw->monitor[i].height)
-				{
-					cw->src.x -= mw->monitor[i].x;
-					cw->src.y -= mw->monitor[i].y;
-				}
-			}
-#endif
+		if (!(mw->monitor[mw->active_monitor].x <= midx
+		&& midx < mw->monitor[mw->active_monitor].x
+		+ mw->monitor[mw->active_monitor].width
+		&& mw->monitor[mw->active_monitor].y <= midy
+		&& midy < mw->monitor[mw->active_monitor].y
+		+ mw->monitor[mw->active_monitor].height))
+			continue;
 
 		// assumed horizontal panel
 		if (cw->src.width >= cw->src.height) {
 			// assumed top panel
-			if (cw->src.y < mw->height / 2.0) {
+			if (cw->src.y < mw->monitor[mw->active_monitor].height / 2.0) {
 				*y1 = MAX(*y1, cw->src.y + cw->src.height);
 			}
 			// assumed bottom panel
@@ -1289,7 +1283,7 @@ calculatePanelBorders(MainWin *mw,
 		// assumed vertical panel
 		else {
 			// assumed left panel
-			if (cw->src.x < mw->width / 2.0) {
+			if (cw->src.x < mw->monitor[mw->active_monitor].width / 2.0) {
 				*x1 = MAX(*x1, cw->src.x + cw->src.width);
 			}
 			// assumed right panel
@@ -1299,8 +1293,8 @@ calculatePanelBorders(MainWin *mw,
 		}
 	}
 
-	*x2 = mw->width - *x2;
-	*y2 = mw->height - *y2;
+	*x2 = mw->monitor[mw->active_monitor].width - *x2;
+	*y2 = mw->monitor[mw->active_monitor].height - *y2;
 
 	printfdf(false,"(): panel framing calculations: (%d,%d) (%d,%d)", *x1, *y1, *x2, *y2);
 }
@@ -1313,24 +1307,26 @@ init_multiplier(MainWin *mw, unsigned int newwidth, unsigned int newheight,
 	calculatePanelBorders(mw, &x1, &y1, &x2, &y2);
 	newwidth += x1 + x2;
 	newheight += y1 + y2;
+	int monitorwidth = mw->monitor[mw->active_monitor].width;
+	int monitorheight = mw->monitor[mw->active_monitor].height;
 
-	float multiplier = (float) (mw->width - gap * mw->distance
+	float multiplier = (float) (monitorwidth - gap * mw->distance
 			- x1 - x2) / newwidth;
-	if (multiplier * newheight > mw->height - gap * mw->distance)
-		multiplier = (float) (mw->height - gap * mw->distance
+	if (multiplier * newheight > monitorheight - gap * mw->distance)
+		multiplier = (float) (monitorheight - gap * mw->distance
 				- y1 - y2) / newheight;
 
 	if (!upscaleWindows)
 		multiplier = MIN(multiplier, 1.0f);
 
-	int xoff = (mw->width - x1 - x2 - (float)(newwidth
+	int xoff = (monitorwidth - x1 - x2 - (float)(newwidth
 				- x1 - x2) * multiplier) / 2;
-	int yoff = (mw->height - y1 - y2 - (float)(newheight
+	int yoff = (monitorheight - y1 - y2 - (float)(newheight
 				- y1 - y2) * multiplier) / 2;
 
 	mw->multiplier = multiplier;
-	mw->xoff = xoff + x1;
-	mw->yoff = yoff + y1;
+	mw->xoff = xoff + x1 + mw->monitor[mw->active_monitor].x;
+	mw->yoff = yoff + y1 + mw->monitor[mw->active_monitor].y;
 }
 
 static void
@@ -1590,11 +1586,6 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 
 	foreach_dlist(mw->panels) {
 		ClientWin *cw = iter->data;
-		if (cw->paneltype == WINTYPE_PANEL
-				|| cw->paneltype == WINTYPE_DESKTOP) {
-			cw->src.x -= mw->x;
-			cw->src.y -= mw->y;
-		}
 		clientwin_prepmove(cw);
 		clientwin_move(cw, 1, 0, 0, 0);
 	}

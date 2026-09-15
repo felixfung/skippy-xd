@@ -103,10 +103,6 @@ mainwin_render_tint_border(ClientWin *cw, XRenderColor *tint, int border)
 
 	int x = cw->mini.x - border;
 	int y = cw->mini.y - border;
-	if (!ps->o.pseudoTrans) {
-		x -= mw->x;
-		y -= mw->y;
-	}
 
 	int w = cw->mini.width + border * 2;
 	int h = cw->mini.height + border * 2;
@@ -132,8 +128,8 @@ mainwin_render_tint_border(ClientWin *cw, XRenderColor *tint, int border)
 			local_y = y - cover->src.y + mw->y;
 		}
 		else {
-			int cover_x = cover->mini.x - (ps->o.pseudoTrans ? 0 : mw->x);
-			int cover_y = cover->mini.y - (ps->o.pseudoTrans ? 0 : mw->y);
+			int cover_x = cover->mini.x;
+			int cover_y = cover->mini.y;
 			local_x = x - cover_x;
 			local_y = y - cover_y;
 		}
@@ -175,6 +171,9 @@ find_argb_visual (Display *dpy, int scr)
 	return visual;
 }
 
+static void
+mainwin_update_geometry(MainWin *mw);
+
 MainWin *
 mainwin_create(session_t *ps) {
 	Display * const dpy = ps->dpy;
@@ -202,11 +201,7 @@ mainwin_create(session_t *ps) {
 	mw->focuslist = 0;
 	mw->refocus = false;
 
-	XWindowAttributes rootattr;
-	XGetWindowAttributes(dpy, ps->root, &rootattr);
-	mw->x = mw->y = 0;
-	mw->width = rootattr.width;
-	mw->height = rootattr.height;
+	mainwin_update_geometry(mw);
 
 	if (!ps->o.pseudoTrans) {
 		mw->depth  = 32;
@@ -506,8 +501,8 @@ mainwin_render_borders(MainWin *mw)
 	}
 }
 
-void
-mainwin_update(MainWin *mw)
+static void
+mainwin_update_geometry(MainWin *mw)
 {
 	session_t * const ps = mw->ps;
 	bool queried_monitor = false;
@@ -601,27 +596,34 @@ mainwin_update(MainWin *mw)
 	Window dummy_w;
 	int root_x, root_y, dummy_i;
 	unsigned int dummy_u;
-	XQueryPointer(ps->dpy, ps->root, &dummy_w, &dummy_w, &root_x, &root_y, &dummy_i, &dummy_i, &dummy_u);
-	printfdf(false, "(): Multi-monitor --> querying pointer... +%i+%i\n", root_x, root_y);
+	XQueryPointer(ps->dpy, ps->root, &dummy_w, &dummy_w,
+			&root_x, &root_y, &dummy_i, &dummy_i, &dummy_u);
+	printfdf(false, "(): Multi-monitor --> querying pointer... +%i+%i\n",
+			root_x, root_y);
 	
 	for (int i = 0; i < mw->nmonitors; ++i)
 	{
-		if (root_x >= mw->monitor[i].x && root_x < mw->monitor[i].x + mw->monitor[i].width &&
-			root_y >= mw->monitor[i].y && root_y < mw->monitor[i].y + mw->monitor[i].height)
+		if (root_x >= mw->monitor[i].x &&
+				root_x < mw->monitor[i].x + mw->monitor[i].width &&
+			root_y >= mw->monitor[i].y &&
+			root_y < mw->monitor[i].y + mw->monitor[i].height)
 		{
-			printfdf(false, "(): Multi-monitor --> %i %ix%i+%i+%i\n",
-					i, mw->monitor[i].width, mw->monitor[i].height, mw->monitor[i].x, mw->monitor[i].y);
+			printfdf(false, "(): Multi-monitor --> active on monitor %i %ix%i+%i+%i\n",
+					i, mw->monitor[i].width, mw->monitor[i].height,
+					mw->monitor[i].x, mw->monitor[i].y);
 			mw->active_monitor = i;
-			mw->x = mw->monitor[i].x;
-			mw->y = mw->monitor[i].y;
-			mw->width = mw->monitor[i].width;
-			mw->height = mw->monitor[i].height;
 			break;
 		}
 	}
 #endif
 
 	XMoveResizeWindow(ps->dpy, mw->window, mw->x, mw->y, mw->width, mw->height);
+}
+
+void
+mainwin_update(MainWin *mw)
+{
+	mainwin_update_geometry(mw);
 	mainwin_update_background(mw);
 }
 
