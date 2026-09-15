@@ -1198,8 +1198,7 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 	// is important for prev/next window selection
 	mw->focuslist = dlist_dup(mw->clientondesktop);
 
-	if (ps->o.mode == PROGMODE_EXPOSE
-	  && ps->o.exposeLayout == LAYOUT_COSMOS)
+	if (ps->o.mode == PROGMODE_EXPOSE && layout == LAYOUT_COSMOS)
 		mw->focuslist = sort_focuslist_cosmos(mw->focuslist);
 	else
 		dlist_reverse(mw->focuslist);
@@ -1235,8 +1234,7 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 		}
 	}
 
-	if (ps->o.mode == PROGMODE_SWITCH
-	  && ps->o.switchLayout == LAYOUT_COSMOS)
+	if (ps->o.mode == PROGMODE_SWITCH && layout == LAYOUT_COSMOS)
 		mw->focuslist = sort_focuslist_cosmos(mw->focuslist);
 }
 
@@ -1330,18 +1328,22 @@ init_multiplier(MainWin *mw, unsigned int newwidth, unsigned int newheight,
 }
 
 static void
-init_layout(MainWin *mw, enum layoutmode layout, Window leader)
+init_layout(MainWin *mw, Window leader)
 {
 	unsigned int newwidth = 100, newheight = 100;
+	enum layoutmode layout = mw->ps->o.switchLayout;
+	if (mw->ps->o.mode == PROGMODE_EXPOSE)
+		layout = mw->ps->o.exposeLayout;
+
 	if (mw->clientondesktop)
-		layout_run(mw, mw->clientondesktop, &newwidth, &newheight);
+		layout_run(mw, mw->clientondesktop, layout, &newwidth, &newheight);
 
 	init_multiplier(mw, newwidth, newheight, mw->ps->o.upscaleWindows, 2);
 	init_focus(mw, layout, leader);
 }
 
 static void
-init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
+init_paging_layout(MainWin *mw, Window leader)
 {
 	int screencount = wm_get_desktops(mw->ps);
 	if (screencount == -1)
@@ -1554,7 +1556,7 @@ desktopwin_map(ClientWin *cw)
 }
 
 static void
-skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
+skippy_activate(MainWin *mw, Window leader)
 {
 	mainwin_update(mw);
 
@@ -1569,10 +1571,10 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 			clientwin_update2(cw);
 	}
 
-	if (layout == LAYOUTMODE_PAGING)
-		init_paging_layout(mw, layout, leader);
+	if (mw->ps->o.mode == PROGMODE_PAGING)
+		init_paging_layout(mw, leader);
 	else
-		init_layout(mw, layout, leader);
+		init_layout(mw, leader);
 
 	foreach_dlist(mw->clientondesktop) {
 		ClientWin *cw = iter->data;
@@ -1599,7 +1601,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 	bool pending_damage = false;
 	long last_rendered = 0L;
 	long last_animated = 0L;
-	enum layoutmode layout = LAYOUTMODE_EXPOSE;
 	bool toggling = !ps->o.pivotkey;
 	bool animating = activate;
 	long first_animated = 0L;
@@ -1637,7 +1638,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 			assert(ps->mainwin);
 			activate = false;
 
-			skippy_activate(ps->mainwin, layout, wm_get_focused(ps));
+			skippy_activate(ps->mainwin, wm_get_focused(ps));
 			last_animated = last_rendered = time_in_millis();
 			mw = ps->mainwin;
 			pending_damage = false;
@@ -1663,7 +1664,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 			// keyboard gets ungrabbed.
 
 			int selected = -1;
-			if (mw->client_to_focus && layout != LAYOUTMODE_PAGING) {
+			if (mw->client_to_focus && ps->o.mode != PROGMODE_PAGING) {
 				if (!mw->refocus) {
 					dlist *iter = dlist_find(ps->mainwin->clients,
 							clientwin_cmp_func,
@@ -1684,7 +1685,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				}
 			}
 
-			if (mw->client_to_focus && layout == LAYOUTMODE_PAGING ) {
+			if (mw->client_to_focus && ps->o.mode == PROGMODE_PAGING ) {
 				if (!mw->refocus &&
 						mw->client_to_focus->slots
 						!= wm_get_current_desktop(ps)) {
@@ -1715,12 +1716,12 @@ mainloop(session_t *ps, bool activate_on_start) {
 				pipe_return[0] = '\0';
 				bool firstprint = true;
 				dlist *iter = mw->clientondesktop;
-				if (layout == LAYOUTMODE_PAGING)
+				if (ps->o.mode == PROGMODE_PAGING)
 					iter = mw->dminis;
 				for (; iter; iter = iter->next) {
 					ClientWin *cw = iter->data;
 					unsigned long client = cw->wid_client;
-					if (layout == LAYOUTMODE_PAGING)
+					if (ps->o.mode == PROGMODE_PAGING)
 						client = cw->slots;
 					if (cw->multiselect) {
 						char wid[1024];
@@ -1816,11 +1817,11 @@ mainloop(session_t *ps, bool activate_on_start) {
 			int timeslice = time_in_millis() - first_animated;
 			int starttime = last_animated + (1000.0 / ps->o.animationRefresh) - first_animated;
 			int stabletime = ps->o.animationDuration;
-			if (layout == LAYOUTMODE_SWITCH) {
+			if (ps->o.mode == PROGMODE_SWITCH) {
 				if (ps->o.switchWaitDuration == 0) {
 					starttime = stabletime = timeslice + 1;
 				}
-				else if (ps->o.switchLayout == LAYOUT_XD) {
+				else if (ps->o.switchLayout != LAYOUT_COSMOS) {
 					starttime = ps->o.switchWaitDuration + 1;
 					stabletime = ps->o.switchWaitDuration;
 				}
@@ -1846,7 +1847,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					first_animating = false;
 				}
 
-				if (layout == LAYOUTMODE_SWITCH
+				if (ps->o.mode == PROGMODE_SWITCH
 				&& ps->o.switchLayout == LAYOUT_COSMOS)
 					timeslice -= ps->o.switchWaitDuration;
 
@@ -1855,7 +1856,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				mainwin_render_borders(mw);
 				last_animated = last_rendered = time_in_millis();
 
-				if (layout == LAYOUTMODE_SWITCH
+				if (ps->o.mode == PROGMODE_SWITCH
 				&& ps->o.switchLayout == LAYOUT_COSMOS)
 					last_animated = last_rendered -= ps->o.switchWaitDuration;
 
@@ -1878,7 +1879,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					first_animating = false;
 				}
 
-				if (layout == LAYOUTMODE_PAGING && mw->ps->o.preservePages) {
+				if (ps->o.mode == PROGMODE_PAGING && mw->ps->o.preservePages) {
 					foreach_dlist (mw->dminis) {
 						ClientWin *cw = (ClientWin *) iter->data;
 #if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
@@ -1919,7 +1920,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				animating = false;
 				last_animated = last_rendered = time_in_millis();
 
-				if (layout == LAYOUTMODE_PAGING) {
+				if (ps->o.mode == PROGMODE_PAGING) {
 					foreach_dlist (mw->dminis) {
 						clientwin_update2(iter->data);
 						desktopwin_map(((ClientWin *) iter->data));
@@ -1934,12 +1935,12 @@ mainloop(session_t *ps, bool activate_on_start) {
 						ps->o.moveMouse);
 			}
 
-			if (layout != LAYOUTMODE_SWITCH ||
+			if (ps->o.mode != PROGMODE_SWITCH ||
 					!(ps->o.switchCycleDuringWait || ps->o.switchWaitDuration == 0))
 				continue; // while animating, do not allow user actions
 		}
 
-		if (layout != LAYOUTMODE_SWITCH
+		if (ps->o.mode != PROGMODE_SWITCH
 				&& !toggling && ps->o.pivotLockingTime > 0
 				&& time_in_millis() >= first_animated + ps->o.pivotLockingTime) {
 			printfdf(false, "(): pivot locking at %d", ps->o.pivotLockingTime);
@@ -1963,7 +1964,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				// when mouse move within a client window, focus on it
 				if (wid) {
 					dlist *iter = mw->clientondesktop;
-					if (layout == LAYOUTMODE_PAGING)
+					if (ps->o.mode == PROGMODE_PAGING)
 						iter = mw->dminis;
 					for (; iter; iter = iter->next) {
 						ClientWin *cw = (ClientWin *) iter->data;
@@ -2103,13 +2104,13 @@ mainloop(session_t *ps, bool activate_on_start) {
 			else if (mw && wid) {
 				bool processing = true;
 				dlist *iter = mw->clientondesktop;
-				if (layout == LAYOUTMODE_PAGING)
+				if (ps->o.mode == PROGMODE_PAGING)
 					iter = mw->dminis;
 				for (; iter && processing; iter = iter->next) {
 					ClientWin *cw = (ClientWin *) iter->data;
 					if (cw->mini.window == wid) {
 						if (!(POLLIN & r_fd[1].revents)
-								&& ((layout != LAYOUTMODE_PAGING)
+								&& ((ps->o.mode != PROGMODE_PAGING)
 								// do not process these excessive paging events
 								|| (ev.type != Expose
 								 && ev.type != GraphicsExpose
@@ -2124,7 +2125,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 								))) {
 
 							die = clientwin_handle(cw, &ev);
-							if (layout == LAYOUTMODE_PAGING) {
+							if (ps->o.mode == PROGMODE_PAGING) {
 								cw->damaged = true;
 								pending_damage = true;
 							}
@@ -2180,7 +2181,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				clientwin_repair((ClientWin *) iter->data);
 			}
 
-			if (layout == LAYOUTMODE_PAGING) {
+			if (ps->o.mode == PROGMODE_PAGING) {
 				foreach_dlist (mw->dminis) {
 					ClientWin *cw = (ClientWin *) iter->data;
 					// with pseudo-transparency,
@@ -2262,18 +2263,12 @@ mainloop(session_t *ps, bool activate_on_start) {
 				if (!mw /*|| !mw->mapped*/)
 				{
 					bool forget_activating = false;
-					if (piped_input & PIPECMD_SWITCH) {
+					if (piped_input & PIPECMD_SWITCH)
 						ps->o.mode = PROGMODE_SWITCH;
-						layout = LAYOUTMODE_SWITCH;
-					}
-					else if (piped_input & PIPECMD_EXPOSE) {
+					else if (piped_input & PIPECMD_EXPOSE)
 						ps->o.mode = PROGMODE_EXPOSE;
-						layout = LAYOUTMODE_EXPOSE;
-					}
-					else if (piped_input & PIPECMD_PAGING) {
+					else if (piped_input & PIPECMD_PAGING)
 						ps->o.mode = PROGMODE_PAGING;
-						layout = LAYOUTMODE_PAGING;
-					}
 					else
 						forget_activating = true;
 
@@ -2342,7 +2337,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 						}
 
 						trigger_client = pid;
-						printfdf(false, "(): skippy activating: metaphor=%d", layout);
+						printfdf(false, "(): skippy activating: metaphor=%d", ps->o.mode);
 					}
 				}
 				// parameter == 0, toggle
@@ -2358,8 +2353,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 					printfdf(false, "(): cycling window");
 					fflush(stdout);fflush(stderr);
 
-					if ((layout == LAYOUTMODE_SWITCH && ps->o.switchCycleDesktops)
-					 || (layout == LAYOUTMODE_EXPOSE && ps->o.exposeCycleDesktops))
+					if ((ps->o.mode == PROGMODE_SWITCH && ps->o.switchCycleDesktops)
+					 || (ps->o.mode == PROGMODE_EXPOSE && ps->o.exposeCycleDesktops))
 					{
 						int focusindex = 0;
 						if (mw->client_to_focus) {
@@ -3028,12 +3023,10 @@ load_config_file(session_t *ps)
 				ps->o.switchLayout = LAYOUT_COSMOS;
 			}
 			else if (strcmp(s,"rect") == 0) {
-				ps->o.switchLayout = LAYOUT_XD;
-				ps->o.switch_compact = false;
+				ps->o.switchLayout = LAYOUT_RECT;
 			}
 			else if (strcmp(s,"compactrect") == 0) {
-				ps->o.switchLayout = LAYOUT_XD;
-				ps->o.switch_compact = true;
+				ps->o.switchLayout = LAYOUT_COMPACTRECT;
 			}
 			else {
 				printfef(true, "(): switchLayout \"%s\" not found. Valid switchLayout are:",
@@ -3041,13 +3034,11 @@ load_config_file(session_t *ps)
 				printfef(true, "(): rect (default)");
 				printfef(true, "(): compactrect");
 				printfef(true, "(): cosmos");
-				ps->o.switchLayout = LAYOUT_XD;
-				ps->o.switch_compact = false;
+				ps->o.switchLayout = LAYOUT_RECT;
 			}
 		}
 		else {
-			ps->o.switchLayout = LAYOUT_XD;
-			ps->o.switch_compact = false;
+			ps->o.switchLayout = LAYOUT_RECT;
 		}
     }
 	{
@@ -3057,12 +3048,10 @@ load_config_file(session_t *ps)
 				ps->o.exposeLayout = LAYOUT_COSMOS;
 			}
 			else if (strcmp(s,"rect") == 0) {
-				ps->o.exposeLayout = LAYOUT_XD;
-				ps->o.expose_compact = false;
+				ps->o.exposeLayout = LAYOUT_RECT;
 			}
 			else if (strcmp(s,"compactrect") == 0) {
-				ps->o.exposeLayout = LAYOUT_XD;
-				ps->o.expose_compact = true;
+				ps->o.exposeLayout = LAYOUT_COMPACTRECT;
 			}
 			else {
 				printfef(true, "(): exposeLayout \"%s\" not found. Valid exposeLayout are:",
@@ -3071,12 +3060,10 @@ load_config_file(session_t *ps)
 				printfef(true, "(): compactrect");
 				printfef(true, "(): cosmos (default)");
 				ps->o.exposeLayout = LAYOUT_COSMOS;
-				ps->o.expose_compact = false;
 			}
 		}
 		else {
 			ps->o.exposeLayout = LAYOUT_COSMOS;
-			ps->o.expose_compact = false;
 		}
     }
     config_get_bool_wrap(config, "layout", "switchCycleDesktops", &ps->o.switchCycleDesktops);

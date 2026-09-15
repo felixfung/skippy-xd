@@ -28,7 +28,8 @@
 #include <stdlib.h>
 
 static void layout_xd(MainWin *mw, dlist *windows,
-		unsigned int *total_width, unsigned int *total_height);
+		unsigned int *total_width, unsigned int *total_height,
+		bool compact);
 static void layout_cosmos(MainWin *mw, dlist *windows,
 		unsigned int *total_width, unsigned int *total_height);
 
@@ -36,11 +37,10 @@ static void layout_cosmos(MainWin *mw, dlist *windows,
 // calculates cw->x, cw->y and the total dimensions from cw->src.x, cw->src.y.
 
 void
-layout_run(MainWin *mw, dlist *windows,
+layout_run(MainWin *mw, dlist *windows, enum layoutmode layout,
 		unsigned int *total_width, unsigned int *total_height)
 {
-	if ((mw->ps->o.mode == PROGMODE_EXPOSE && mw->ps->o.exposeLayout == LAYOUT_COSMOS)
-	|| (mw->ps->o.mode == PROGMODE_SWITCH && mw->ps->o.switchLayout == LAYOUT_COSMOS)) {
+	if (layout == LAYOUT_COSMOS) {
 		foreach_dlist (dlist_first(windows)) {
 			ClientWin *cw = iter->data;
 
@@ -80,7 +80,8 @@ layout_run(MainWin *mw, dlist *windows,
 		// to get the proper z-order based window ordering,
 		// reversing the list of windows is needed
 		dlist_reverse(windows);
-		layout_xd(mw, windows, total_width, total_height);
+		layout_xd(mw, windows, total_width, total_height,
+				layout == LAYOUT_COMPACTRECT);
 		// reversing the linked list again for proper focus ordering
 		dlist_reverse(windows);
 	}
@@ -91,7 +92,7 @@ layout_run(MainWin *mw, dlist *windows,
 //
 static void
 layout_xd(MainWin *mw, dlist *windows,
-		unsigned int *total_width, unsigned int *total_height)
+		unsigned int *total_width, unsigned int *total_height, bool compact)
 {
 	int sum_w = 0, max_h = 0;
 
@@ -111,8 +112,7 @@ layout_xd(MainWin *mw, dlist *windows,
 	foreach_dlist (windows) {
 		ClientWin *cw = (ClientWin*) iter->data;
 		dlist *slot_iter = NULL;
-		if ((mw->ps->o.mode == PROGMODE_SWITCH && mw->ps->o.switch_compact)
-		 || (mw->ps->o.mode == PROGMODE_EXPOSE && mw->ps->o.expose_compact))
+		if (compact)
 			slot_iter = dlist_first(slots);
 		for (; slot_iter; slot_iter = slot_iter->next) {
 			dlist *slot = (dlist *) slot_iter->data;

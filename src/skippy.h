@@ -73,8 +73,9 @@ extern bool debuglog;
 
 /// @brief Possible return values.
 
-enum {
-	LAYOUT_XD,
+enum layoutmode {
+	LAYOUT_RECT,
+	LAYOUT_COMPACTRECT,
 	LAYOUT_COSMOS,
 };
 
@@ -92,12 +93,6 @@ enum progmode {
 	PROGMODE_EXPOSE,
 	PROGMODE_PAGING,
 	PROGMODE_DM_STOP,
-};
-
-enum layoutmode {
-	LAYOUTMODE_SWITCH,
-	LAYOUTMODE_EXPOSE,
-	LAYOUTMODE_PAGING,
 };
 
 enum cliop {
@@ -213,9 +208,7 @@ typedef struct {
 	char *desktops;
 
 	int switchLayout;
-	bool switch_compact;
 	int exposeLayout;
-	bool expose_compact;
 	int switchWaitDuration;
 	bool switchCycleDuringWait;
 	bool switchCycleDesktops;
@@ -306,10 +299,8 @@ typedef struct {
 \
 	.wm_status = NULL, \
 \
-	.switchLayout = LAYOUT_XD, \
-	.switch_compact = false, \
+	.switchLayout = LAYOUT_RECT, \
 	.exposeLayout = LAYOUT_COSMOS, \
-	.expose_compact = false, \
 	.switchWaitDuration = 100, \
 	.switchCycleDuringWait = false, \
 	.switchCycleDesktops = false, \
