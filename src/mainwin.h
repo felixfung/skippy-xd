@@ -20,12 +20,10 @@
 #ifndef SKIPPY_MAINWIN_H
 #define SKIPPY_MAINWIN_H
 
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
 typedef struct {
 	int x, y;
 	int width, height;
 } MonitorCoord;
-#endif
 
 struct _mainwin_t {
 	session_t *ps;
@@ -84,9 +82,11 @@ struct _mainwin_t {
 	bool refocus;
 	bool mapped;
 
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
 	int nmonitors, active_monitor;
 	MonitorCoord *monitor;
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+	float *mm_multiplier;
+	int *mm_xoff, *mm_yoff;
 #endif
 
 	/// @brief The client window to eventually focus.

@@ -45,6 +45,8 @@ pseudoTrans = true
 
 [multimonitor]
 
+exposeOnCurrentMonitor = false
+
 [layout]
 
 # cosmos: position preserving layout

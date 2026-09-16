@@ -31,15 +31,18 @@ static void layout_xd(MainWin *mw, dlist *windows,
 		unsigned int *total_width, unsigned int *total_height,
 		bool compact);
 static void layout_cosmos(MainWin *mw, dlist *windows,
+		MonitorCoord monitor,
 		unsigned int *total_width, unsigned int *total_height);
 
 // Redirect to the configured expose layout.  The selected implementation
 // calculates cw->x, cw->y and the total dimensions from cw->src.x, cw->src.y.
 
 void
-layout_run(MainWin *mw, dlist *windows, enum layoutmode layout,
+layout_run(MainWin *mw, dlist *windows,
+		MonitorCoord monitor, enum layoutmode layout,
 		unsigned int *total_width, unsigned int *total_height)
 {
+	if (!windows) return;
 	if (layout == LAYOUT_COSMOS) {
 		foreach_dlist (dlist_first(windows)) {
 			ClientWin *cw = iter->data;
@@ -62,8 +65,8 @@ layout_run(MainWin *mw, dlist *windows, enum layoutmode layout,
 				int current_desktop_x = current_desktop % desktop_dim;
 				int current_desktop_y = current_desktop / desktop_dim;
 
-				cw->src.x += (win_desktop_x - current_desktop_x) * (mw->width + mw->distance);
-				cw->src.y += (win_desktop_y - current_desktop_y) * (mw->height + mw->distance);
+				cw->src.x += (win_desktop_x - current_desktop_x) * (monitor.width + mw->distance);
+				cw->src.y += (win_desktop_y - current_desktop_y) * (monitor.height + mw->distance);
 			}
 
 			cw->x = cw->src.x;
@@ -73,7 +76,7 @@ layout_run(MainWin *mw, dlist *windows, enum layoutmode layout,
 		dlist *sorted_windows = dlist_dup(windows);
 		dlist_sort(sorted_windows, sort_cw_by_id, 0);
 		dlist_sort(sorted_windows, sort_cw_by_row, 0);
-		layout_cosmos(mw, sorted_windows, total_width, total_height);
+		layout_cosmos(mw, sorted_windows, monitor, total_width, total_height);
 		dlist_free(sorted_windows);
 	}
 	else {
@@ -577,6 +580,7 @@ run_final_settle(AabbWorld *world)
 
 static void
 layout_cosmos(MainWin *mw, dlist *windows,
+		MonitorCoord monitor,
 		unsigned int *total_width, unsigned int *total_height)
 {
 	const float aspect_balance = 1.4f;
@@ -603,10 +607,10 @@ layout_cosmos(MainWin *mw, dlist *windows,
 		items[index++] = cw;
 	}
 
-	float monitor_aspect = (float) mw->width / (float) mw->height;
+	float monitor_aspect = (float) monitor.width / (float) monitor.height;
 	float padding = (float) mw->distance + rounding_padding;
 	unsigned int scatter_groups = run_scatter(items, count,
-			(float) mw->width, (float) mw->height,
+			(float) monitor.width, (float) monitor.height,
 			aspect_balance, padding, clearance);
 
 	int min_x, max_x, min_y, max_y;

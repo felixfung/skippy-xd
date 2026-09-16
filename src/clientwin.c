@@ -60,9 +60,10 @@ clientwin_render_desktop_cover_tint_border(ClientWin *cover, ClientWin *cw,
 	if (x >= cover->mini.width || y >= cover->mini.height || x + w <= 0 || y + h <= 0)
 		return;
 
+	int cornerRadius = ps->o.cornerRadius * clientwin_get_multiplier(cw);
 	XRenderTintBorder(ps, cover->mini.window, cover->destination, tint,
 			x, y, cw->mini.width, cw->mini.height, border,
-			ps->o.cornerRadius * mw->multiplier);
+			cornerRadius);
 }
 
 static void
@@ -105,6 +106,17 @@ clientwin_validate_panel(dlist *l, void *data) {
 	return cw->paneltype == WINTYPE_PANEL? ps->o.panel_show:
 			cw->paneltype == WINTYPE_DESKTOP? ps->o.panel_show_desktop:
 			0;
+}
+
+int
+clientwin_filter_monitor(dlist *l, void *data) {
+	ClientWin *cw = l->data;
+	MonitorCoord *monitor = data;
+	int midx = cw->src0.x + cw->src0.width / 2;
+	int midy = cw->src0.y + cw->src0.height / 2;
+
+	return monitor->x <= midx && midx < monitor->x + monitor->width
+		&& monitor->y <= midy && midy < monitor->y + monitor->height;
 }
 
 int
@@ -406,7 +418,7 @@ static inline bool
 clientwin_update2_filled(session_t *ps, MainWin *mw, ClientWin *cw) {
 	float scale = cw->paneltype == WINTYPE_PANEL
 			   || cw->paneltype == WINTYPE_DESKTOP
-		? 1.0f : cw->mainwin->multiplier;
+		? 1.0f : clientwin_get_multiplier(cw);
 	int width = cw->mini.width > 0 ? cw->mini.width
 				: cw->src.width * scale;
 	int height = cw->mini.height > 0 ? cw->mini.height
@@ -427,7 +439,7 @@ static inline bool
 clientwin_update2_icon(session_t *ps, MainWin *mw, ClientWin *cw) {
 	float scale = cw->paneltype == WINTYPE_PANEL
 			   || cw->paneltype == WINTYPE_DESKTOP
-		? 1.0f : cw->mainwin->multiplier;
+		? 1.0f : clientwin_get_multiplier(cw);
 	int width = cw->mini.width > 0 ? cw->mini.width
 				: cw->src.width * scale;
 	int height = cw->mini.height > 0 ? cw->mini.height
@@ -759,13 +771,14 @@ void XRoundedRectTint(session_t *ps,
 
 void clientwin_round_corners(ClientWin *cw) {
 	session_t* ps = cw->mainwin->ps;
-	int radius = ps->o.cornerRadius * cw->mainwin->multiplier;
-	int dia = 2 * radius;
 	int w = cw->mini.width;
 	int h = cw->mini.height;
 	XGCValues xgcv;
 	Pixmap mask = XCreatePixmap(ps->dpy, cw->mini.window, w, h, 1);
 	GC shape_gc = XCreateGC(ps->dpy, mask, 0, &xgcv);
+
+	int radius = ps->o.cornerRadius * clientwin_get_multiplier(cw);
+	int dia = 2 * radius;
 
 	XSetForeground(ps->dpy, shape_gc, 0);
 	XFillRectangle(ps->dpy, mask, shape_gc, 0, 0, w, h);
@@ -785,8 +798,9 @@ void clientwin_round_corners(ClientWin *cw) {
 
 void clientwin_prepmove(ClientWin *cw)
 {
-	int width = MAX(cw->src.width, cw->src.width * cw->mainwin->multiplier);
-	int height = MAX(cw->src.height, cw->src.height * cw->mainwin->multiplier);
+	float multiplier = clientwin_get_multiplier(cw);
+	int width = MAX(cw->src.width, cw->src.width * multiplier);
+	int height = MAX(cw->src.height, cw->src.height * multiplier);
 
 	if (width <= 0 || height <= 0)
 		return;

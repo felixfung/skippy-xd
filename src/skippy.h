@@ -202,6 +202,8 @@ typedef struct {
 	int clientList;
 	bool pseudoTrans;
 
+	bool exposeOnCurrentMonitor;
+
 	char *wm_class;
 	char *wm_title;
 	char *wm_status;
@@ -296,6 +298,8 @@ typedef struct {
 	.pipePath2 = NULL, \
 	.clientList = 0, \
 	.pseudoTrans = true, \
+\
+	.exposeOnCurrentMonitor = false, \
 \
 	.wm_status = NULL, \
 \

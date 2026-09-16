@@ -22,7 +22,8 @@
 
 // calculate and populate windows destination positions
 // switches to different layout algorithms based on user/default config
-void layout_run(MainWin *mw, dlist *windows, enum layoutmode layout,
+void layout_run(MainWin *mw, dlist *windows,
+		MonitorCoord monitor, enum layoutmode layout,
 		unsigned int *total_width, unsigned int *total_height);
 
 #endif /* SKIPPY_LAYOUT_H */

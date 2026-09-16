@@ -109,10 +109,11 @@ mainwin_render_tint_border(ClientWin *cw, XRenderColor *tint, int border)
 	if (w <= 0 || h <= 0)
 		return;
 
+	int cornerRadius = ps->o.cornerRadius * clientwin_get_multiplier(cw);
 	Picture dst = XRenderCreatePicture(ps->dpy, mw->window, mw->format, 0, NULL);
 	XRenderTintBorder(ps, mw->window, dst, tint, x, y,
 			cw->mini.width, cw->mini.height, border,
-			ps->o.cornerRadius * mw->multiplier);
+			cornerRadius);
 	XRenderFreePicture(ps->dpy, dst);
 
 	foreach_dlist (mw->panels) {
@@ -140,7 +141,7 @@ mainwin_render_tint_border(ClientWin *cw, XRenderColor *tint, int border)
 
 		XRenderTintBorder(ps, cover->mini.window, cover->destination, tint,
 				local_x, local_y, cw->mini.width, cw->mini.height,
-				border, ps->o.cornerRadius * mw->multiplier);
+				border, cornerRadius);
 	}
 }
 
@@ -190,9 +191,11 @@ mainwin_create(session_t *ps) {
 	mw->bg_pixmap = None;
 	mw->background = None;
 
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
 	mw->nmonitors = mw->active_monitor = 0;
 	mw->monitor = NULL;
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+	mw->mm_multiplier = NULL;
+	mw->mm_xoff = mw->mm_yoff = NULL;
 #endif
 
 	// mw->pressed = mw->focus = 0;
@@ -513,8 +516,17 @@ mainwin_update_geometry(MainWin *mw)
 
 	if (xrr_monitors && mw->nmonitors > 0) {
 		if (mw->monitor)
-			XFree(mw->monitor);
+			free(mw->monitor);
 		mw->monitor = calloc(mw->nmonitors, sizeof(*mw->monitor));
+		if (mw->mm_multiplier)
+			free(mw->mm_multiplier);
+		mw->mm_multiplier = calloc(mw->nmonitors, sizeof(float));
+		if (mw->mm_xoff)
+			free(mw->mm_xoff);
+		mw->mm_xoff = calloc(mw->nmonitors, sizeof(int));
+		if (mw->mm_yoff)
+			free(mw->mm_yoff);
+		mw->mm_yoff = calloc(mw->nmonitors, sizeof(int));
 		for (int i = 0; i < mw->nmonitors; ++i) {
 			mw->monitor[i].x = xrr_monitors[i].x;
 			mw->monitor[i].y = xrr_monitors[i].y;
@@ -535,8 +547,17 @@ mainwin_update_geometry(MainWin *mw)
 		iter0 = iter1 = XineramaQueryScreens(ps->dpy, &mw->nmonitors);
 		if (iter1 && mw->nmonitors) {
 			if (mw->monitor)
-				XFree(mw->monitor);
+				free(mw->monitor);
 			mw->monitor = calloc(mw->nmonitors, sizeof(*mw->monitor));
+            if (mw->mm_multiplier)
+                free(mw->mm_multiplier);
+			mw->mm_multiplier = calloc(mw->nmonitors, sizeof(float));
+            if (mw->mm_xoff)
+                free(mw->mm_xoff);
+			mw->mm_xoff = calloc(mw->nmonitors, sizeof(int));
+            if (mw->mm_yoff)
+                free(mw->mm_yoff);
+			mw->mm_yoff = calloc(mw->nmonitors, sizeof(int));
 
 			for(int i = 0; i < mw->nmonitors; ++i)
 			{
@@ -564,7 +585,6 @@ mainwin_update_geometry(MainWin *mw)
 		mw->width = rootattr.width;
 		mw->height = rootattr.height;
 
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
 		mw->nmonitors = 1;
 		mw->active_monitor = 0;
 		if(mw->monitor)
@@ -575,6 +595,17 @@ mainwin_update_geometry(MainWin *mw)
 		mw->monitor[0].y = 0;
 		mw->monitor[0].width = rootattr.width;
 		mw->monitor[0].height = rootattr.height;
+
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+		if (mw->mm_multiplier)
+			free(mw->mm_multiplier);
+		mw->mm_multiplier = calloc(mw->nmonitors, sizeof(float));
+		if (mw->mm_xoff)
+			free(mw->mm_xoff);
+		mw->mm_xoff = calloc(mw->nmonitors, sizeof(int));
+		if (mw->mm_yoff)
+			free(mw->mm_yoff);
+		mw->mm_yoff = calloc(mw->nmonitors, sizeof(int));
 #endif
 	}
 
@@ -695,9 +726,16 @@ mainwin_destroy(MainWin *mw) {
 
 	XDestroyWindow(ps->dpy, mw->window);
 	
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
 	if (mw->monitor)
-		XFree(mw->monitor);
+		free(mw->monitor);
+
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+	if (mw->mm_multiplier)
+		free(mw->mm_multiplier);
+	if (mw->mm_xoff)
+		free(mw->mm_xoff);
+	if (mw->mm_yoff)
+		free(mw->mm_yoff);
 #endif
 
 	free(mw->keysyms_Up);
