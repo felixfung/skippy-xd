@@ -30,6 +30,17 @@ xfixes_dep = dependency('xfixes')
 xft_dep = dependency('xft')
 xrender_dep = dependency('xrender')
 
+skippy_deps = [
+  m_dep,
+  x11_dep,
+  xcomposite_dep,
+  xdamage_dep,
+  xext_dep,
+  xfixes_dep,
+  xft_dep,
+  xrender_dep,
+]
+
 # optional
 giflib_dep = cc.find_library('libgif', required: get_option('skippy_gif'))
 if giflib_dep.found()
@@ -59,25 +70,38 @@ if xinerama_dep.found()
   add_project_dependencies(xinerama_dep, language: 'c')
 endif
 
-chipmunk_dep = cc.find_library('chipmunk', required: get_option('skippy_chipmunk'))
+chipmunk_dep = disabler()
+chipmunk_opt = get_option('skippy_chipmunk')
+chipmunk_lib = cc.find_library('chipmunk', required: false)
+if chipmunk_lib.found() and chipmunk_opt.allowed()
+  chipmunk_dep = declare_dependency(dependencies: chipmunk_lib)
+elif chipmunk_opt.enabled()
+  cmake = import('cmake')
+  chipmunk_cmake_opts = cmake.subproject_options()
+  chipmunk_cmake_opts.set_install(false)
+  chipmunk_cmake_opts.add_cmake_defines({
+    'BUILD_DEMOS': 'OFF',
+    'BUILD_SHARED': 'OFF',
+    'CMAKE_C_FLAGS': '-DCHIPMUNK_FFI',
+  })
+  chipmunk_cmake_proj = cmake.subproject('chipmunk2d', options: chipmunk_cmake_opts)
+  chipmunk_cmake_dep = chipmunk_cmake_proj.dependency('chipmunk_static')
+  meson.override_dependency('chipmunk', chipmunk_cmake_dep)
+  chipmunk_dep = dependency('chipmunk',
+    allow_fallback: true,
+    required: chipmunk_opt,
+  )
+endif
+
 if chipmunk_dep.found()
+  skippy_deps += [chipmunk_dep]
   add_project_arguments('-DCFG_CHIPMUNK', language: 'c')
-  add_project_dependencies(chipmunk_dep, language: 'c')
 endif
 
 executable(
   meson.project_name(),
   sources: skippy_sources,
-  dependencies: [
-    m_dep,
-    x11_dep,
-    xcomposite_dep,
-    xdamage_dep,
-    xext_dep,
-    xfixes_dep,
-    xft_dep,
-    xrender_dep,
-  ],
+  dependencies: skippy_deps,
   c_args: [ '-DSKIPPYXD_VERSION="' + meson.project_version() + '"' ],
   install: true,
 )
