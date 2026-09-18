@@ -21,7 +21,9 @@ endif
 
 ifeq "${CFG_NO_CHIPMUNK}" ""
 	CPPFLAGS += -DCFG_CHIPMUNK
-	LIBS += -lchipmunk
+	LIBS += -Wl,-Bstatic -lchipmunk -Wl,-Bdynamic
+	# to perform dynamic linking, do instead
+	# LIBS += -lchipmunk
 endif
 
 ifeq "${CFG_NO_PNG}" ""

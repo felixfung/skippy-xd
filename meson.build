@@ -59,7 +59,9 @@ if xinerama_dep.found()
   add_project_dependencies(xinerama_dep, language: 'c')
 endif
 
-chipmunk_dep = cc.find_library('chipmunk', required: get_option('skippy_chipmunk'))
+chipmunk_dep = cc.find_library('chipmunk', required: get_option('skippy_chipmunk'), static: true)
+# to perform dynamic linking, do instead
+# remove the "static: true" clause
 if chipmunk_dep.found()
   add_project_arguments('-DCFG_CHIPMUNK', language: 'c')
   add_project_dependencies(chipmunk_dep, language: 'c')
