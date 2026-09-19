@@ -1,0 +1,6 @@
+[wrap-git]
+directory = chipmunk2d
+url = https://codeberg.org/slembcke/Chipmunk2D.git
+revision = master
+depth = 1
+patch_directory = chipmunk2d
