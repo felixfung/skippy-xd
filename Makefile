@@ -1,6 +1,11 @@
+.DEFAULT_GOAL := all
+
 PREFIX ?= /usr
 BINDIR ?= ${PREFIX}/bin
 MANDIR ?= ${PREFIX}/share/man/man1
+
+MESON ?= meson
+CMAKE ?= cmake
 
 ifeq ($(shell command -v clang 2>&1 | grep -c "clang"), 1)
 	CC = clang
@@ -14,14 +19,12 @@ SRCS_RAW = skippy wm dlist mainwin clientwin layout aabb focus config tooltip im
 PACKAGES = x11 xft xrender xcomposite xdamage xfixes xext
 
 # === Options ===
+# Accepts enabled, auto, or disabled, matching Meson's skippy_chipmunk option.
+SKIPPY_CHIPMUNK ?= enabled
+
 ifeq "${CFG_NO_XINERAMA}" ""
 	CPPFLAGS += -DCFG_XINERAMA
 	PACKAGES += xinerama
-endif
-
-ifeq "${CFG_NO_CHIPMUNK}" ""
-	CPPFLAGS += -DCFG_CHIPMUNK
-	LIBS += -lchipmunk
 endif
 
 ifeq "${CFG_NO_PNG}" ""
@@ -60,6 +63,9 @@ endif
 
 CFLAGS += -std=c99 -Wall
 LDFLAGS ?= -Wl,-O1 -Wl,--as-needed
+
+include chipmunk.mk
+
 INCS = $(shell pkg-config --cflags $(PACKAGES))
 LIBS += -lm $(shell pkg-config --libs $(PACKAGES))
 
@@ -74,12 +80,12 @@ SRCS = $(foreach name,$(SRCS_RAW),src/$(name).c)
 HDRS = $(foreach name,$(SRCS_RAW),src/$(name).h)
 OBJS = $(foreach name,$(SRCS_RAW),$(name).o)
 
-%.o: src/%.c ${HDRS}
+%.o: src/%.c ${HDRS} ${CHIPMUNK_SOURCE_DEP}
 	${CC} ${INCS} ${CFLAGS} ${CPPFLAGS} -c src/$*.c
 
 all: ${BINS} skippy-xd.1 skippy-xd.rc
 
-skippy-xd${EXESUFFIX}: ${OBJS}
+skippy-xd${EXESUFFIX}: ${OBJS} ${CHIPMUNK_BUILD_DEP}
 	${CC} ${LDFLAGS} -o skippy-xd${EXESUFFIX} ${OBJS} ${LIBS}
 
 # === Man page creation ===
@@ -87,7 +93,7 @@ VERSION_SKIPPYXD := $(shell cat version.txt)
 skippy-xd.1: skippy-xd.1.in version.txt
 	sed "s|@VERSION@|$(VERSION_SKIPPYXD)|" $< > $@
 
-clean:
+clean: clean-chipmunk
 	rm -f ${BINS} ${OBJS} src/.clang_complete skippy-xd.1
 
 install-check:
