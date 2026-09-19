@@ -1,6 +1,11 @@
 project(
   'skippy-xd', 'c',
   version: files('version.txt'),
+  default_options: [
+    'buildtype=debugoptimized',
+    'b_ndebug=if-release',
+    'optimization=3',
+  ],
 )
 
 skippy_sources = [
