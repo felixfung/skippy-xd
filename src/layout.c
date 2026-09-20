@@ -447,6 +447,8 @@ run_contraction(AabbWorld *world, ClientWin **windows, size_t count,
 	float checkpoint_span_height = 0;
 	float checkpoint_balance_x = 0;
 	float checkpoint_balance_y = 0;
+	float checkpoint_spread_x = 0;
+	float checkpoint_spread_y = 0;
 
 	if (count <= 1)
 		return 0;
@@ -488,12 +490,26 @@ run_contraction(AabbWorld *world, ClientWin **windows, size_t count,
 		float balance_y = span_center_y - center_y;
 		float normalized_balance_x = balance_x / half_span_x;
 		float normalized_balance_y = balance_y / half_span_y;
+		float spread_x = 0;
+		float spread_y = 0;
+
+		for (size_t i = 0; i < count; i++) {
+			float offset_x = windows[i]->fx - span_center_x;
+			float offset_y = windows[i]->fy - span_center_y;
+			spread_x += offset_x * offset_x;
+			spread_y += offset_y * offset_y;
+		}
+
+		spread_x = sqrtf(spread_x / (float) count);
+		spread_y = sqrtf(spread_y / (float) count);
 
 		if (iteration == 0) {
 			checkpoint_span_width = span_width;
 			checkpoint_span_height = span_height;
 			checkpoint_balance_x = normalized_balance_x;
 			checkpoint_balance_y = normalized_balance_y;
+			checkpoint_spread_x = spread_x;
+			checkpoint_spread_y = spread_y;
 		}
 		else if ((size_t) iteration % count == 0) {
 			bool stagnant =
@@ -506,6 +522,10 @@ run_contraction(AabbWorld *world, ClientWin **windows, size_t count,
 						<= movement_tolerance
 					&& fabsf(normalized_balance_y
 							- checkpoint_balance_y) * half_span_y
+						<= movement_tolerance
+					&& fabsf(spread_x - checkpoint_spread_x)
+						<= movement_tolerance
+					&& fabsf(spread_y - checkpoint_spread_y)
 						<= movement_tolerance;
 
 			if (stagnant)
@@ -515,6 +535,8 @@ run_contraction(AabbWorld *world, ClientWin **windows, size_t count,
 			checkpoint_span_height = span_height;
 			checkpoint_balance_x = normalized_balance_x;
 			checkpoint_balance_y = normalized_balance_y;
+			checkpoint_spread_x = spread_x;
+			checkpoint_spread_y = spread_y;
 		}
 
 		for (size_t i = 0; i < count; i++) {
