@@ -5,13 +5,13 @@
 #
 # First compile skippy-xd, then launch the executable, and do a test run through valgrind. Something like this:
 #
-#   make && valgrind --suppressions=.valgrind.suppressions --leak-check=full ./skippy-xd
+#   ninja -C build && valgrind --suppressions=.valgrind.suppressions --leak-check=full build/skippy-xd
 #
 #
 #
 # To generate a supression rule, to ignore, then add it to this file:
 #
-#   make && valgrind --suppressions=.valgrind.suppressions --gen-suppressions=all --leak-check=full ./skippy-xd
+#   ninja -C build && valgrind --suppressions=.valgrind.suppressions --gen-suppressions=all --leak-check=full build/skippy-xd
 #
 #
 #

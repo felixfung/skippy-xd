@@ -7,7 +7,7 @@ URL:            https://github.com/musqz/skippy-xd
 Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  gcc
-BuildRequires:  make
+BuildRequires:  meson
 BuildRequires:  libX11-devel
 BuildRequires:  libXft-devel
 BuildRequires:  libXrender-devel
@@ -30,11 +30,11 @@ It is window-manager agnostic and works with any EWMH-compliant WM.
 %autosetup
 
 %build
-%make_build
+%meson
+%meson_build
 
 %install
-mkdir -p %{buildroot}%{_mandir}/man1
-%make_install PREFIX=%{_prefix} MANDIR=%{_mandir}/man1
+%meson_install
 
 %files
 %license COPYING
