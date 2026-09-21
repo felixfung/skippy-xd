@@ -29,7 +29,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            build-essential wget zsync \
+            build-essential meson ninja-build wget zsync \
             libx11-dev libxft-dev libxrender-dev \
             libxcomposite-dev libxdamage-dev libxfixes-dev \
             libxext-dev libxinerama-dev \
@@ -37,7 +37,9 @@ jobs:
             desktop-file-utils
 
       - name: Build skippy-xd binary
-        run: make
+        run: |
+          meson setup build --prefix=/usr --buildtype=release
+          meson compile -C build
 
       - name: Create AppDir structure
         run: |
@@ -51,10 +53,7 @@ jobs:
 
       - name: Install binary and files into AppDir
         run: |
-          make install \
-            DESTDIR=$(pwd)/skippy-xd.AppDir \
-            PREFIX=/usr \
-            MANDIR=/usr/share/man/man1
+          DESTDIR=$(pwd)/skippy-xd.AppDir meson install -C build
 
       - name: Bundle shared libraries
         run: |
