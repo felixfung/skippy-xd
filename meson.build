@@ -1,6 +1,7 @@
 project(
   'skippy-xd', 'c',
   version: files('version.txt'),
+  meson_version: '>=1.1',
   default_options: [
     'buildtype=debugoptimized',
     'b_ndebug=if-release',
