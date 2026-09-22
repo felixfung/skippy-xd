@@ -1,5 +1,11 @@
 Skippy-XD changelog
 
+0.11.0.1 -- "Chipmunk Expose" (26 Sep 2026) ~/felixfung
+ - Meson build allows vendoring of lipchipmunk
+ - Removed Makefile
+ - Focus up/down/left/right does not skip windows
+ - Tighten cosmos termination condition
+
 0.11.0 -- "Chipmunk" (13 Sep 2026) ~/felixfung
  - Much improved cosmos layout:
      - Scattering into grid layout. This improves max windows most
