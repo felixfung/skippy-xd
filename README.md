@@ -1,4 +1,4 @@
-# BREAKING!! New compilation and packaging procedure! See https://github.com/felixfung/skippy-xd/pull/535
+# BREAKING!! New compilation and packaging procedure! See https://github.com/felixfung/skippy-xd/pull/552
 
 Welcome to skippy-xd!
 
