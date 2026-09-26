@@ -45,7 +45,7 @@ skippy-xd --expose
 skippy-xd --paging
 ```
 
-Or better, find the package in your distro https://github.com/felixfung/skippy-xd/wiki/Adoption#distro-adoption, or find ready made package in https://github.com/felixfung/skippy-xd/releases/latest.
+Find the package in your distro https://github.com/felixfung/skippy-xd/wiki/Adoption#distro-adoption, or ready made package in https://github.com/felixfung/skippy-xd/releases/latest.
 
 Check the wiki for documentation on basic use https://github.com/felixfung/skippy-xd/wiki/How-to-Use and advanced tips and tricks https://github.com/felixfung/skippy-xd/wiki/Advanced-Uses-and-Special-Set-Ups.
 
