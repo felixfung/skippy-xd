@@ -1279,6 +1279,10 @@ init_focus(MainWin *mw, enum layoutmode layout, dlist *windows, Window leader) {
 		mw->focuslist = sort_focuslist_cosmos(mw, mw->focuslist);
 }
 
+#define INTERSECTS(x1, y1, w1, h1, x2, y2, w2, h2) \
+	(((x1 > x2 && x1 < (x2 + w2)) || (x2 > x1 && x2 < (x1 + w1))) && \
+	 ((y1 > y2 && y1 < (y2 + h2)) || (y2 > y1 && y2 < (y1 + h1))))
+
 static void
 calculatePanelBorders(MainWin *mw, MonitorCoord monitor,
 		int *x1, int *y1, int *x2, int *y2) {
@@ -1300,8 +1304,8 @@ calculatePanelBorders(MainWin *mw, MonitorCoord monitor,
 		int midx = cw->src.x + cw->src.width / 2;
 		int midy = cw->src.y + cw->src.height / 2;
 
-		if (!(monitor.x <= midx && midx < monitor.x + monitor.width
-		   && monitor.y <= midy && midy < monitor.y + monitor.height))
+		if (!(INTERSECTS(monitor.x, monitor.y, monitor.width, monitor.height,
+				cw->x, cw->y, cw->src.width, cw->src.height)))
 			continue;
 
 		// assumed horizontal panel
