@@ -973,7 +973,7 @@ sort_cw_by_y(dlist *dlist1, dlist *dlist2, void *data)
 }
 
 static dlist *
-sort_focuslist_cosmos(dlist *list)
+sort_focuslist_cosmos_region(dlist *list)
 {
 	list = dlist_first(list);
 	unsigned int len = dlist_len(list);
@@ -1200,9 +1200,35 @@ sort_focuslist_cosmos(dlist *list)
 	}
 
 	dlist *second = dlist_split_nth(list, best_split);
-	list = sort_focuslist_cosmos(list);
-	second = sort_focuslist_cosmos(second);
+	list = sort_focuslist_cosmos_region(list);
+	second = sort_focuslist_cosmos_region(second);
 	return dlist_join(list, second);
+}
+
+static dlist *
+sort_focuslist_cosmos(MainWin *mw, dlist *list)
+{
+	list = dlist_first(list);
+	if (mw->nmonitors <= 1)
+		return sort_focuslist_cosmos_region(list);
+
+	dlist *ordered = NULL;
+	for (int i = 0; i < mw->nmonitors; i++) {
+		dlist *windows = NULL;
+		for (dlist *iter = list; iter; ) {
+			dlist *next = iter->next;
+			if (clientwin_filter_monitor(iter, &mw->monitor[i])) {
+				if (iter == list)
+					list = next;
+				dlist_extract(iter);
+				windows = dlist_join(windows, iter);
+			}
+			iter = next;
+		}
+		ordered = dlist_join(ordered, sort_focuslist_cosmos_region(windows));
+	}
+
+	return dlist_join(ordered, sort_focuslist_cosmos_region(list));
 }
 
 static void
@@ -1214,7 +1240,7 @@ init_focus(MainWin *mw, enum layoutmode layout, dlist *windows, Window leader) {
 	mw->focuslist = dlist_dup(windows);
 
 	if (ps->o.mode == PROGMODE_EXPOSE && layout == LAYOUT_COSMOS)
-		mw->focuslist = sort_focuslist_cosmos(mw->focuslist);
+		mw->focuslist = sort_focuslist_cosmos(mw, mw->focuslist);
 	else
 		dlist_reverse(mw->focuslist);
 
@@ -1250,7 +1276,7 @@ init_focus(MainWin *mw, enum layoutmode layout, dlist *windows, Window leader) {
 	}
 
 	if (ps->o.mode == PROGMODE_SWITCH && layout == LAYOUT_COSMOS)
-		mw->focuslist = sort_focuslist_cosmos(mw->focuslist);
+		mw->focuslist = sort_focuslist_cosmos(mw, mw->focuslist);
 }
 
 static void
