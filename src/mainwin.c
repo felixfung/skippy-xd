@@ -664,7 +664,10 @@ mainwin_destroy(MainWin *mw) {
 	session_t *ps = mw->ps; 
 
 	// Free all clients associated with this main window
-	dlist_free_with_func(mw->clients, (dlist_free_func) clientwin_destroy);
+	foreach_dlist (mw->clients) {
+		clientwin_destroy(iter->data, false);
+	}
+	dlist_free(mw->clients);
 
 	dlist_free(mw->clientondesktop);
 	dlist_free(mw->panels);
