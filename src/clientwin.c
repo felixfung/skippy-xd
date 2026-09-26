@@ -43,6 +43,57 @@ void XRoundedRectTint(session_t *ps,
 
 void clientwin_round_corners(ClientWin *cw);
 
+void
+clientwin_fill_shape(ClientWin *cw, Drawable drawable, GC gc, int offset, int expand)
+{
+	MainWin *mw = cw->mainwin;
+	session_t *ps = mw->ps;
+
+	int radius = ps->o.cornerRadius * clientwin_get_multiplier(cw);
+	int count = 1;
+
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+	bool page = ps->o.mode == PROGMODE_PAGING && ps->o.preservePages
+			&& cw->mode == CLIDISP_DESKTOP && mw->nmonitors > 0;
+	if (page)
+		count = mw->nmonitors;
+#endif
+
+	for (int i = 0; i < count; ++i) {
+		int x = 0, y = 0, w = cw->mini.width, h = cw->mini.height;
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+		if (page) {
+			x = (int)(mw->monitor[i].x * mw->multiplier + cw->x)
+					+ mw->xoff + ps->o.leftFrameBorder - cw->mini.x;
+			y = (int)(mw->monitor[i].y * mw->multiplier + cw->y)
+					+ mw->yoff + ps->o.topFrameBorder - cw->mini.y;
+			w = mw->monitor[i].width * mw->multiplier - ps->o.leftFrameBorder;
+			h = mw->monitor[i].height * mw->multiplier - ps->o.topFrameBorder;
+		}
+#endif
+
+		if (w <= 0 || h <= 0)
+			continue;
+		x += offset - expand;
+		y += offset - expand;
+		w += expand * 2;
+		h += expand * 2;
+		int r = radius > 0 ? MIN(radius + expand, MIN(w / 2, h / 2)) : 0;
+		if (r == 0) {
+			XFillRectangle(ps->dpy, drawable, gc, x, y, w, h);
+			continue;
+		}
+		int dia = r * 2;
+		XFillArc(ps->dpy, drawable, gc, x, y, dia, dia, 90 * 64, 90 * 64);
+		XFillArc(ps->dpy, drawable, gc, x + w - dia, y, dia, dia, 0, 90 * 64);
+		XFillArc(ps->dpy, drawable, gc, x + w - dia, y + h - dia, dia, dia, 270 * 64, 90 * 64);
+		XFillArc(ps->dpy, drawable, gc, x, y + h - dia, dia, dia, 180 * 64, 90 * 64);
+		XFillRectangle(ps->dpy, drawable, gc, x + r, y, w - dia, r);
+		XFillRectangle(ps->dpy, drawable, gc, x + r, y + h - r, w - dia, r);
+		XFillRectangle(ps->dpy, drawable, gc, x, y + r, w, h - dia);
+	}
+}
+
 static void
 clientwin_render_desktop_cover_tint_border(ClientWin *cover, ClientWin *cw,
 		XRenderColor *tint, int border)
@@ -60,10 +111,8 @@ clientwin_render_desktop_cover_tint_border(ClientWin *cover, ClientWin *cw,
 	if (x >= cover->mini.width || y >= cover->mini.height || x + w <= 0 || y + h <= 0)
 		return;
 
-	int cornerRadius = ps->o.cornerRadius * clientwin_get_multiplier(cw);
-	XRenderTintBorder(ps, cover->mini.window, cover->destination, tint,
-			x, y, cw->mini.width, cw->mini.height, border,
-			cornerRadius);
+	XRenderTintBorder(cw, cover->mini.window, cover->destination, tint,
+			x, y, border);
 }
 
 static void
@@ -783,14 +832,20 @@ void clientwin_round_corners(ClientWin *cw) {
 	XSetForeground(ps->dpy, shape_gc, 0);
 	XFillRectangle(ps->dpy, mask, shape_gc, 0, 0, w, h);
 	XSetForeground(ps->dpy, shape_gc, 1);
-	if (dia > 0) {
-		XFillArc(ps->dpy, mask, shape_gc, 0, 0, dia, dia, 0, 360 * 64);
-		XFillArc(ps->dpy, mask, shape_gc, w-dia-1, 0, dia, dia, 0, 360 * 64);
-		XFillArc(ps->dpy, mask, shape_gc, 0, h-dia-1, dia, dia, 0, 360 * 64);
-		XFillArc(ps->dpy, mask, shape_gc, w-dia-1, h-dia-1, dia, dia, 0, 360 * 64);
+
+	if (ps->o.mode == PROGMODE_PAGING && ps->o.preservePages
+			&& cw->mode == CLIDISP_DESKTOP)
+		clientwin_fill_shape(cw, mask, shape_gc, 0, 0);
+	else {
+		if (dia > 0) {
+			XFillArc(ps->dpy, mask, shape_gc, 0, 0, dia, dia, 0, 360 * 64);
+			XFillArc(ps->dpy, mask, shape_gc, w-dia-1, 0, dia, dia, 0, 360 * 64);
+			XFillArc(ps->dpy, mask, shape_gc, 0, h-dia-1, dia, dia, 0, 360 * 64);
+			XFillArc(ps->dpy, mask, shape_gc, w-dia-1, h-dia-1, dia, dia, 0, 360 * 64);
+		}
+		XFillRectangle(ps->dpy, mask, shape_gc, radius, 0, w-dia, h);
+		XFillRectangle(ps->dpy, mask, shape_gc, 0, radius, w, h-dia);
 	}
-	XFillRectangle(ps->dpy, mask, shape_gc, radius, 0, w-dia, h);
-	XFillRectangle(ps->dpy, mask, shape_gc, 0, radius, w, h-dia);
 	XShapeCombineMask(ps->dpy, cw->mini.window, ShapeBounding, 0, 0, mask, ShapeSet);
 	XFreePixmap(ps->dpy, mask);
 	XFreeGC(ps->dpy, shape_gc);

@@ -20,15 +20,15 @@
 #include "skippy.h"
 
 void
-XRenderTintBorder(session_t *ps,
+XRenderTintBorder(ClientWin *cw,
 		Drawable drawable,
 		Picture dst,
 		XRenderColor *tint,
 		int x, int y,
-		int inner_w, int inner_h,
-		int border,
-		int radius)
+		int border)
 {
+	session_t *ps = cw->mainwin->ps;
+	int inner_w = cw->mini.width, inner_h = cw->mini.height;
 	if (!tint || !tint->alpha || border <= 0 || inner_w <= 0 || inner_h <= 0)
 		return;
 
@@ -44,40 +44,10 @@ XRenderTintBorder(session_t *ps,
 
 	gcv.foreground = 0xFF;
 	XChangeGC(ps->dpy, gc, GCForeground, &gcv);
-	if (radius > 0) {
-		int outer_radius = MIN(radius + border, MIN(w / 2, h / 2));
-		int inner_radius = MIN(radius, MIN(inner_w / 2, inner_h / 2));
-		int outer_dia = outer_radius * 2;
-		int inner_dia = inner_radius * 2;
-
-		XFillArc(ps->dpy, pm, gc, 0, 0, outer_dia, outer_dia, 90 * 64, 90 * 64);
-		XFillArc(ps->dpy, pm, gc, w - outer_dia, 0, outer_dia, outer_dia, 0, 90 * 64);
-		XFillArc(ps->dpy, pm, gc, w - outer_dia, h - outer_dia, outer_dia, outer_dia, 270 * 64, 90 * 64);
-		XFillArc(ps->dpy, pm, gc, 0, h - outer_dia, outer_dia, outer_dia, 180 * 64, 90 * 64);
-		XFillRectangle(ps->dpy, pm, gc, outer_radius, 0, w - 2 * outer_radius, outer_radius);
-		XFillRectangle(ps->dpy, pm, gc, outer_radius, h - outer_radius, w - 2 * outer_radius, outer_radius);
-		XFillRectangle(ps->dpy, pm, gc, 0, outer_radius, w, h - 2 * outer_radius);
-
-		gcv.foreground = 0;
-		XChangeGC(ps->dpy, gc, GCForeground, &gcv);
-		XFillArc(ps->dpy, pm, gc, border, border, inner_dia, inner_dia, 90 * 64, 90 * 64);
-		XFillArc(ps->dpy, pm, gc, border + inner_w - inner_dia, border, inner_dia, inner_dia, 0, 90 * 64);
-		XFillArc(ps->dpy, pm, gc, border + inner_w - inner_dia, border + inner_h - inner_dia,
-				inner_dia, inner_dia, 270 * 64, 90 * 64);
-		XFillArc(ps->dpy, pm, gc, border, border + inner_h - inner_dia, inner_dia, inner_dia, 180 * 64, 90 * 64);
-		XFillRectangle(ps->dpy, pm, gc, border + inner_radius, border,
-				inner_w - 2 * inner_radius, inner_radius);
-		XFillRectangle(ps->dpy, pm, gc, border + inner_radius, border + inner_h - inner_radius,
-				inner_w - 2 * inner_radius, inner_radius);
-		XFillRectangle(ps->dpy, pm, gc, border, border + inner_radius,
-				inner_w, inner_h - 2 * inner_radius);
-	}
-	else {
-		XFillRectangle(ps->dpy, pm, gc, 0, 0, w, h);
-		gcv.foreground = 0;
-		XChangeGC(ps->dpy, gc, GCForeground, &gcv);
-		XFillRectangle(ps->dpy, pm, gc, border, border, inner_w, inner_h);
-	}
+	clientwin_fill_shape(cw, pm, gc, border, border);
+	gcv.foreground = 0;
+	XChangeGC(ps->dpy, gc, GCForeground, &gcv);
+	clientwin_fill_shape(cw, pm, gc, border, 0);
 
 	XFreeGC(ps->dpy, gc);
 
@@ -109,11 +79,8 @@ mainwin_render_tint_border(ClientWin *cw, XRenderColor *tint, int border)
 	if (w <= 0 || h <= 0)
 		return;
 
-	int cornerRadius = ps->o.cornerRadius * clientwin_get_multiplier(cw);
 	Picture dst = XRenderCreatePicture(ps->dpy, mw->window, mw->format, 0, NULL);
-	XRenderTintBorder(ps, mw->window, dst, tint, x, y,
-			cw->mini.width, cw->mini.height, border,
-			cornerRadius);
+	XRenderTintBorder(cw, mw->window, dst, tint, x, y, border);
 	XRenderFreePicture(ps->dpy, dst);
 
 	foreach_dlist (mw->panels) {
@@ -139,9 +106,8 @@ mainwin_render_tint_border(ClientWin *cw, XRenderColor *tint, int border)
 				|| local_x + w <= 0 || local_y + h <= 0)
 			continue;
 
-		XRenderTintBorder(ps, cover->mini.window, cover->destination, tint,
-				local_x, local_y, cw->mini.width, cw->mini.height,
-				border, cornerRadius);
+		XRenderTintBorder(cw, cover->mini.window, cover->destination, tint,
+				local_x, local_y, border);
 	}
 }
 

@@ -1405,14 +1405,12 @@ void XRoundedRectComposite(session_t *ps,
 		int w, int h,
 		int radius);
 
-void XRenderTintBorder(session_t *ps,
+void XRenderTintBorder(ClientWin *cw,
 		Drawable drawable,
 		Picture dst,
 		XRenderColor *tint,
 		int x, int y,
-		int inner_w, int inner_h,
-		int border,
-		int radius);
+		int border);
 
 extern session_t *ps_g;
 

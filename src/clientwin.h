@@ -96,6 +96,7 @@ clientwin_get_multiplier(ClientWin *cw) {
 #endif
 	return multiplier;
 }
+void clientwin_fill_shape(ClientWin *cw, Drawable drawable, GC gc, int offset, int expand);
 int clientwin_validate_panel(dlist *, void *);
 int clientwin_filter_monitor(dlist *, void *);
 int clientwin_filter_func(dlist *, void *);
