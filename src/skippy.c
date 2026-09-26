@@ -802,18 +802,33 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 static void
 anime(
 	MainWin *mw,
-	dlist *clients,
 	float timeslice
 )
 {
-	float multiplier = 1.0 + timeslice * (mw->multiplier - 1.0);
-	mainwin_transform(mw, multiplier);
+	for (int i=0; i<mw->nmonitors; i++) {
+		float mtarget = mw->multiplier;
+		int xoff = mw->xoff, yoff = mw->yoff;
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+		if (mw->ps->o.mode == PROGMODE_EXPOSE
+				&& !mw->ps->o.exposeOnCurrentMonitor) {
+			mtarget = mw->mm_multiplier[i];
+			xoff = mw->mm_xoff[i];
+			yoff = mw->mm_yoff[i];
+		}
+#endif
 
-	foreach_dlist (mw->clientondesktop) {
-		ClientWin *cw = (ClientWin *) iter->data;
-		clientwin_move(cw, multiplier, mw->xoff, mw->yoff, timeslice);
-		clientwin_update2(cw);
-		clientwin_map(cw);
+		float multiplier = 1.0 + timeslice * (mtarget - 1.0);
+		mainwin_transform(mw, multiplier);
+
+		dlist *windows = dlist_first(dlist_find_all(mw->clientondesktop,
+				(dlist_match_func) clientwin_filter_monitor, &mw->monitor[i]));
+		foreach_dlist (windows) {
+			ClientWin *cw = (ClientWin *) iter->data;
+			clientwin_move(cw, multiplier, xoff, yoff, timeslice);
+			clientwin_update2(cw);
+			clientwin_map(cw);
+		}
+		dlist_free(windows);
 	}
 }
 
@@ -958,7 +973,7 @@ sort_cw_by_y(dlist *dlist1, dlist *dlist2, void *data)
 }
 
 static dlist *
-sort_focuslist_cosmos(dlist *list)
+sort_focuslist_cosmos_region(dlist *list)
 {
 	list = dlist_first(list);
 	unsigned int len = dlist_len(list);
@@ -1185,22 +1200,47 @@ sort_focuslist_cosmos(dlist *list)
 	}
 
 	dlist *second = dlist_split_nth(list, best_split);
-	list = sort_focuslist_cosmos(list);
-	second = sort_focuslist_cosmos(second);
+	list = sort_focuslist_cosmos_region(list);
+	second = sort_focuslist_cosmos_region(second);
 	return dlist_join(list, second);
 }
 
+static dlist *
+sort_focuslist_cosmos(MainWin *mw, dlist *list)
+{
+	list = dlist_first(list);
+	if (mw->nmonitors <= 1)
+		return sort_focuslist_cosmos_region(list);
+
+	dlist *ordered = NULL;
+	for (int i = 0; i < mw->nmonitors; i++) {
+		dlist *windows = NULL;
+		for (dlist *iter = list; iter; ) {
+			dlist *next = iter->next;
+			if (clientwin_filter_monitor(iter, &mw->monitor[i])) {
+				if (iter == list)
+					list = next;
+				dlist_extract(iter);
+				windows = dlist_join(windows, iter);
+			}
+			iter = next;
+		}
+		ordered = dlist_join(ordered, sort_focuslist_cosmos_region(windows));
+	}
+
+	return dlist_join(ordered, sort_focuslist_cosmos_region(list));
+}
+
 static void
-init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
+init_focus(MainWin *mw, enum layoutmode layout, dlist *windows, Window leader) {
 	session_t *ps = mw->ps;
 
 	// ordering of client windows list
 	// is important for prev/next window selection
-	mw->focuslist = dlist_dup(mw->clientondesktop);
+	mw->focuslist = dlist_dup(windows);
 
-	if (ps->o.mode == PROGMODE_EXPOSE
-	  && ps->o.exposeLayout == LAYOUT_COSMOS)
-		mw->focuslist = sort_focuslist_cosmos(mw->focuslist);
+	if (ps->o.mode == PROGMODE_EXPOSE && layout == LAYOUT_COSMOS)
+		mw->focuslist = sort_focuslist_cosmos(mw, mw->focuslist);
 	else
 		dlist_reverse(mw->focuslist);
 
@@ -1235,13 +1275,16 @@ init_focus(MainWin *mw, enum layoutmode layout, Window leader) {
 		}
 	}
 
-	if (ps->o.mode == PROGMODE_SWITCH
-	  && ps->o.switchLayout == LAYOUT_COSMOS)
-		mw->focuslist = sort_focuslist_cosmos(mw->focuslist);
+	if (ps->o.mode == PROGMODE_SWITCH && layout == LAYOUT_COSMOS)
+		mw->focuslist = sort_focuslist_cosmos(mw, mw->focuslist);
 }
 
+#define INTERSECTS(x1, y1, w1, h1, x2, y2, w2, h2) \
+	(((x1 > x2 && x1 < (x2 + w2)) || (x2 > x1 && x2 < (x1 + w1))) && \
+	 ((y1 > y2 && y1 < (y2 + h2)) || (y2 > y1 && y2 < (y1 + h1))))
+
 static void
-calculatePanelBorders(MainWin *mw,
+calculatePanelBorders(MainWin *mw, MonitorCoord monitor,
 		int *x1, int *y1, int *x2, int *y2) {
 	if (!mw->ps->o.panel_reserveSpace)
 		return;
@@ -1250,155 +1293,83 @@ calculatePanelBorders(MainWin *mw,
 	// e.g. a panel on the bottom
 	*x1 = 0;
 	*y1 = 0;
-	*x2 = mw->width;
-	*y2 = mw->height;
+	*x2 = monitor.width;
+	*y2 = monitor.height;
 
 	foreach_dlist(mw->panels) {
 		ClientWin *cw = iter->data;
 		if (cw->paneltype != WINTYPE_PANEL)
 			continue;
 
-#ifdef CFG_XINERAMA
-			int midx = cw->src.x + cw->src.width / 2;
-			int midy = cw->src.y + cw->src.height / 2;
+		int midx = cw->src.x + cw->src.width / 2;
+		int midy = cw->src.y + cw->src.height / 2;
 
-			XineramaScreenInfo *xiter = mw->xin_info;
-			for (int i=0; i<mw->xin_screens; i++)
-			{
-				if(xiter->x_org <= midx && midx < xiter->x_org + xiter->width &&
-				   xiter->y_org <= midy && midy < xiter->y_org + xiter->height)
-				{
-					cw->src.x -= xiter->x_org;
-					cw->src.y -= xiter->y_org;
-				}
-				xiter++;
-			}
-#endif /* CFG_XINERAMA */
+		if (!(INTERSECTS(monitor.x, monitor.y, monitor.width, monitor.height,
+				cw->x, cw->y, cw->src.width, cw->src.height)))
+			continue;
 
 		// assumed horizontal panel
 		if (cw->src.width >= cw->src.height) {
 			// assumed top panel
-			if (cw->src.y < mw->height / 2.0) {
-				*y1 = MAX(*y1, cw->src.y + cw->src.height);
+			if (cw->src.y < monitor.y + monitor.height / 2.0) {
+				*y1 = MAX(*y1,
+						cw->src.y + cw->src.height - monitor.y);
 			}
 			// assumed bottom panel
 			else {
-				*y2 = MIN(*y2, cw->src.y);
+				*y2 = MIN(*y2, cw->src.y - monitor.y);
 			}
 		}
 		// assumed vertical panel
 		else {
 			// assumed left panel
-			if (cw->src.x < mw->width / 2.0) {
-				*x1 = MAX(*x1, cw->src.x + cw->src.width);
+			if (cw->src.x < monitor.x + monitor.width / 2.0) {
+				*x1 = MAX(*x1,
+						cw->src.x + cw->src.width - monitor.x);
 			}
 			// assumed right panel
 			else {
-				*x2 = MIN(*x2, cw->src.x);
+				*x2 = MIN(*x2, cw->src.x - monitor.x);
 			}
 		}
 	}
 
-	*x2 = mw->width - *x2;
-	*y2 = mw->height - *y2;
+	*x2 = monitor.width - *x2;
+	*y2 = monitor.height - *y2;
 
 	printfdf(false,"(): panel framing calculations: (%d,%d) (%d,%d)", *x1, *y1, *x2, *y2);
 }
 
 static void
-transportPanelToActiveMonitor(ClientWin *cw)
-{
-#ifdef CFG_XINERAMA
-	int midx = cw->src.x + cw->src.width / 2;
-	int midy = cw->src.y + cw->src.height / 2;
-	MainWin *mw = cw->mainwin;
-	XineramaScreenInfo *xiter = mw->xin_info;
-
-	for (int i = 0; i < mw->xin_screens; ++i) {
-		if (xiter->x_org <= midx && midx < xiter->x_org + xiter->width
-				&& xiter->y_org <= midy && midy < xiter->y_org + xiter->height) {
-			break;
-		}
-		xiter++;
-	}
-
-	if (xiter < mw->xin_info + mw->xin_screens) {
-		cw->src.x -= xiter->x_org;
-		cw->src.y -= xiter->y_org;
-	}
-
-	if (xiter < mw->xin_info + mw->xin_screens
-			&& xiter->x_org == mw->x && xiter->y_org == mw->y)
-		return;
-
-	if (cw->src.width >= cw->src.height) {
-		switch (mw->ps->o.horizontalPanelAlignment) {
-			case ALIGN_LEFT:
-				break;
-			case ALIGN_RIGHT:
-				cw->src.x = mw->width - cw->src.width - cw->src.x;
-				break;
-			case ALIGN_MID:
-				cw->src.x = (mw->width - cw->src.width) / 2;
-				break;
-		}
-	}
-	else {
-		switch (mw->ps->o.verticalPanelAlignment) {
-			case ALIGN_LEFT:
-				break;
-			case ALIGN_RIGHT:
-				cw->src.y = mw->height - cw->src.height - cw->src.y;
-				break;
-			case ALIGN_MID:
-				cw->src.y = (mw->height - cw->src.height) / 2;
-				break;
-		}
-	}
-#endif /* CFG_XINERAMA */
-}
-
-static void
-init_multiplier(MainWin *mw, unsigned int newwidth, unsigned int newheight,
-		bool upscaleWindows, int gap)
+init_multiplier(MainWin *mw, MonitorCoord monitor,
+		unsigned int newwidth, unsigned int newheight,
+		bool upscaleWindows, int gap,
+		float *multiplier, int *xoff, int *yoff)
 {
 	int x1=0, y1=0, x2=0, y2=0;
-	calculatePanelBorders(mw, &x1, &y1, &x2, &y2);
+	calculatePanelBorders(mw, monitor, &x1, &y1, &x2, &y2);
 	newwidth += x1 + x2;
 	newheight += y1 + y2;
 
-	float multiplier = (float) (mw->width - gap * mw->distance
+	*multiplier = (float) (monitor.width - gap * mw->distance
 			- x1 - x2) / newwidth;
-	if (multiplier * newheight > mw->height - gap * mw->distance)
-		multiplier = (float) (mw->height - gap * mw->distance
+	if (*multiplier * newheight > monitor.height - gap * mw->distance)
+		*multiplier = (float) (monitor.height - gap * mw->distance
 				- y1 - y2) / newheight;
 
 	if (!upscaleWindows)
-		multiplier = MIN(multiplier, 1.0f);
+		*multiplier = MIN(*multiplier, 1.0f);
 
-	int xoff = (mw->width - x1 - x2 - (float)(newwidth
-				- x1 - x2) * multiplier) / 2;
-	int yoff = (mw->height - y1 - y2 - (float)(newheight
-				- y1 - y2) * multiplier) / 2;
-
-	mw->multiplier = multiplier;
-	mw->xoff = xoff + x1;
-	mw->yoff = yoff + y1;
+	*xoff = (monitor.width - x1 - x2 - (float)(newwidth
+			- x1 - x2) * *multiplier) / 2
+			+ x1 + monitor.x;
+	*yoff = (monitor.height - y1 - y2 - (float)(newheight
+				- y1 - y2) * *multiplier) / 2
+			+ y1 + monitor.y;
 }
 
 static void
-init_layout(MainWin *mw, enum layoutmode layout, Window leader)
-{
-	unsigned int newwidth = 100, newheight = 100;
-	if (mw->clientondesktop)
-		layout_run(mw, mw->clientondesktop, &newwidth, &newheight);
-
-	init_multiplier(mw, newwidth, newheight, mw->ps->o.upscaleWindows, 2);
-	init_focus(mw, layout, leader);
-}
-
-static void
-init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
+init_paging_layout(MainWin *mw, Window leader)
 {
 	int screencount = wm_get_desktops(mw->ps);
 	if (screencount == -1)
@@ -1408,31 +1379,26 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 	int desktop_width = mw->width;
 	int desktop_height = mw->height;
 
-#ifdef CFG_XINERAMA
-	printfdf(false,"(): detecting %d screens and %d virtual desktops",
-			mw->xin_screens, screencount);
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+	printfdf(false,"(): detecting %d monitors and %d virtual desktops",
+			mw->nmonitors, screencount);
 
 	int minx = INT_MAX;
 	int miny = INT_MAX;
 	int maxx = INT_MIN;
 	int maxy = INT_MIN;
 
+	for (int i = 0; i < mw->nmonitors; ++i)
 	{
-		XineramaScreenInfo *iter = mw->xin_info;
-		for (int i = 0; i < mw->xin_screens; ++i)
-		{
-			minx = MIN(minx, iter->x_org);
-			miny = MIN(miny, iter->y_org);
-			maxx = MAX(maxx, iter->x_org + iter->width);
-			maxy = MAX(maxy,  iter->y_org +iter->height);
-
-			iter++;
-		}
+		minx = MIN(minx, mw->monitor[i].x);
+		miny = MIN(miny, mw->monitor[i].y);
+		maxx = MAX(maxx, mw->monitor[i].x + mw->monitor[i].width);
+		maxy = MAX(maxy, mw->monitor[i].y + mw->monitor[i].height);
 	}
 
 	desktop_width = maxx - minx;
 	desktop_height = maxy - miny;
-#endif /* CFG_XINERAMA */
+#endif
 
 	// the paging layout is rectangular
 	// such that screenwidth == ceil(sqrt(screencount))
@@ -1463,7 +1429,15 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 
 	unsigned int totalwidth = screenwidth * (desktop_width + mw->distance) - mw->distance;
 	unsigned int totalheight = screenheight * (desktop_height + mw->distance) - mw->distance;
-	init_multiplier(mw, totalwidth, totalheight, false, 1);
+
+	init_multiplier(mw, mw->monitor[mw->active_monitor], totalwidth, totalheight, false, 1,
+			&mw->multiplier, &mw->xoff, &mw->yoff);
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+	mw->mm_multiplier[mw->active_monitor] = mw->multiplier;
+	mw->mm_xoff[mw->active_monitor] = mw->xoff;
+	mw->mm_yoff[mw->active_monitor] = mw->yoff;
+#endif
+
 	mw->desktoptransform.matrix[0][0] = 1.0;
 	mw->desktoptransform.matrix[0][1] = 0.0;
 	mw->desktoptransform.matrix[0][2] = mw->xoff;
@@ -1593,11 +1567,18 @@ desktopwin_map(ClientWin *cw)
 
 	if (ps->o.pseudoTrans)
 	{
-		mw->desktoptransform.matrix[0][2] += cw->mini.x - mw->xoff;
-		mw->desktoptransform.matrix[1][2] += cw->mini.y - mw->yoff;
+		int xoff = mw->xoff, yoff = mw->yoff;
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+		if (false && !ps->o.exposeOnCurrentMonitor) {
+			xoff = mw->mm_xoff[mw->active_monitor];
+			yoff = mw->mm_yoff[mw->active_monitor];
+		}
+#endif
+		mw->desktoptransform.matrix[0][2] += cw->mini.x - xoff;
+		mw->desktoptransform.matrix[1][2] += cw->mini.y - yoff;
 		XRenderSetPictureTransform(ps->dpy, cw->origin, &mw->desktoptransform);
-		mw->desktoptransform.matrix[0][2] -= cw->mini.x - mw->xoff;
-		mw->desktoptransform.matrix[1][2] -= cw->mini.y - mw->yoff;
+		mw->desktoptransform.matrix[0][2] -= cw->mini.x - xoff;
+		mw->desktoptransform.matrix[1][2] -= cw->mini.y - yoff;
 	}
 
 	cw->focused = cw == mw->client_to_focus;
@@ -1616,8 +1597,9 @@ desktopwin_map(ClientWin *cw)
 }
 
 static void
-skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
+skippy_activate(MainWin *mw, Window leader)
 {
+	session_t *ps = mw->ps;
 	mainwin_update(mw);
 
 	mw->client_to_focus = NULL;
@@ -1626,34 +1608,82 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 	foreach_dlist(mw->clients) {
 		ClientWin *cw = iter->data;
 		clientwin_update3(cw);
-		cw->paneltype = wm_identify_panel(mw->ps, cw->wid_client);
+		cw->paneltype = wm_identify_panel(ps, cw->wid_client);
 		if (cw->paneltype == WINTYPE_PANEL || cw->paneltype == WINTYPE_DESKTOP)
 			clientwin_update2(cw);
 	}
 
-	if (layout == LAYOUTMODE_PAGING)
-		init_paging_layout(mw, layout, leader);
-	else
-		init_layout(mw, layout, leader);
+	if (ps->o.mode == PROGMODE_PAGING) {
+		init_paging_layout(mw, leader);
+		foreach_dlist(mw->clientondesktop) {
+			ClientWin *cw = iter->data;
+			cw->x *= mw->multiplier;
+			cw->y *= mw->multiplier;
+		}
+	}
+	else {
+		enum layoutmode layout = mw->ps->o.switchLayout;
+		if (ps->o.mode == PROGMODE_EXPOSE)
+			layout = ps->o.exposeLayout;
 
-	foreach_dlist(mw->clientondesktop) {
-		ClientWin *cw = iter->data;
-		cw->src.x -= mw->x;
-		cw->src.y -= mw->y;
-		cw->x *= mw->multiplier;
-		cw->y *= mw->multiplier;
-		if (cw->paneltype != WINTYPE_PANEL && cw->paneltype != WINTYPE_DESKTOP)
-			clientwin_update2(cw);
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+		if (ps->o.mode == PROGMODE_EXPOSE && !ps->o.exposeOnCurrentMonitor) {
+			for (int i=0; i<mw->nmonitors; i++) {
+				dlist *windows = dlist_first(dlist_find_all(mw->clientondesktop,
+						(dlist_match_func) clientwin_filter_monitor, &mw->monitor[i]));
+				unsigned int newwidth = 100, newheight = 100;
+				layout_run(mw, windows, mw->monitor[i], layout, &newwidth, &newheight);
+				init_multiplier(mw, mw->monitor[i],
+						newwidth, newheight, mw->ps->o.upscaleWindows, 2,
+						&mw->mm_multiplier[i], &mw->mm_xoff[i], &mw->mm_yoff[i]);
+
+				foreach_dlist(windows) {
+					ClientWin *cw = iter->data;
+					cw->monitor = i;
+					cw->x *= mw->mm_multiplier[i];
+					cw->y *= mw->mm_multiplier[i];
+					// use src0 width/height for restoration later
+					if (cw->paneltype != WINTYPE_PANEL && cw->paneltype != WINTYPE_DESKTOP)
+						clientwin_update2(cw);
+					cw->src.width = cw->src0.width * mw->mm_multiplier[i];
+					cw->src.height = cw->src0.height * mw->mm_multiplier[i];
+				}
+				dlist_free(windows);
+			}
+
+			init_focus(mw, layout, mw->clientondesktop, leader);
+			// use src0 width/height for restoration here
+			foreach_dlist(mw->clientondesktop) {
+				ClientWin *cw = iter->data;
+				cw->src.width = cw->src0.width;
+				cw->src.height = cw->src0.height;
+			}
+		}
+		else
+#endif
+		{
+			dlist *windows = dlist_dup(mw->clientondesktop);
+			unsigned int newwidth = 100, newheight = 100;
+			layout_run(mw, windows, mw->monitor[mw->active_monitor], layout, &newwidth, &newheight);
+			init_multiplier(mw, mw->monitor[mw->active_monitor],
+					newwidth, newheight, mw->ps->o.upscaleWindows, 2,
+					&mw->multiplier, &mw->xoff, &mw->yoff);
+			init_focus(mw, layout, mw->clientondesktop, leader);
+
+			foreach_dlist(windows) {
+				ClientWin *cw = iter->data;
+				cw->x *= mw->multiplier;
+				cw->y *= mw->multiplier;
+				if (cw->paneltype != WINTYPE_PANEL && cw->paneltype != WINTYPE_DESKTOP)
+					clientwin_update2(cw);
+			}
+			dlist_free(windows);
+		}
+
 	}
 
 	foreach_dlist(mw->panels) {
 		ClientWin *cw = iter->data;
-		if (cw->paneltype == WINTYPE_PANEL)
-			transportPanelToActiveMonitor(cw);
-		if (cw->paneltype == WINTYPE_DESKTOP) {
-			cw->src.x -= mw->x;
-			cw->src.y -= mw->y;
-		}
 		clientwin_prepmove(cw);
 		clientwin_move(cw, 1, 0, 0, 0);
 	}
@@ -1667,7 +1697,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 	bool pending_damage = false;
 	long last_rendered = 0L;
 	long last_animated = 0L;
-	enum layoutmode layout = LAYOUTMODE_EXPOSE;
 	bool toggling = !ps->o.pivotkey;
 	bool animating = activate;
 	long first_animated = 0L;
@@ -1705,7 +1734,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 			assert(ps->mainwin);
 			activate = false;
 
-			skippy_activate(ps->mainwin, layout, wm_get_focused(ps));
+			skippy_activate(ps->mainwin, wm_get_focused(ps));
 			last_animated = last_rendered = time_in_millis();
 			mw = ps->mainwin;
 			pending_damage = false;
@@ -1731,7 +1760,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 			// keyboard gets ungrabbed.
 
 			int selected = -1;
-			if (mw->client_to_focus && layout != LAYOUTMODE_PAGING) {
+			if (mw->client_to_focus && ps->o.mode != PROGMODE_PAGING) {
 				if (!mw->refocus) {
 					dlist *iter = dlist_find(ps->mainwin->clients,
 							clientwin_cmp_func,
@@ -1752,7 +1781,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				}
 			}
 
-			if (mw->client_to_focus && layout == LAYOUTMODE_PAGING ) {
+			if (mw->client_to_focus && ps->o.mode == PROGMODE_PAGING ) {
 				if (!mw->refocus &&
 						mw->client_to_focus->slots
 						!= wm_get_current_desktop(ps)) {
@@ -1783,12 +1812,12 @@ mainloop(session_t *ps, bool activate_on_start) {
 				pipe_return[0] = '\0';
 				bool firstprint = true;
 				dlist *iter = mw->clientondesktop;
-				if (layout == LAYOUTMODE_PAGING)
+				if (ps->o.mode == PROGMODE_PAGING)
 					iter = mw->dminis;
 				for (; iter; iter = iter->next) {
 					ClientWin *cw = iter->data;
 					unsigned long client = cw->wid_client;
-					if (layout == LAYOUTMODE_PAGING)
+					if (ps->o.mode == PROGMODE_PAGING)
 						client = cw->slots;
 					if (cw->multiselect) {
 						char wid[1024];
@@ -1884,11 +1913,11 @@ mainloop(session_t *ps, bool activate_on_start) {
 			int timeslice = time_in_millis() - first_animated;
 			int starttime = last_animated + (1000.0 / ps->o.animationRefresh) - first_animated;
 			int stabletime = ps->o.animationDuration;
-			if (layout == LAYOUTMODE_SWITCH) {
+			if (ps->o.mode == PROGMODE_SWITCH) {
 				if (ps->o.switchWaitDuration == 0) {
 					starttime = stabletime = timeslice + 1;
 				}
-				else if (ps->o.switchLayout == LAYOUT_XD) {
+				else if (ps->o.switchLayout != LAYOUT_COSMOS) {
 					starttime = ps->o.switchWaitDuration + 1;
 					stabletime = ps->o.switchWaitDuration;
 				}
@@ -1914,16 +1943,16 @@ mainloop(session_t *ps, bool activate_on_start) {
 					first_animating = false;
 				}
 
-				if (layout == LAYOUTMODE_SWITCH
+				if (ps->o.mode == PROGMODE_SWITCH
 				&& ps->o.switchLayout == LAYOUT_COSMOS)
 					timeslice -= ps->o.switchWaitDuration;
 
-				anime(ps->mainwin, ps->mainwin->clients,
-					((float)timeslice)/(float)ps->o.animationDuration);
+				anime(ps->mainwin, ((float)timeslice)/(float)ps->o.animationDuration);
+
 				mainwin_render_borders(mw);
 				last_animated = last_rendered = time_in_millis();
 
-				if (layout == LAYOUTMODE_SWITCH
+				if (ps->o.mode == PROGMODE_SWITCH
 				&& ps->o.switchLayout == LAYOUT_COSMOS)
 					last_animated = last_rendered -= ps->o.switchWaitDuration;
 
@@ -1946,50 +1975,54 @@ mainloop(session_t *ps, bool activate_on_start) {
 					first_animating = false;
 				}
 
-				if (layout == LAYOUTMODE_PAGING && mw->ps->o.preservePages) {
+				if (ps->o.mode == PROGMODE_PAGING && mw->ps->o.preservePages) {
 					foreach_dlist (mw->dminis) {
 						ClientWin *cw = (ClientWin *) iter->data;
-#ifdef CFG_XINERAMA
-						XineramaScreenInfo *iter = mw->xin_info;
-						for (int i = 0; i < mw->xin_screens; ++i)
+						int xoff = mw->xoff, yoff = mw->yoff;
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+						if (false && !ps->o.exposeOnCurrentMonitor) {
+							xoff = mw->mm_xoff[mw->active_monitor];
+							yoff = mw->mm_yoff[mw->active_monitor];
+						}
+						for (int i = 0; i < mw->nmonitors; ++i)
 						{
-							int s_x = iter->x_org * mw->multiplier + cw->x;
-							int s_y = iter->y_org * mw->multiplier + cw->y;
-							int s_w = iter->width * mw->multiplier - ps->o.leftFrameBorder;
-							int s_h = iter->height * mw->multiplier - ps->o.topFrameBorder;
+							int s_x = mw->monitor[i].x * mw->multiplier + cw->x;
+							int s_y = mw->monitor[i].y * mw->multiplier + cw->y;
+							int s_w = mw->monitor[i].width * mw->multiplier - ps->o.leftFrameBorder;
+							int s_h = mw->monitor[i].height * mw->multiplier - ps->o.topFrameBorder;
 
 							XRoundedRectComposite(mw->ps,
 									mw->ps->o.from, mw->background,
-									s_x + mw->xoff + mw->x + ps->o.leftFrameBorder,
-									s_y + mw->yoff + mw->y + ps->o.topFrameBorder,
-									s_x + mw->xoff + ps->o.leftFrameBorder,
-									s_y + mw->yoff + ps->o.topFrameBorder,
+									s_x + xoff + mw->x + ps->o.leftFrameBorder,
+									s_y + yoff + mw->y + ps->o.topFrameBorder,
+									s_x + xoff + ps->o.leftFrameBorder,
+									s_y + yoff + ps->o.topFrameBorder,
 									s_w,
 									s_h,
 									ps->o.cornerRadius * mw->multiplier);
-							iter++;
 						}
 #else
 						XRoundedRectComposite(mw->ps,
 								mw->ps->o.from, mw->background,
-								cw->x + mw->xoff + mw->x + ps->o.leftFrameBorder,
-								cw->y + mw->yoff + mw->y + ps->o.topFrameBorder,
-								cw->x + mw->xoff + ps->o.leftFrameBorder,
-								cw->y + mw->yoff + ps->o.topFrameBorder,
+								cw->x + xoff + mw->x + ps->o.leftFrameBorder,
+								cw->y + yoff + mw->y + ps->o.topFrameBorder,
+								cw->x + xoff + ps->o.leftFrameBorder,
+								cw->y + yoff + ps->o.topFrameBorder,
 								cw->src.width * mw->multiplier,
 								cw->src.height * mw->multiplier,
 								ps->o.cornerRadius * mw->multiplier);
-#endif /* CFG_XINERAMA */
+#endif
 						XClearWindow(ps->dpy, mw->window);
 					}
 				}
 
-				anime(ps->mainwin, ps->mainwin->clients, 1);
+				anime(ps->mainwin, 1);
+
 				mainwin_render_borders(mw);
 				animating = false;
 				last_animated = last_rendered = time_in_millis();
 
-				if (layout == LAYOUTMODE_PAGING) {
+				if (ps->o.mode == PROGMODE_PAGING) {
 					foreach_dlist (mw->dminis) {
 						clientwin_update2(iter->data);
 						desktopwin_map(((ClientWin *) iter->data));
@@ -2004,12 +2037,12 @@ mainloop(session_t *ps, bool activate_on_start) {
 						ps->o.moveMouse);
 			}
 
-			if (layout != LAYOUTMODE_SWITCH ||
+			if (ps->o.mode != PROGMODE_SWITCH ||
 					!(ps->o.switchCycleDuringWait || ps->o.switchWaitDuration == 0))
 				continue; // while animating, do not allow user actions
 		}
 
-		if (layout != LAYOUTMODE_SWITCH
+		if (ps->o.mode != PROGMODE_SWITCH
 				&& !toggling && ps->o.pivotLockingTime > 0
 				&& time_in_millis() >= first_animated + ps->o.pivotLockingTime) {
 			printfdf(false, "(): pivot locking at %d", ps->o.pivotLockingTime);
@@ -2033,7 +2066,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				// when mouse move within a client window, focus on it
 				if (wid) {
 					dlist *iter = mw->clientondesktop;
-					if (layout == LAYOUTMODE_PAGING)
+					if (ps->o.mode == PROGMODE_PAGING)
 						iter = mw->dminis;
 					for (; iter; iter = iter->next) {
 						ClientWin *cw = (ClientWin *) iter->data;
@@ -2173,13 +2206,13 @@ mainloop(session_t *ps, bool activate_on_start) {
 			else if (mw && wid) {
 				bool processing = true;
 				dlist *iter = mw->clientondesktop;
-				if (layout == LAYOUTMODE_PAGING)
+				if (ps->o.mode == PROGMODE_PAGING)
 					iter = mw->dminis;
 				for (; iter && processing; iter = iter->next) {
 					ClientWin *cw = (ClientWin *) iter->data;
 					if (cw->mini.window == wid) {
 						if (!(POLLIN & r_fd[1].revents)
-								&& ((layout != LAYOUTMODE_PAGING)
+								&& ((ps->o.mode != PROGMODE_PAGING)
 								// do not process these excessive paging events
 								|| (ev.type != Expose
 								 && ev.type != GraphicsExpose
@@ -2194,7 +2227,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 								))) {
 
 							die = clientwin_handle(cw, &ev);
-							if (layout == LAYOUTMODE_PAGING) {
+							if (ps->o.mode == PROGMODE_PAGING) {
 								cw->damaged = true;
 								pending_damage = true;
 							}
@@ -2250,7 +2283,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				clientwin_repair((ClientWin *) iter->data);
 			}
 
-			if (layout == LAYOUTMODE_PAGING) {
+			if (ps->o.mode == PROGMODE_PAGING) {
 				foreach_dlist (mw->dminis) {
 					ClientWin *cw = (ClientWin *) iter->data;
 					// with pseudo-transparency,
@@ -2332,18 +2365,12 @@ mainloop(session_t *ps, bool activate_on_start) {
 				if (!mw /*|| !mw->mapped*/)
 				{
 					bool forget_activating = false;
-					if (piped_input & PIPECMD_SWITCH) {
+					if (piped_input & PIPECMD_SWITCH)
 						ps->o.mode = PROGMODE_SWITCH;
-						layout = LAYOUTMODE_SWITCH;
-					}
-					else if (piped_input & PIPECMD_EXPOSE) {
+					else if (piped_input & PIPECMD_EXPOSE)
 						ps->o.mode = PROGMODE_EXPOSE;
-						layout = LAYOUTMODE_EXPOSE;
-					}
-					else if (piped_input & PIPECMD_PAGING) {
+					else if (piped_input & PIPECMD_PAGING)
 						ps->o.mode = PROGMODE_PAGING;
-						layout = LAYOUTMODE_PAGING;
-					}
 					else
 						forget_activating = true;
 
@@ -2412,7 +2439,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 						}
 
 						trigger_client = pid;
-						printfdf(false, "(): skippy activating: metaphor=%d", layout);
+						printfdf(false, "(): skippy activating: metaphor=%d", ps->o.mode);
 					}
 				}
 				// parameter == 0, toggle
@@ -2428,8 +2455,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 					printfdf(false, "(): cycling window");
 					fflush(stdout);fflush(stderr);
 
-					if ((layout == LAYOUTMODE_SWITCH && ps->o.switchCycleDesktops)
-					 || (layout == LAYOUTMODE_EXPOSE && ps->o.exposeCycleDesktops))
+					if ((ps->o.mode == PROGMODE_SWITCH && ps->o.switchCycleDesktops)
+					 || (ps->o.mode == PROGMODE_EXPOSE && ps->o.exposeCycleDesktops))
 					{
 						int focusindex = 0;
 						if (mw->client_to_focus) {
@@ -2561,11 +2588,16 @@ xerror(Display *dpy, XErrorEvent *ev) {
 
 static inline void
 multimonitor_about(FILE *os) {
-#ifdef CFG_XINERAMA
-	fprintf(os, "\nMulti-monitor support: Yes\n"
-			"  Compiled with xinerama.\n");
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+	fprintf(os, "\nMulti-monitor support: Yes\n");
 #else
 	fprintf(os, "\nMulti-monitor support: No\n");
+#endif
+#ifdef CFG_XRANDR
+	fprintf(os, "  Compiled with libxrandr.\n");
+#endif
+#ifdef CFG_XINERAMA
+	fprintf(os, "  Compiled with libxinerama.\n");
 #endif
 }
 
@@ -2573,7 +2605,7 @@ static inline void
 chipmunk_about(FILE *os) {
 #ifdef CFG_CHIPMUNK
 	fprintf(os, "\nCosmos support: Yes\n"
-			"  Compiled with chipmunk2d %s.\n", cpVersionString);
+			"  Compiled with libchipmunk %s.\n", cpVersionString);
 #else
 	fprintf(os, "\nCosmos support: No\n");
 #endif
@@ -2641,15 +2673,26 @@ show_help() {
 static inline bool
 init_xexts(session_t *ps) {
 	Display * const dpy = ps->dpy;
+
+#ifdef CFG_XRANDR
+	XRRQueryExtension(dpy,
+			&ps->xinfo.xrandr_ev_base, &ps->xinfo.xrandr_err_base);
+	{
+		int major, minor;
+		if (XRRQueryVersion(ps->dpy, &major, &minor))
+			printfef(false, "(): XRandR extension: %d.%d.", major, minor);
+	}
+#endif
+
 #ifdef CFG_XINERAMA
-	ps->xinfo.xinerama_exist = XineramaQueryExtension(dpy,
+	XineramaQueryExtension(dpy,
 			&ps->xinfo.xinerama_ev_base, &ps->xinfo.xinerama_err_base);
 	{
 		int major, minor;
 		if (XineramaQueryVersion(ps->dpy, &major, &minor))
 			printfef(false, "(): Xinerama extension: %d.%d.", major, minor);
 	}
-#endif /* CFG_XINERAMA */
+#endif
 
 #ifdef CFG_CHIPMUNK
 	printfef(false, "(): Chipmunk extension: %s. Cosmos layout will be optimized.", cpVersionString);
@@ -3075,18 +3118,10 @@ load_config_file(session_t *ps)
 	}
     config_get_bool_wrap(config, "system", "pseudoTrans", &ps->o.pseudoTrans);
 
-    config_get_bool_wrap(config, "multimonitor", "showOnlyCurrentMonitor", &ps->o.showOnlyCurrentMonitor);
-    config_get_bool_wrap(config, "multimonitor", "showOnlyCurrentScreen", &ps->o.filterxscreen);
-	{
-		const char* align_str = config_get(config, "multimonitor",
-				"horizontalPanelAlignment", "mid");
-		parse_align(ps, align_str, &ps->o.horizontalPanelAlignment);
-	}
-	{
-		const char* align_str = config_get(config, "multimonitor",
-				"verticalPanelAlignment", "mid");
-		parse_alignv(ps, align_str, &ps->o.verticalPanelAlignment);
-	}
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+	config_get_bool_wrap(config, "multimonitor", "exposeOnCurrentMonitor",
+			&ps->o.exposeOnCurrentMonitor);
+#endif
 
 	{
 		const char *s = config_get(config, "layout", "switchLayout", NULL);
@@ -3095,12 +3130,10 @@ load_config_file(session_t *ps)
 				ps->o.switchLayout = LAYOUT_COSMOS;
 			}
 			else if (strcmp(s,"rect") == 0) {
-				ps->o.switchLayout = LAYOUT_XD;
-				ps->o.switch_compact = false;
+				ps->o.switchLayout = LAYOUT_RECT;
 			}
 			else if (strcmp(s,"compactrect") == 0) {
-				ps->o.switchLayout = LAYOUT_XD;
-				ps->o.switch_compact = true;
+				ps->o.switchLayout = LAYOUT_COMPACTRECT;
 			}
 			else {
 				printfef(true, "(): switchLayout \"%s\" not found. Valid switchLayout are:",
@@ -3108,13 +3141,11 @@ load_config_file(session_t *ps)
 				printfef(true, "(): rect (default)");
 				printfef(true, "(): compactrect");
 				printfef(true, "(): cosmos");
-				ps->o.switchLayout = LAYOUT_XD;
-				ps->o.switch_compact = false;
+				ps->o.switchLayout = LAYOUT_RECT;
 			}
 		}
 		else {
-			ps->o.switchLayout = LAYOUT_XD;
-			ps->o.switch_compact = false;
+			ps->o.switchLayout = LAYOUT_RECT;
 		}
     }
 	{
@@ -3124,12 +3155,10 @@ load_config_file(session_t *ps)
 				ps->o.exposeLayout = LAYOUT_COSMOS;
 			}
 			else if (strcmp(s,"rect") == 0) {
-				ps->o.exposeLayout = LAYOUT_XD;
-				ps->o.expose_compact = false;
+				ps->o.exposeLayout = LAYOUT_RECT;
 			}
 			else if (strcmp(s,"compactrect") == 0) {
-				ps->o.exposeLayout = LAYOUT_XD;
-				ps->o.expose_compact = true;
+				ps->o.exposeLayout = LAYOUT_COMPACTRECT;
 			}
 			else {
 				printfef(true, "(): exposeLayout \"%s\" not found. Valid exposeLayout are:",
@@ -3138,19 +3167,17 @@ load_config_file(session_t *ps)
 				printfef(true, "(): compactrect");
 				printfef(true, "(): cosmos (default)");
 				ps->o.exposeLayout = LAYOUT_COSMOS;
-				ps->o.expose_compact = false;
 			}
 		}
 		else {
 			ps->o.exposeLayout = LAYOUT_COSMOS;
-			ps->o.expose_compact = false;
 		}
     }
     config_get_bool_wrap(config, "layout", "switchCycleDesktops", &ps->o.switchCycleDesktops);
     config_get_bool_wrap(config, "layout", "exposeCycleDesktops", &ps->o.exposeCycleDesktops);
     config_get_int_wrap(config, "layout", "switchWaitDuration", &ps->o.switchWaitDuration, 0, 2000);
     config_get_bool_wrap(config, "layout", "switchCycleDuringWait", &ps->o.switchCycleDuringWait);
-    config_get_int_wrap(config, "layout", "distance", &ps->o.distance, 5, INT_MAX);
+    config_get_int_wrap(config, "layout", "minDistance", &ps->o.distance, 5, INT_MAX);
     config_get_bool_wrap(config, "layout", "upscaleWindows", &ps->o.upscaleWindows);
 
     config_get_int_wrap(config, "appearance", "animationDuration", &ps->o.animationDuration, 0, 2000);

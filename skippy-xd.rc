@@ -45,18 +45,7 @@ pseudoTrans = true
 
 [multimonitor]
 
-# Filter windows by Xinerama monitor
-showOnlyCurrentMonitor = false
-
-# Display only windows on the current XScreen
-showOnlyCurrentScreen = true
-
-# In multi-monitor environment,
-# Panels are displayed on the active monitor
-# Control how horizontal panels are aligned (left/mid/right)
-# And how vertical panels are aligned (top/mid/bottom)
-horizontalPanelAlignment = mid
-verticalPanelAlignment = mid
+exposeOnCurrentMonitor = false
 
 [layout]
 
@@ -78,8 +67,8 @@ switchCycleDuringWait = false
 switchCycleDesktops = false
 exposeCycleDesktops = false
 
-# Relative minimal pixel distance between windows
-distance = 50
+# minimal pixel distance (in relative scale) between windows
+minDistance = 50
 
 # Fill screen by upscaling windows
 upscaleWindows = false

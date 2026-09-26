@@ -45,6 +45,10 @@
 #include <X11/extensions/Xfixes.h>
 #include <X11/extensions/shape.h>
 
+#ifdef CFG_XRANDR
+# include <X11/extensions/Xrandr.h>
+#endif
+
 #ifdef CFG_XINERAMA
 # include <X11/extensions/Xinerama.h>
 #endif
@@ -69,8 +73,9 @@ extern bool debuglog;
 
 /// @brief Possible return values.
 
-enum {
-	LAYOUT_XD,
+enum layoutmode {
+	LAYOUT_RECT,
+	LAYOUT_COMPACTRECT,
 	LAYOUT_COSMOS,
 };
 
@@ -88,12 +93,6 @@ enum progmode {
 	PROGMODE_EXPOSE,
 	PROGMODE_PAGING,
 	PROGMODE_DM_STOP,
-};
-
-enum layoutmode {
-	LAYOUTMODE_SWITCH,
-	LAYOUTMODE_EXPOSE,
-	LAYOUTMODE_PAGING,
 };
 
 enum cliop {
@@ -203,19 +202,15 @@ typedef struct {
 	int clientList;
 	bool pseudoTrans;
 
-	bool showOnlyCurrentMonitor;
-	bool filterxscreen;
-	enum align horizontalPanelAlignment;
-	enum align verticalPanelAlignment;
+	bool exposeOnCurrentMonitor;
+
 	char *wm_class;
 	char *wm_title;
 	char *wm_status;
 	char *desktops;
 
 	int switchLayout;
-	bool switch_compact;
 	int exposeLayout;
-	bool expose_compact;
 	int switchWaitDuration;
 	bool switchCycleDuringWait;
 	bool switchCycleDesktops;
@@ -304,16 +299,12 @@ typedef struct {
 	.clientList = 0, \
 	.pseudoTrans = true, \
 \
-	.showOnlyCurrentMonitor = false, \
-	.filterxscreen = true, \
-	.horizontalPanelAlignment = 1, \
-	.verticalPanelAlignment = 1, \
+	.exposeOnCurrentMonitor = false, \
+\
 	.wm_status = NULL, \
 \
-	.switchLayout = LAYOUT_XD, \
-	.switch_compact = false, \
+	.switchLayout = LAYOUT_RECT, \
 	.exposeLayout = LAYOUT_COSMOS, \
-	.expose_compact = false, \
 	.switchWaitDuration = 100, \
 	.switchCycleDuringWait = false, \
 	.switchCycleDesktops = false, \
@@ -380,15 +371,11 @@ typedef struct {
 	int render_err_base;
 	int fixes_ev_base;
 	int fixes_err_base;
-
-	bool xinerama_exist;
+	int xrandr_err_base;
+	int xrandr_ev_base;
 	int xinerama_err_base;
 	int xinerama_ev_base;
 } xinfo_t;
-
-#define XINFOT_INIT { \
-	.xinerama_exist = false, \
-}
 
 typedef struct _clientwin_t ClientWin;
 typedef struct _mainwin_t MainWin;
@@ -423,7 +410,6 @@ typedef struct {
 
 #define SESSIONT_INIT { \
 	.o = OPTIONST_INIT, \
-	.xinfo = XINFOT_INIT, \
 	.time_start = { .tv_sec = 0, .tv_usec = 0 }, \
 	.fd_pipe = -1, \
 	.fd_pipe2 = -1, \
@@ -1419,14 +1405,12 @@ void XRoundedRectComposite(session_t *ps,
 		int w, int h,
 		int radius);
 
-void XRenderTintBorder(session_t *ps,
+void XRenderTintBorder(ClientWin *cw,
 		Drawable drawable,
 		Picture dst,
 		XRenderColor *tint,
 		int x, int y,
-		int inner_w, int inner_h,
-		int border,
-		int radius);
+		int border);
 
 extern session_t *ps_g;
 

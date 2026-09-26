@@ -20,15 +20,15 @@
 #include "skippy.h"
 
 void
-XRenderTintBorder(session_t *ps,
+XRenderTintBorder(ClientWin *cw,
 		Drawable drawable,
 		Picture dst,
 		XRenderColor *tint,
 		int x, int y,
-		int inner_w, int inner_h,
-		int border,
-		int radius)
+		int border)
 {
+	session_t *ps = cw->mainwin->ps;
+	int inner_w = cw->mini.width, inner_h = cw->mini.height;
 	if (!tint || !tint->alpha || border <= 0 || inner_w <= 0 || inner_h <= 0)
 		return;
 
@@ -44,40 +44,10 @@ XRenderTintBorder(session_t *ps,
 
 	gcv.foreground = 0xFF;
 	XChangeGC(ps->dpy, gc, GCForeground, &gcv);
-	if (radius > 0) {
-		int outer_radius = MIN(radius + border, MIN(w / 2, h / 2));
-		int inner_radius = MIN(radius, MIN(inner_w / 2, inner_h / 2));
-		int outer_dia = outer_radius * 2;
-		int inner_dia = inner_radius * 2;
-
-		XFillArc(ps->dpy, pm, gc, 0, 0, outer_dia, outer_dia, 90 * 64, 90 * 64);
-		XFillArc(ps->dpy, pm, gc, w - outer_dia, 0, outer_dia, outer_dia, 0, 90 * 64);
-		XFillArc(ps->dpy, pm, gc, w - outer_dia, h - outer_dia, outer_dia, outer_dia, 270 * 64, 90 * 64);
-		XFillArc(ps->dpy, pm, gc, 0, h - outer_dia, outer_dia, outer_dia, 180 * 64, 90 * 64);
-		XFillRectangle(ps->dpy, pm, gc, outer_radius, 0, w - 2 * outer_radius, outer_radius);
-		XFillRectangle(ps->dpy, pm, gc, outer_radius, h - outer_radius, w - 2 * outer_radius, outer_radius);
-		XFillRectangle(ps->dpy, pm, gc, 0, outer_radius, w, h - 2 * outer_radius);
-
-		gcv.foreground = 0;
-		XChangeGC(ps->dpy, gc, GCForeground, &gcv);
-		XFillArc(ps->dpy, pm, gc, border, border, inner_dia, inner_dia, 90 * 64, 90 * 64);
-		XFillArc(ps->dpy, pm, gc, border + inner_w - inner_dia, border, inner_dia, inner_dia, 0, 90 * 64);
-		XFillArc(ps->dpy, pm, gc, border + inner_w - inner_dia, border + inner_h - inner_dia,
-				inner_dia, inner_dia, 270 * 64, 90 * 64);
-		XFillArc(ps->dpy, pm, gc, border, border + inner_h - inner_dia, inner_dia, inner_dia, 180 * 64, 90 * 64);
-		XFillRectangle(ps->dpy, pm, gc, border + inner_radius, border,
-				inner_w - 2 * inner_radius, inner_radius);
-		XFillRectangle(ps->dpy, pm, gc, border + inner_radius, border + inner_h - inner_radius,
-				inner_w - 2 * inner_radius, inner_radius);
-		XFillRectangle(ps->dpy, pm, gc, border, border + inner_radius,
-				inner_w, inner_h - 2 * inner_radius);
-	}
-	else {
-		XFillRectangle(ps->dpy, pm, gc, 0, 0, w, h);
-		gcv.foreground = 0;
-		XChangeGC(ps->dpy, gc, GCForeground, &gcv);
-		XFillRectangle(ps->dpy, pm, gc, border, border, inner_w, inner_h);
-	}
+	clientwin_fill_shape(cw, pm, gc, border, border);
+	gcv.foreground = 0;
+	XChangeGC(ps->dpy, gc, GCForeground, &gcv);
+	clientwin_fill_shape(cw, pm, gc, border, 0);
 
 	XFreeGC(ps->dpy, gc);
 
@@ -103,10 +73,6 @@ mainwin_render_tint_border(ClientWin *cw, XRenderColor *tint, int border)
 
 	int x = cw->mini.x - border;
 	int y = cw->mini.y - border;
-	if (!ps->o.pseudoTrans) {
-		x -= mw->x;
-		y -= mw->y;
-	}
 
 	int w = cw->mini.width + border * 2;
 	int h = cw->mini.height + border * 2;
@@ -114,9 +80,7 @@ mainwin_render_tint_border(ClientWin *cw, XRenderColor *tint, int border)
 		return;
 
 	Picture dst = XRenderCreatePicture(ps->dpy, mw->window, mw->format, 0, NULL);
-	XRenderTintBorder(ps, mw->window, dst, tint, x, y,
-			cw->mini.width, cw->mini.height, border,
-			ps->o.cornerRadius * mw->multiplier);
+	XRenderTintBorder(cw, mw->window, dst, tint, x, y, border);
 	XRenderFreePicture(ps->dpy, dst);
 
 	foreach_dlist (mw->panels) {
@@ -132,8 +96,8 @@ mainwin_render_tint_border(ClientWin *cw, XRenderColor *tint, int border)
 			local_y = y - cover->src.y + mw->y;
 		}
 		else {
-			int cover_x = cover->mini.x - (ps->o.pseudoTrans ? 0 : mw->x);
-			int cover_y = cover->mini.y - (ps->o.pseudoTrans ? 0 : mw->y);
+			int cover_x = cover->mini.x;
+			int cover_y = cover->mini.y;
 			local_x = x - cover_x;
 			local_y = y - cover_y;
 		}
@@ -142,9 +106,8 @@ mainwin_render_tint_border(ClientWin *cw, XRenderColor *tint, int border)
 				|| local_x + w <= 0 || local_y + h <= 0)
 			continue;
 
-		XRenderTintBorder(ps, cover->mini.window, cover->destination, tint,
-				local_x, local_y, cw->mini.width, cw->mini.height,
-				border, ps->o.cornerRadius * mw->multiplier);
+		XRenderTintBorder(cw, cover->mini.window, cover->destination, tint,
+				local_x, local_y, border);
 	}
 }
 
@@ -175,6 +138,9 @@ find_argb_visual (Display *dpy, int scr)
 	return visual;
 }
 
+static void
+mainwin_update_geometry(MainWin *mw);
+
 MainWin *
 mainwin_create(session_t *ps) {
 	Display * const dpy = ps->dpy;
@@ -191,22 +157,20 @@ mainwin_create(session_t *ps) {
 	mw->bg_pixmap = None;
 	mw->background = None;
 
-#ifdef CFG_XINERAMA
-	mw->xin_info = mw->xin_active = 0;
-	mw->xin_screens = 0;
-#endif /* CFG_XINERAMA */
-	
+	mw->nmonitors = mw->active_monitor = 0;
+	mw->monitor = NULL;
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+	mw->mm_multiplier = NULL;
+	mw->mm_xoff = mw->mm_yoff = NULL;
+#endif
+
 	// mw->pressed = mw->focus = 0;
 	mw->pressed = mw->client_to_focus = 0;
 	mw->clientondesktop = 0;
 	mw->focuslist = 0;
 	mw->refocus = false;
 
-	XWindowAttributes rootattr;
-	XGetWindowAttributes(dpy, ps->root, &rootattr);
-	mw->x = mw->y = 0;
-	mw->width = rootattr.width;
-	mw->height = rootattr.height;
+	mainwin_update_geometry(mw);
 
 	if (!ps->o.pseudoTrans) {
 		mw->depth  = 32;
@@ -506,60 +470,157 @@ mainwin_render_borders(MainWin *mw)
 	}
 }
 
-void
-mainwin_update(MainWin *mw)
+static void
+mainwin_update_geometry(MainWin *mw)
 {
-#ifdef CFG_XINERAMA
 	session_t * const ps = mw->ps;
+	bool queried_monitor = false;
 
-	XineramaScreenInfo *iter;
-	int i;
+#ifdef CFG_XRANDR
+	XRRMonitorInfo *xrr_monitors =
+		XRRGetMonitors(ps->dpy, ps->root, True, &mw->nmonitors);
+
+	if (xrr_monitors && mw->nmonitors > 0) {
+		if (mw->monitor)
+			free(mw->monitor);
+		mw->monitor = calloc(mw->nmonitors, sizeof(*mw->monitor));
+		if (mw->mm_multiplier)
+			free(mw->mm_multiplier);
+		mw->mm_multiplier = calloc(mw->nmonitors, sizeof(float));
+		if (mw->mm_xoff)
+			free(mw->mm_xoff);
+		mw->mm_xoff = calloc(mw->nmonitors, sizeof(int));
+		if (mw->mm_yoff)
+			free(mw->mm_yoff);
+		mw->mm_yoff = calloc(mw->nmonitors, sizeof(int));
+		for (int i = 0; i < mw->nmonitors; ++i) {
+			mw->monitor[i].x = xrr_monitors[i].x;
+			mw->monitor[i].y = xrr_monitors[i].y;
+			mw->monitor[i].width = xrr_monitors[i].width;
+			mw->monitor[i].height = xrr_monitors[i].height;
+		}
+
+		queried_monitor = true;
+		XRRFreeMonitors(xrr_monitors);
+
+		printfdf(false, "(): XRandR is enabled (%d monitors).", mw->nmonitors);
+	}
+#endif
+
+#ifdef CFG_XINERAMA
+	if (!queried_monitor && XineramaIsActive(ps->dpy)) {
+		XineramaScreenInfo *iter0, *iter1;
+		iter0 = iter1 = XineramaQueryScreens(ps->dpy, &mw->nmonitors);
+		if (iter1 && mw->nmonitors) {
+			if (mw->monitor)
+				free(mw->monitor);
+			mw->monitor = calloc(mw->nmonitors, sizeof(*mw->monitor));
+            if (mw->mm_multiplier)
+                free(mw->mm_multiplier);
+			mw->mm_multiplier = calloc(mw->nmonitors, sizeof(float));
+            if (mw->mm_xoff)
+                free(mw->mm_xoff);
+			mw->mm_xoff = calloc(mw->nmonitors, sizeof(int));
+            if (mw->mm_yoff)
+                free(mw->mm_yoff);
+			mw->mm_yoff = calloc(mw->nmonitors, sizeof(int));
+
+			for(int i = 0; i < mw->nmonitors; ++i)
+			{
+				mw->monitor[i].x = iter1->x_org;
+				mw->monitor[i].y = iter1->y_org;
+				mw->monitor[i].width = iter1->width;
+				mw->monitor[i].height = iter1->height;
+				iter1++;
+			}
+
+			queried_monitor = true;
+			XFree(iter0);
+
+			printfdf(false, "(): Xinerama is enabled (%d monitors).", mw->nmonitors);
+		}
+	}
+#endif
+
+	if (!queried_monitor) {
+		XWindowAttributes rootattr;
+		XGetWindowAttributes(ps->dpy, ps->root, &rootattr);
+
+		mw->x = 0;
+		mw->y = 0;
+		mw->width = rootattr.width;
+		mw->height = rootattr.height;
+
+		mw->nmonitors = 1;
+		mw->active_monitor = 0;
+		if(mw->monitor)
+			XFree(mw->monitor);
+		mw->monitor = calloc(mw->nmonitors, sizeof(*mw->monitor));
+
+		mw->monitor[0].x = 0;
+		mw->monitor[0].y = 0;
+		mw->monitor[0].width = rootattr.width;
+		mw->monitor[0].height = rootattr.height;
+
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+		if (mw->mm_multiplier)
+			free(mw->mm_multiplier);
+		mw->mm_multiplier = calloc(mw->nmonitors, sizeof(float));
+		if (mw->mm_xoff)
+			free(mw->mm_xoff);
+		mw->mm_xoff = calloc(mw->nmonitors, sizeof(int));
+		if (mw->mm_yoff)
+			free(mw->mm_yoff);
+		mw->mm_yoff = calloc(mw->nmonitors, sizeof(int));
+#endif
+	}
+
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+	{
+		int minx=INT_MAX, miny=INT_MAX, maxx=INT_MIN, maxy=INT_MIN;
+		for (int i = 0; i < mw->nmonitors; ++i) {
+			minx = MIN(minx, mw->monitor[i].x);
+			miny = MIN(miny, mw->monitor[i].y);
+			maxx = MAX(maxx, mw->monitor[i].x + mw->monitor[i].width);
+			maxy = MAX(maxy, mw->monitor[i].y + mw->monitor[i].height);
+		}
+		mw->x = minx;
+		mw->y = miny;
+		mw->width = maxx - minx;
+		mw->height = maxy - miny;
+	}
+
 	Window dummy_w;
 	int root_x, root_y, dummy_i;
 	unsigned int dummy_u;
-
-	if (ps->xinfo.xinerama_exist && XineramaIsActive(ps->dpy)) {
-		if(mw->xin_info)
-			XFree(mw->xin_info);
-		mw->xin_info = XineramaQueryScreens(ps->dpy, &mw->xin_screens);
-		printfdf(false, "(): Xinerama is enabled (%d screens).", mw->xin_screens);
-	}
+	XQueryPointer(ps->dpy, ps->root, &dummy_w, &dummy_w,
+			&root_x, &root_y, &dummy_i, &dummy_i, &dummy_u);
+	printfdf(false, "(): Multi-monitor --> querying pointer... +%i+%i\n",
+			root_x, root_y);
 	
-	if(! mw->xin_info || ! mw->xin_screens)
+	for (int i = 0; i < mw->nmonitors; ++i)
 	{
-		mainwin_update_background(mw);
-		return;
-	}
-	
-	printfdf(false, "(): XINERAMA --> querying pointer... ");
-	XQueryPointer(ps->dpy, ps->root, &dummy_w, &dummy_w, &root_x, &root_y, &dummy_i, &dummy_i, &dummy_u);
-	printfdf(false, "(): XINERAMA +%i+%i\n", root_x, root_y);
-	
-	printfdf(false, "(): XINERAMA --> figuring out which screen we're on... ");
-	iter = mw->xin_info;
-	for(i = 0; i < mw->xin_screens; ++i)
-	{
-		if(root_x >= iter->x_org && root_x < iter->x_org + iter->width &&
-		   root_y >= iter->y_org && root_y < iter->y_org + iter->height)
+		if (root_x >= mw->monitor[i].x &&
+				root_x < mw->monitor[i].x + mw->monitor[i].width &&
+			root_y >= mw->monitor[i].y &&
+			root_y < mw->monitor[i].y + mw->monitor[i].height)
 		{
-			printfdf(false, "(): XINERAMA screen %i %ix%i+%i+%i\n", iter->screen_number, iter->width, iter->height, iter->x_org, iter->y_org);
+			printfdf(false, "(): Multi-monitor --> active on monitor %i %ix%i+%i+%i\n",
+					i, mw->monitor[i].width, mw->monitor[i].height,
+					mw->monitor[i].x, mw->monitor[i].y);
+			mw->active_monitor = i;
 			break;
 		}
-		iter++;
 	}
-	if(i == mw->xin_screens)
-	{
-		printfdf(false, "(): XINERAMA unknown\n");
-		return;
-	}
-	mw->x = iter->x_org;
-	mw->y = iter->y_org;
-	mw->width = iter->width;
-	mw->height = iter->height;
-	XMoveResizeWindow(ps->dpy, mw->window, iter->x_org, iter->y_org, mw->width, mw->height);
+#endif
 
-	mw->xin_active = iter;
-#endif /* CFG_XINERAMA */
+	XMoveResizeWindow(ps->dpy, mw->window, mw->x, mw->y, mw->width, mw->height);
+}
+
+void
+mainwin_update(MainWin *mw)
+{
+	mainwin_update_geometry(mw);
 	mainwin_update_background(mw);
 }
 
@@ -631,11 +692,18 @@ mainwin_destroy(MainWin *mw) {
 
 	XDestroyWindow(ps->dpy, mw->window);
 	
-#ifdef CFG_XINERAMA
-	if(mw->xin_info)
-		XFree(mw->xin_info);
-#endif /* CFG_XINERAMA */
-	
+	if (mw->monitor)
+		free(mw->monitor);
+
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+	if (mw->mm_multiplier)
+		free(mw->mm_multiplier);
+	if (mw->mm_xoff)
+		free(mw->mm_xoff);
+	if (mw->mm_yoff)
+		free(mw->mm_yoff);
+#endif
+
 	free(mw->keysyms_Up);
 	free(mw->keysyms_Down);
 	free(mw->keysyms_Left);

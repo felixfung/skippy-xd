@@ -65,7 +65,8 @@ struct _clientwin_t {
 	int x, y;
 	float fx, fy, fx2, fy2, vx, vy;
 	struct _Tooltip *tooltip;
-    int slots;
+	int slots;
+	int monitor;
 };
 
 #define CLIENTWT_INIT { \
@@ -83,7 +84,21 @@ clientwin_free_res2(session_t *ps, ClientWin *cw) {
 	free_pictw(ps, &cw->pict_filled);
 }
 
+static float inline
+clientwin_get_multiplier(ClientWin *cw) {
+	if (cw->paneltype == WINTYPE_PANEL || cw->paneltype == WINTYPE_DESKTOP)
+	return 1.0f;
+	float multiplier = cw->mainwin->multiplier;
+#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+	if (cw->mainwin->ps->o.mode == PROGMODE_EXPOSE
+			&& !cw->mainwin->ps->o.exposeOnCurrentMonitor)
+		multiplier = cw->mainwin->mm_multiplier[cw->monitor];
+#endif
+	return multiplier;
+}
+void clientwin_fill_shape(ClientWin *cw, Drawable drawable, GC gc, int offset, int expand);
 int clientwin_validate_panel(dlist *, void *);
+int clientwin_filter_monitor(dlist *, void *);
 int clientwin_filter_func(dlist *, void *);
 ClientWin *clientwin_create(MainWin *, Window);
 void clientwin_destroy(ClientWin *, bool destroyed);
