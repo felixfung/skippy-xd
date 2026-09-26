@@ -159,10 +159,8 @@ mainwin_create(session_t *ps) {
 
 	mw->nmonitors = mw->active_monitor = 0;
 	mw->monitor = NULL;
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
-	mw->mm_multiplier = NULL;
-	mw->mm_xoff = mw->mm_yoff = NULL;
-#endif
+	mw->multiplier = NULL;
+	mw->xoff = mw->yoff = NULL;
 
 	// mw->pressed = mw->focus = 0;
 	mw->pressed = mw->client_to_focus = 0;
@@ -484,15 +482,15 @@ mainwin_update_geometry(MainWin *mw)
 		if (mw->monitor)
 			free(mw->monitor);
 		mw->monitor = calloc(mw->nmonitors, sizeof(*mw->monitor));
-		if (mw->mm_multiplier)
-			free(mw->mm_multiplier);
-		mw->mm_multiplier = calloc(mw->nmonitors, sizeof(float));
-		if (mw->mm_xoff)
-			free(mw->mm_xoff);
-		mw->mm_xoff = calloc(mw->nmonitors, sizeof(int));
-		if (mw->mm_yoff)
-			free(mw->mm_yoff);
-		mw->mm_yoff = calloc(mw->nmonitors, sizeof(int));
+		if (mw->multiplier)
+			free(mw->multiplier);
+		mw->multiplier = calloc(mw->nmonitors, sizeof(float));
+		if (mw->xoff)
+			free(mw->xoff);
+		mw->xoff = calloc(mw->nmonitors, sizeof(int));
+		if (mw->yoff)
+			free(mw->yoff);
+		mw->yoff = calloc(mw->nmonitors, sizeof(int));
 		for (int i = 0; i < mw->nmonitors; ++i) {
 			mw->monitor[i].x = xrr_monitors[i].x;
 			mw->monitor[i].y = xrr_monitors[i].y;
@@ -515,15 +513,15 @@ mainwin_update_geometry(MainWin *mw)
 			if (mw->monitor)
 				free(mw->monitor);
 			mw->monitor = calloc(mw->nmonitors, sizeof(*mw->monitor));
-            if (mw->mm_multiplier)
-                free(mw->mm_multiplier);
-			mw->mm_multiplier = calloc(mw->nmonitors, sizeof(float));
-            if (mw->mm_xoff)
-                free(mw->mm_xoff);
-			mw->mm_xoff = calloc(mw->nmonitors, sizeof(int));
-            if (mw->mm_yoff)
-                free(mw->mm_yoff);
-			mw->mm_yoff = calloc(mw->nmonitors, sizeof(int));
+            if (mw->multiplier)
+                free(mw->multiplier);
+			mw->multiplier = calloc(mw->nmonitors, sizeof(float));
+            if (mw->xoff)
+                free(mw->xoff);
+			mw->xoff = calloc(mw->nmonitors, sizeof(int));
+            if (mw->yoff)
+                free(mw->yoff);
+			mw->yoff = calloc(mw->nmonitors, sizeof(int));
 
 			for(int i = 0; i < mw->nmonitors; ++i)
 			{
@@ -562,17 +560,15 @@ mainwin_update_geometry(MainWin *mw)
 		mw->monitor[0].width = rootattr.width;
 		mw->monitor[0].height = rootattr.height;
 
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
-		if (mw->mm_multiplier)
-			free(mw->mm_multiplier);
-		mw->mm_multiplier = calloc(mw->nmonitors, sizeof(float));
-		if (mw->mm_xoff)
-			free(mw->mm_xoff);
-		mw->mm_xoff = calloc(mw->nmonitors, sizeof(int));
-		if (mw->mm_yoff)
-			free(mw->mm_yoff);
-		mw->mm_yoff = calloc(mw->nmonitors, sizeof(int));
-#endif
+		if (mw->multiplier)
+			free(mw->multiplier);
+		mw->multiplier = calloc(mw->nmonitors, sizeof(float));
+		if (mw->xoff)
+			free(mw->xoff);
+		mw->xoff = calloc(mw->nmonitors, sizeof(int));
+		if (mw->yoff)
+			free(mw->yoff);
+		mw->yoff = calloc(mw->nmonitors, sizeof(int));
 	}
 
 #if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
@@ -698,14 +694,12 @@ mainwin_destroy(MainWin *mw) {
 	if (mw->monitor)
 		free(mw->monitor);
 
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
-	if (mw->mm_multiplier)
-		free(mw->mm_multiplier);
-	if (mw->mm_xoff)
-		free(mw->mm_xoff);
-	if (mw->mm_yoff)
-		free(mw->mm_yoff);
-#endif
+	if (mw->multiplier)
+		free(mw->multiplier);
+	if (mw->xoff)
+		free(mw->xoff);
+	if (mw->yoff)
+		free(mw->yoff);
 
 	free(mw->keysyms_Up);
 	free(mw->keysyms_Down);

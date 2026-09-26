@@ -87,14 +87,11 @@ clientwin_free_res2(session_t *ps, ClientWin *cw) {
 static float inline
 clientwin_get_multiplier(ClientWin *cw) {
 	if (cw->paneltype == WINTYPE_PANEL || cw->paneltype == WINTYPE_DESKTOP)
-	return 1.0f;
-	float multiplier = cw->mainwin->multiplier;
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
-	if (cw->mainwin->ps->o.mode == PROGMODE_EXPOSE
-			&& !cw->mainwin->ps->o.exposeOnCurrentMonitor)
-		multiplier = cw->mainwin->mm_multiplier[cw->monitor];
-#endif
-	return multiplier;
+		return 1.0f;
+	MainWin *mw = cw->mainwin;
+	if (mw->ps->o.mode == PROGMODE_EXPOSE && !mw->ps->o.exposeOnCurrentMonitor)
+		return mw->multiplier[cw->monitor];
+	return mw->multiplier[mw->active_monitor];
 }
 void clientwin_fill_shape(ClientWin *cw, Drawable drawable, GC gc, int offset, int expand);
 int clientwin_validate_panel(dlist *, void *);

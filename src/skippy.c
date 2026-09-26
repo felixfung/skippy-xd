@@ -806,16 +806,15 @@ anime(
 )
 {
 	for (int i=0; i<mw->nmonitors; i++) {
-		float mtarget = mw->multiplier;
-		int xoff = mw->xoff, yoff = mw->yoff;
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+		float mtarget = mw->multiplier[mw->active_monitor];
+		int xoff = mw->xoff[mw->active_monitor],
+			yoff = mw->yoff[mw->active_monitor];
 		if (mw->ps->o.mode == PROGMODE_EXPOSE
 				&& !mw->ps->o.exposeOnCurrentMonitor) {
-			mtarget = mw->mm_multiplier[i];
-			xoff = mw->mm_xoff[i];
-			yoff = mw->mm_yoff[i];
+			mtarget = mw->multiplier[i];
+			xoff = mw->xoff[i];
+			yoff = mw->yoff[i];
 		}
-#endif
 
 		float multiplier = 1.0 + timeslice * (mtarget - 1.0);
 		mainwin_transform(mw, multiplier);
@@ -1301,9 +1300,6 @@ calculatePanelBorders(MainWin *mw, MonitorCoord monitor,
 		if (cw->paneltype != WINTYPE_PANEL)
 			continue;
 
-		int midx = cw->src.x + cw->src.width / 2;
-		int midy = cw->src.y + cw->src.height / 2;
-
 		if (!(INTERSECTS(monitor.x, monitor.y, monitor.width, monitor.height,
 				cw->x, cw->y, cw->src.width, cw->src.height)))
 			continue;
@@ -1430,20 +1426,16 @@ init_paging_layout(MainWin *mw, Window leader)
 	unsigned int totalwidth = screenwidth * (desktop_width + mw->distance) - mw->distance;
 	unsigned int totalheight = screenheight * (desktop_height + mw->distance) - mw->distance;
 
-	init_multiplier(mw, mw->monitor[mw->active_monitor], totalwidth, totalheight, false, 1,
-			&mw->multiplier, &mw->xoff, &mw->yoff);
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
-	mw->mm_multiplier[mw->active_monitor] = mw->multiplier;
-	mw->mm_xoff[mw->active_monitor] = mw->xoff;
-	mw->mm_yoff[mw->active_monitor] = mw->yoff;
-#endif
+	init_multiplier(mw, mw->monitor[mw->active_monitor], totalwidth, totalheight,
+			false, 1, &mw->multiplier[mw->active_monitor],
+			&mw->xoff[mw->active_monitor], &mw->yoff[mw->active_monitor]);
 
 	mw->desktoptransform.matrix[0][0] = 1.0;
 	mw->desktoptransform.matrix[0][1] = 0.0;
-	mw->desktoptransform.matrix[0][2] = mw->xoff;
+	mw->desktoptransform.matrix[0][2] = mw->xoff[mw->active_monitor];
 	mw->desktoptransform.matrix[1][0] = 0.0;
 	mw->desktoptransform.matrix[1][1] = 1.0;
-	mw->desktoptransform.matrix[1][2] = mw->yoff;
+	mw->desktoptransform.matrix[1][2] = mw->yoff[mw->active_monitor];
 	mw->desktoptransform.matrix[2][0] = 0.0;
 	mw->desktoptransform.matrix[2][1] = 0.0;
 	mw->desktoptransform.matrix[2][2] = 1.0;
@@ -1500,13 +1492,15 @@ init_paging_layout(MainWin *mw, Window leader)
 
 			cw->zombie = false;
 
-			cw->x = cw->src.x = (i * (desktop_width + mw->distance)) * mw->multiplier;
-			cw->y = cw->src.y = (j * (desktop_height + mw->distance)) * mw->multiplier;
+			float multiplier = mw->multiplier[mw->active_monitor];
+			cw->x = cw->src.x = (i * (desktop_width + mw->distance)) * multiplier;
+			cw->y = cw->src.y = (j * (desktop_height + mw->distance)) * multiplier;
 			cw->src.width = desktop_width;
 			cw->src.height = desktop_height;
 
 			clientwin_prepmove(cw);
-			clientwin_move(cw, mw->multiplier, mw->xoff, mw->yoff, 1);
+			clientwin_move(cw, multiplier,
+					mw->xoff[mw->active_monitor], mw->yoff[mw->active_monitor], 1);
 
 			if (mw->ps->o.tooltip_show) {
 				if (cw->tooltip)
@@ -1570,13 +1564,7 @@ desktopwin_map(ClientWin *cw)
 
 	if (ps->o.pseudoTrans)
 	{
-		int xoff = mw->xoff, yoff = mw->yoff;
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
-		if (false && !ps->o.exposeOnCurrentMonitor) {
-			xoff = mw->mm_xoff[mw->active_monitor];
-			yoff = mw->mm_yoff[mw->active_monitor];
-		}
-#endif
+		int xoff = mw->xoff[mw->active_monitor], yoff = mw->yoff[mw->active_monitor];
 		mw->desktoptransform.matrix[0][2] += cw->mini.x - xoff;
 		mw->desktoptransform.matrix[1][2] += cw->mini.y - yoff;
 		XRenderSetPictureTransform(ps->dpy, cw->origin, &mw->desktoptransform);
@@ -1620,8 +1608,8 @@ skippy_activate(MainWin *mw, Window leader)
 		init_paging_layout(mw, leader);
 		foreach_dlist(mw->clientondesktop) {
 			ClientWin *cw = iter->data;
-			cw->x *= mw->multiplier;
-			cw->y *= mw->multiplier;
+			cw->x *= mw->multiplier[mw->active_monitor];
+			cw->y *= mw->multiplier[mw->active_monitor];
 		}
 	}
 	else {
@@ -1629,60 +1617,48 @@ skippy_activate(MainWin *mw, Window leader)
 		if (ps->o.mode == PROGMODE_EXPOSE)
 			layout = ps->o.exposeLayout;
 
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
-		if (ps->o.mode == PROGMODE_EXPOSE && !ps->o.exposeOnCurrentMonitor) {
-			for (int i=0; i<mw->nmonitors; i++) {
-				dlist *windows = dlist_first(dlist_find_all(mw->clientondesktop,
-						(dlist_match_func) clientwin_filter_monitor, &mw->monitor[i]));
-				unsigned int newwidth = 100, newheight = 100;
-				layout_run(mw, windows, mw->monitor[i], layout, &newwidth, &newheight);
-				init_multiplier(mw, mw->monitor[i],
-						newwidth, newheight, mw->ps->o.upscaleWindows, 2,
-						&mw->mm_multiplier[i], &mw->mm_xoff[i], &mw->mm_yoff[i]);
-
-				foreach_dlist(windows) {
-					ClientWin *cw = iter->data;
-					cw->monitor = i;
-					cw->x *= mw->mm_multiplier[i];
-					cw->y *= mw->mm_multiplier[i];
-					// use src0 width/height for restoration later
-					if (cw->paneltype != WINTYPE_PANEL && cw->paneltype != WINTYPE_DESKTOP)
-						clientwin_update2(cw);
-					cw->src.width = cw->src0.width * mw->mm_multiplier[i];
-					cw->src.height = cw->src0.height * mw->mm_multiplier[i];
-				}
-				dlist_free(windows);
-			}
-
-			init_focus(mw, layout, mw->clientondesktop, leader);
-			// use src0 width/height for restoration here
-			foreach_dlist(mw->clientondesktop) {
-				ClientWin *cw = iter->data;
-				cw->src.width = cw->src0.width;
-				cw->src.height = cw->src0.height;
-			}
+		int i0 = mw->active_monitor, i1 = i0;
+		bool multimonitor =  ps->o.mode == PROGMODE_EXPOSE && !ps->o.exposeOnCurrentMonitor;
+		if (multimonitor) {
+			i0 = 0;
+			i1 = mw->nmonitors;
 		}
-		else
-#endif
-		{
-			dlist *windows = dlist_dup(mw->clientondesktop);
+
+		for (int i=i0; i<=i1; i++) {
+			dlist *windows = NULL;
+			if (multimonitor)
+				windows = dlist_first(dlist_find_all(mw->clientondesktop,
+						(dlist_match_func) clientwin_filter_monitor, &mw->monitor[i]));
+			else
+				windows = dlist_dup(mw->clientondesktop);
+
 			unsigned int newwidth = 100, newheight = 100;
-			layout_run(mw, windows, mw->monitor[mw->active_monitor], layout, &newwidth, &newheight);
-			init_multiplier(mw, mw->monitor[mw->active_monitor],
+			layout_run(mw, windows, mw->monitor[i], layout, &newwidth, &newheight);
+			init_multiplier(mw, mw->monitor[i],
 					newwidth, newheight, mw->ps->o.upscaleWindows, 2,
-					&mw->multiplier, &mw->xoff, &mw->yoff);
-			init_focus(mw, layout, mw->clientondesktop, leader);
+					&mw->multiplier[i], &mw->xoff[i], &mw->yoff[i]);
 
 			foreach_dlist(windows) {
 				ClientWin *cw = iter->data;
-				cw->x *= mw->multiplier;
-				cw->y *= mw->multiplier;
+				cw->monitor = i;
+				cw->x *= mw->multiplier[i];
+				cw->y *= mw->multiplier[i];
+				// use src0 width/height for restoration later
 				if (cw->paneltype != WINTYPE_PANEL && cw->paneltype != WINTYPE_DESKTOP)
 					clientwin_update2(cw);
+				cw->src.width = cw->src0.width * mw->multiplier[i];
+				cw->src.height = cw->src0.height * mw->multiplier[i];
 			}
 			dlist_free(windows);
 		}
 
+		init_focus(mw, layout, mw->clientondesktop, leader);
+		// use src0 width/height for restoration here
+		foreach_dlist(mw->clientondesktop) {
+			ClientWin *cw = iter->data;
+			cw->src.width = cw->src0.width;
+			cw->src.height = cw->src0.height;
+		}
 	}
 
 	foreach_dlist(mw->panels) {
@@ -1984,18 +1960,16 @@ mainloop(session_t *ps, bool activate_on_start) {
 				if (ps->o.mode == PROGMODE_PAGING && mw->ps->o.preservePages) {
 					foreach_dlist (mw->dminis) {
 						ClientWin *cw = (ClientWin *) iter->data;
-						int xoff = mw->xoff, yoff = mw->yoff;
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
-						if (false && !ps->o.exposeOnCurrentMonitor) {
-							xoff = mw->mm_xoff[mw->active_monitor];
-							yoff = mw->mm_yoff[mw->active_monitor];
-						}
+
+						float multiplier = mw->multiplier[mw->active_monitor];
+						int xoff = mw->xoff[mw->active_monitor],
+							yoff = mw->yoff[mw->active_monitor];
 						for (int i = 0; i < mw->nmonitors; ++i)
 						{
-							int s_x = mw->monitor[i].x * mw->multiplier + cw->x;
-							int s_y = mw->monitor[i].y * mw->multiplier + cw->y;
-							int s_w = mw->monitor[i].width * mw->multiplier - ps->o.leftFrameBorder;
-							int s_h = mw->monitor[i].height * mw->multiplier - ps->o.topFrameBorder;
+							int s_x = mw->monitor[i].x * multiplier + cw->x;
+							int s_y = mw->monitor[i].y * multiplier + cw->y;
+							int s_w = mw->monitor[i].width * multiplier - ps->o.leftFrameBorder;
+							int s_h = mw->monitor[i].height * multiplier - ps->o.topFrameBorder;
 
 							XRoundedRectComposite(mw->ps,
 									mw->ps->o.from, mw->background,
@@ -2005,19 +1979,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 									s_y + yoff + ps->o.topFrameBorder,
 									s_w,
 									s_h,
-									ps->o.cornerRadius * mw->multiplier);
+									ps->o.cornerRadius * multiplier);
 						}
-#else
-						XRoundedRectComposite(mw->ps,
-								mw->ps->o.from, mw->background,
-								cw->x + xoff + mw->x + ps->o.leftFrameBorder,
-								cw->y + yoff + mw->y + ps->o.topFrameBorder,
-								cw->x + xoff + ps->o.leftFrameBorder,
-								cw->y + yoff + ps->o.topFrameBorder,
-								cw->src.width * mw->multiplier,
-								cw->src.height * mw->multiplier,
-								ps->o.cornerRadius * mw->multiplier);
-#endif
 						XClearWindow(ps->dpy, mw->window);
 					}
 				}
