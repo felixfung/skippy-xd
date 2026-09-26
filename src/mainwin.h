@@ -41,9 +41,8 @@ struct _mainwin_t {
 	Window window;
 	Picture background;
 	Pixmap bg_pixmap;
-	int x, y, xoff, yoff;
+	int x, y;
 	int width, height, distance;
-	float multiplier;
 
 	XRenderPictFormat *format;
 	XTransform transform, desktoptransform;
@@ -84,10 +83,8 @@ struct _mainwin_t {
 
 	int nmonitors, active_monitor;
 	MonitorCoord *monitor;
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
-	float *mm_multiplier;
-	int *mm_xoff, *mm_yoff;
-#endif
+	float *multiplier;
+	int *xoff, *yoff;
 
 	/// @brief The client window to eventually focus.
 	ClientWin *client_to_focus;

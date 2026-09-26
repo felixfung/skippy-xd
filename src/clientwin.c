@@ -49,28 +49,25 @@ clientwin_fill_shape(ClientWin *cw, Drawable drawable, GC gc, int offset, int ex
 	MainWin *mw = cw->mainwin;
 	session_t *ps = mw->ps;
 
-	int radius = ps->o.cornerRadius * clientwin_get_multiplier(cw);
+	float multiplier = clientwin_get_multiplier(cw);
+	int radius = ps->o.cornerRadius * multiplier;
 	int count = 1;
 
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
 	bool page = ps->o.mode == PROGMODE_PAGING && ps->o.preservePages
 			&& cw->mode == CLIDISP_DESKTOP && mw->nmonitors > 0;
 	if (page)
 		count = mw->nmonitors;
-#endif
 
 	for (int i = 0; i < count; ++i) {
 		int x = 0, y = 0, w = cw->mini.width, h = cw->mini.height;
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
 		if (page) {
-			x = (int)(mw->monitor[i].x * mw->multiplier + cw->x)
-					+ mw->xoff + ps->o.leftFrameBorder - cw->mini.x;
-			y = (int)(mw->monitor[i].y * mw->multiplier + cw->y)
-					+ mw->yoff + ps->o.topFrameBorder - cw->mini.y;
-			w = mw->monitor[i].width * mw->multiplier - ps->o.leftFrameBorder;
-			h = mw->monitor[i].height * mw->multiplier - ps->o.topFrameBorder;
+			x = (int)(mw->monitor[i].x * multiplier + cw->x)
+					+ mw->xoff[mw->active_monitor] + ps->o.leftFrameBorder - cw->mini.x;
+			y = (int)(mw->monitor[i].y * multiplier + cw->y)
+					+ mw->yoff[mw->active_monitor] + ps->o.topFrameBorder - cw->mini.y;
+			w = mw->monitor[i].width * multiplier - ps->o.leftFrameBorder;
+			h = mw->monitor[i].height * multiplier - ps->o.topFrameBorder;
 		}
-#endif
 
 		if (w <= 0 || h <= 0)
 			continue;
@@ -656,30 +653,18 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 					topborder = ps->o.topFrameBorder;
 				}
 
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
 				for (int i = 0; i < mw->nmonitors; ++i)
 				{
 					int x = dwin->mini.x + mw->monitor[i].x - cw->mini.x + leftborder;
 					int y = dwin->mini.y + mw->monitor[i].y - cw->mini.y + topborder;
-					int width = mw->monitor[i].width * mw->multiplier;
-					int height = mw->monitor[i].height * mw->multiplier;
+					int width = mw->monitor[i].width * mw->multiplier[mw->active_monitor];
+					int height = mw->monitor[i].height * mw->multiplier[mw->active_monitor];
 
 					XRoundedRectComposite(mw->ps,
 							source, cw->destination,
 							x, y, x, y, width, height,
-							ps->o.cornerRadius * mw->multiplier);
+							ps->o.cornerRadius * mw->multiplier[mw->active_monitor]);
 				}
-#else
-				int x = dwin->mini.x - cw->mini.x + leftborder;
-				int y = dwin->mini.y - cw->mini.y + topborder;
-				int width = dwin->src.width * mw->multiplier;
-				int height = dwin->src.height * mw->multiplier;
-
-				XRoundedRectComposite(mw->ps,
-						source, cw->destination,
-						x, y, x, y, width, height,
-						ps->o.cornerRadius * mw->multiplier);
-#endif
 			}
 		}
 
@@ -718,31 +703,27 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 			}
 
 			if (tint && tint->alpha && tint_window) {
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
 				if (cw->mode == CLIDISP_DESKTOP)
 				{
 					for (int i = 0; i < mw->nmonitors; ++i)
 					{
-						s_x = mw->monitor[i].x * mw->multiplier;
-						s_y = mw->monitor[i].y * mw->multiplier;
-						s_w = mw->monitor[i].width * mw->multiplier;
-						s_h = mw->monitor[i].height * mw->multiplier;
+						s_x = mw->monitor[i].x * mw->multiplier[mw->active_monitor];
+						s_y = mw->monitor[i].y * mw->multiplier[mw->active_monitor];
+						s_w = mw->monitor[i].width * mw->multiplier[mw->active_monitor];
+						s_h = mw->monitor[i].height * mw->multiplier[mw->active_monitor];
 
 						XRoundedRectTint(mw->ps,
 								cw->destination, tint,
-								s_x, s_y, s_w, s_h, ps->o.cornerRadius * mw->multiplier);
+								s_x, s_y, s_w, s_h, ps->o.cornerRadius * mw->multiplier[mw->active_monitor]);
 
 						XClearArea(mw->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
 					}
 				}
 				else {
-#endif
 					XRenderFillRectangle(mw->ps->dpy, PictOpOver,
 							cw->destination, tint, s_x, s_y, s_w, s_h);
 					XClearArea(mw->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
 				}
-#endif
 			}
 		}
 
