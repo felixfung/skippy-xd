@@ -202,6 +202,7 @@ typedef struct {
 	int clientList;
 	bool pseudoTrans;
 
+	bool switchOnCurrentMonitor;
 	bool exposeOnCurrentMonitor;
 
 	char *wm_class;
@@ -299,6 +300,7 @@ typedef struct {
 	.clientList = 0, \
 	.pseudoTrans = true, \
 \
+	.switchOnCurrentMonitor = true, \
 	.exposeOnCurrentMonitor = false, \
 \
 	.wm_status = NULL, \
