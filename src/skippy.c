@@ -3147,7 +3147,7 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "layout", "exposeCycleDesktops", &ps->o.exposeCycleDesktops);
     config_get_int_wrap(config, "layout", "switchWaitDuration", &ps->o.switchWaitDuration, 0, 2000);
     config_get_bool_wrap(config, "layout", "switchCycleDuringWait", &ps->o.switchCycleDuringWait);
-    config_get_int_wrap(config, "layout", "distance", &ps->o.distance, 5, INT_MAX);
+    config_get_int_wrap(config, "layout", "minDistance", &ps->o.distance, 5, INT_MAX);
     config_get_bool_wrap(config, "layout", "upscaleWindows", &ps->o.upscaleWindows);
 
     config_get_int_wrap(config, "appearance", "animationDuration", &ps->o.animationDuration, 0, 2000);

@@ -67,8 +67,8 @@ switchCycleDuringWait = false
 switchCycleDesktops = false
 exposeCycleDesktops = false
 
-# Relative minimal pixel distance between windows
-distance = 50
+# minimal pixel distance (in relative scale) between windows
+minDistance = 50
 
 # Fill screen by upscaling windows
 upscaleWindows = false
