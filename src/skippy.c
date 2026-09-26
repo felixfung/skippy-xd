@@ -809,8 +809,10 @@ anime(
 		float mtarget = mw->multiplier[mw->active_monitor];
 		int xoff = mw->xoff[mw->active_monitor],
 			yoff = mw->yoff[mw->active_monitor];
-		if (mw->ps->o.mode == PROGMODE_EXPOSE
-				&& !mw->ps->o.exposeOnCurrentMonitor) {
+		if ((mw->ps->o.mode == PROGMODE_SWITCH
+				&& !mw->ps->o.switchOnCurrentMonitor)
+		 || (mw->ps->o.mode == PROGMODE_EXPOSE
+				&& !mw->ps->o.exposeOnCurrentMonitor)) {
 			mtarget = mw->multiplier[i];
 			xoff = mw->xoff[i];
 			yoff = mw->yoff[i];
@@ -1618,7 +1620,8 @@ skippy_activate(MainWin *mw, Window leader)
 			layout = ps->o.exposeLayout;
 
 		int i0 = mw->active_monitor, i1 = i0;
-		bool multimonitor =  ps->o.mode == PROGMODE_EXPOSE && !ps->o.exposeOnCurrentMonitor;
+		bool multimonitor = (ps->o.mode == PROGMODE_SWITCH && !ps->o.switchOnCurrentMonitor)
+				|| (ps->o.mode == PROGMODE_EXPOSE && !ps->o.exposeOnCurrentMonitor);
 		if (multimonitor) {
 			i0 = 0;
 			i1 = mw->nmonitors;
@@ -3088,6 +3091,8 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "system", "pseudoTrans", &ps->o.pseudoTrans);
 
 #if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+	config_get_bool_wrap(config, "multimonitor", "switchOnCurrentMonitor",
+			&ps->o.switchOnCurrentMonitor);
 	config_get_bool_wrap(config, "multimonitor", "exposeOnCurrentMonitor",
 			&ps->o.exposeOnCurrentMonitor);
 #endif

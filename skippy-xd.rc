@@ -45,6 +45,7 @@ pseudoTrans = true
 
 [multimonitor]
 
+switchOnCurrentMonitor = true
 exposeOnCurrentMonitor = false
 
 [layout]
