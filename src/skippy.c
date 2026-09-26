@@ -1509,6 +1509,9 @@ init_paging_layout(MainWin *mw, enum layoutmode layout, Window leader)
 			cw->slots = desktop_idx;
 			cw->mode = CLIDISP_DESKTOP;
 
+			// when ps->o.includeFrame this would be incorrectly set
+			cw->src.window = desktopwin;
+
 			{
 				unsigned char *str = wm_get_desktop_name(mw->ps, desktop_idx);
 				char *str1 = "skippy-xd page ";
@@ -1829,7 +1832,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 			dlist_free(mw->focuslist);
 
 			// free all mini desktop representations
-			dlist_free_with_func(mw->dminis, (dlist_free_func) clientwin_destroy);
+			foreach_dlist (mw->dminis) {
+				clientwin_destroy(iter->data, false);
+			}
+			dlist_free(mw->dminis);
 			mw->dminis = NULL;
 
 			foreach_dlist (mw->desktopwins) {
