@@ -63,10 +63,6 @@ switchWaitDuration = 100
 # Whether switch can cycle through windows
 switchCycleDuringWait = false
 
-# Enable to cycle through all virtual desktops
-switchCycleDesktops = false
-exposeCycleDesktops = false
-
 # minimal pixel distance (in relative scale) between windows
 minDistance = 50
 

@@ -696,7 +696,7 @@ exit_daemon(const char *pipePath) {
 }
 
 static void
-activate_via_fifo(session_t *ps, const char *pipePath) {
+activate_via_fifo(session_t *ps, const char *pipePath, int focus_initial) {
 	char master_command = 0;
 	if (ps->o.mode == PROGMODE_SWITCH)
 		master_command |= PIPECMD_SWITCH;
@@ -705,9 +705,9 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 	if (ps->o.mode == PROGMODE_PAGING)
 		master_command |= PIPECMD_PAGING;
 
-	if (ps->o.focus_initial > 0)
+	if (focus_initial > 0)
 		master_command |= PIPECMD_NEXT;
-	else if (ps->o.focus_initial < 0)
+	else if (focus_initial < 0)
 		master_command |= PIPECMD_PREV;
 
 	char command[BUF_LEN*2];
@@ -1233,7 +1233,7 @@ sort_focuslist_cosmos(MainWin *mw, dlist *list)
 }
 
 static void
-init_focus(MainWin *mw, enum layoutmode layout, dlist *windows, Window leader) {
+init_focus(MainWin *mw, enum layoutmode layout, dlist *windows) {
 	session_t *ps = mw->ps;
 
 	// ordering of client windows list
@@ -1245,39 +1245,36 @@ init_focus(MainWin *mw, enum layoutmode layout, dlist *windows, Window leader) {
 	else
 		dlist_reverse(mw->focuslist);
 
-	dlist *iter = dlist_find(mw->focuslist, clientwin_cmp_func, (void *) leader);
+	// for traditional alt-tab, start with the very first window
+	if (ps->o.mode == PROGMODE_SWITCH &&
+			(layout == LAYOUT_RECT || layout == LAYOUT_COMPACTRECT))
+		dlist_cycle(mw->focuslist, dlist_len(mw->focuslist) - 1);
 
-	if (iter) {
-		mw->client_to_focus_on_cancel = (ClientWin *) iter->data;
-		mw->focuslist = dlist_cycle(mw->focuslist,
-				dlist_index_of(mw->focuslist, iter));
-		if (ps->o.focus_initial != 0 && iter)
-		{
-			if (ps->o.focus_initial < 0)
-				ps->o.focus_initial = ps->o.focus_initial % dlist_len(mw->focuslist);
+	if (ps->o.mode == PROGMODE_SWITCH && layout == LAYOUT_COSMOS)
+		mw->focuslist = sort_focuslist_cosmos(mw, mw->focuslist);
+}
 
-			mw->focuslist = dlist_cycle(mw->focuslist, ps->o.focus_initial);
-		}
-	}
-	else {
-		mw->client_to_focus_on_cancel = NULL;
-	}
+void cycle_focus(MainWin *mw, int focus_initial) {
+	session_t *ps = mw->ps;
 
-	dlist *first = dlist_first(mw->focuslist);
-	if (first) {
-		mw->client_to_focus = first->data;
-		mw->client_to_focus->focused = 1;
-		if (iter && !mw->mapped &&
+	printfdf(true, "(): cycling window");
+	fflush(stdout);fflush(stderr);
+
+	if (focus_initial < 0)
+		focus_initial = dlist_len(mw->focuslist) + focus_initial;
+
+	while (focus_initial > 0 && mw->client_to_focus) {
+		focus_miniw_next(ps, mw->client_to_focus);
+		if (!mw->mapped &&
 				(ps->o.switchCycleDuringWait || ps->o.switchWaitDuration == 0)) {
 			Window wid = mw->client_to_focus->wid_client;
 			XRaiseWindow(ps->dpy, wid);
 			XSetInputFocus(ps->dpy, wid, RevertToParent, CurrentTime);
 			XFlush(ps->dpy);
 		}
+		focus_initial--;
 	}
-
-	if (ps->o.mode == PROGMODE_SWITCH && layout == LAYOUT_COSMOS)
-		mw->focuslist = sort_focuslist_cosmos(mw, mw->focuslist);
+	mw->client_to_focus_on_cancel = mw->client_to_focus;
 }
 
 #define INTERSECTS(x1, y1, w1, h1, x2, y2, w2, h2) \
@@ -1367,7 +1364,7 @@ init_multiplier(MainWin *mw, MonitorCoord monitor,
 }
 
 static void
-init_paging_layout(MainWin *mw, Window leader)
+init_paging_layout(MainWin *mw)
 {
 	int screencount = wm_get_desktops(mw->ps);
 	if (screencount == -1)
@@ -1521,7 +1518,7 @@ init_paging_layout(MainWin *mw, Window leader)
 				mw->client_to_focus = cw;
 				mw->client_to_focus->focused = 1;
 
-				{
+				/*{
 					dlist *iter = dlist_find(mw->clientondesktop, clientwin_cmp_func, (void *) leader);
 					if (!iter) {
 						mw->client_to_focus_on_cancel = NULL;
@@ -1529,7 +1526,8 @@ init_paging_layout(MainWin *mw, Window leader)
 					else {
 						mw->client_to_focus_on_cancel = (ClientWin *) iter->data;
 					}
-				}
+				}*/
+				mw->client_to_focus_on_cancel = NULL;
 			}
 			k++;
 		}
@@ -1590,7 +1588,7 @@ desktopwin_map(ClientWin *cw)
 }
 
 static void
-skippy_activate(MainWin *mw, Window leader)
+skippy_activate(MainWin *mw)
 {
 	session_t *ps = mw->ps;
 	mainwin_update(mw);
@@ -1607,7 +1605,7 @@ skippy_activate(MainWin *mw, Window leader)
 	}
 
 	if (ps->o.mode == PROGMODE_PAGING) {
-		init_paging_layout(mw, leader);
+		init_paging_layout(mw);
 		foreach_dlist(mw->clientondesktop) {
 			ClientWin *cw = iter->data;
 			cw->x *= mw->multiplier[mw->active_monitor];
@@ -1655,7 +1653,7 @@ skippy_activate(MainWin *mw, Window leader)
 			dlist_free(windows);
 		}
 
-		init_focus(mw, layout, mw->clientondesktop, leader);
+		init_focus(mw, layout, mw->clientondesktop);
 		// use src0 width/height for restoration here
 		foreach_dlist(mw->clientondesktop) {
 			ClientWin *cw = iter->data;
@@ -1684,7 +1682,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 	long first_animated = 0L;
 	bool first_animating = false;
 	pid_t trigger_client = 0;
-	bool switchdesktop = false;
 
 	ps->o.mode = PROGMODE_EXPOSE;
 
@@ -1716,7 +1713,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 			assert(ps->mainwin);
 			activate = false;
 
-			skippy_activate(ps->mainwin, wm_get_focused(ps));
+			skippy_activate(ps->mainwin);
 			last_animated = last_rendered = time_in_millis();
 			mw = ps->mainwin;
 			pending_damage = false;
@@ -1753,6 +1750,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					}
 				}
 				else {
+					printfdf(true, "(): !!!!!!!!!!!!"); //////////////////////////////////////////
 					dlist *iter = dlist_find(ps->mainwin->clients,
 							clientwin_cmp_func,
 							(void *) mw->client_to_focus_on_cancel);
@@ -1859,14 +1857,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 			// Catch all errors, but remove all events
 			XSync(ps->dpy, False);
 			XSync(ps->dpy, True);
-
-			if (switchdesktop) {
-				wm_set_desktop_ewmh(ps,
-						(wm_get_current_desktop(ps) + ps->o.focus_initial)
-						% wm_get_desktops(mw->ps));
-				animating = activate = true;
-				switchdesktop = false;
-			}
 
 			mw = NULL;
 		}
@@ -2331,7 +2321,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					}
 				}
 
-				ps->o.focus_initial = -((piped_input & PIPECMD_PREV) > 0)
+				int focus_initial = -((piped_input & PIPECMD_PREV) > 0)
 					+ ((piped_input & PIPECMD_NEXT) > 0);
 
 				if (!mw /*|| !mw->mapped*/)
@@ -2413,10 +2403,13 @@ mainloop(session_t *ps, bool activate_on_start) {
 						trigger_client = pid;
 						printfdf(false, "(): skippy activating: metaphor=%d", ps->o.mode);
 					}
+
+					// handle first next/prev here
+					cycle_focus(ps->mainwin, focus_initial);
 				}
 				// parameter == 0, toggle
 				// otherwise shift window focus
-				else if (mw && ps->o.focus_initial == 0) {
+				else if (mw && focus_initial == 0) {
 					if (toggling) {
 						printfdf(false, "(): toggling skippy off");
 						mw->refocus = die = true;
@@ -2424,41 +2417,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				}
 				else if (mw /*&& mw->mapped*/)
 				{
-					printfdf(false, "(): cycling window");
-					fflush(stdout);fflush(stderr);
-
-					if ((ps->o.mode == PROGMODE_SWITCH && ps->o.switchCycleDesktops)
-					 || (ps->o.mode == PROGMODE_EXPOSE && ps->o.exposeCycleDesktops))
-					{
-						int focusindex = 0;
-						if (mw->client_to_focus) {
-							dlist *search = dlist_first(mw->focuslist);
-							ClientWin *searchdata = search->data;
-							while (searchdata != mw->client_to_focus) {
-								search = search->next;
-								searchdata = search->data;
-								focusindex++;
-							}
-						}
-						if (0 > focusindex + ps->o.focus_initial
-						|| focusindex + ps->o.focus_initial >= dlist_len(mw->focuslist)) {
-							die = true;
-							switchdesktop = true;
-						}
-					}
-
-					int oldfocus = ps->o.focus_initial;
-					if (ps->o.focus_initial < 0)
-						ps->o.focus_initial = dlist_len(mw->focuslist) + ps->o.focus_initial;
-
-					while (ps->o.focus_initial > 0 && mw->client_to_focus) {
-						focus_miniw_next(ps, mw->client_to_focus);
-						if (!mw->mapped &&
-								(ps->o.switchCycleDuringWait || ps->o.switchWaitDuration == 0))
-							childwin_focus(mw->client_to_focus);
-						ps->o.focus_initial--;
-					}
-					ps->o.focus_initial = oldfocus;
+					cycle_focus(mw, focus_initial);
 				}
 
 				// if the client did not trigger activation, return to it immediately
@@ -2777,7 +2736,8 @@ get_cfg_path_found:
 }
 
 static void
-parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
+parse_args(session_t *ps, int argc, char **argv,
+		bool first_pass, int *focus_initial) {
 	enum options {
 		OPT_CONFIG,
 		OPT_CONFIG_RELOAD,
@@ -2980,10 +2940,10 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 				ps->o.pivotkey = XKeysymToKeycode(ps->dpy, keysym);
 				break;
 			case OPT_PREV:
-				ps->o.focus_initial--;
+				(*focus_initial)--;
 				break;
 			case OPT_NEXT:
-				ps->o.focus_initial++;
+				(*focus_initial)++;
 				break;
 			case OPT_DM_START:
 				ps->o.runAsDaemon = true;
@@ -3147,8 +3107,6 @@ load_config_file(session_t *ps)
 			ps->o.exposeLayout = LAYOUT_COSMOS;
 		}
     }
-    config_get_bool_wrap(config, "layout", "switchCycleDesktops", &ps->o.switchCycleDesktops);
-    config_get_bool_wrap(config, "layout", "exposeCycleDesktops", &ps->o.exposeCycleDesktops);
     config_get_int_wrap(config, "layout", "switchWaitDuration", &ps->o.switchWaitDuration, 0, 2000);
     config_get_bool_wrap(config, "layout", "switchCycleDuringWait", &ps->o.switchCycleDuringWait);
     config_get_int_wrap(config, "layout", "minDistance", &ps->o.distance, 5, INT_MAX);
@@ -3345,6 +3303,7 @@ int main(int argc, char *argv[]) {
 	session_t *ps = NULL;
 	int ret = RET_SUCCESS;
 	Display *dpy = NULL;
+	int focus_initial = 0;
 
 	/* Set program locale */
 	setlocale (LC_ALL, "");
@@ -3358,7 +3317,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	// First pass
-	parse_args(ps, argc, argv, true);
+	parse_args(ps, argc, argv, true, &focus_initial);
 
 	// Open connection to X
 	if (!(ps->dpy = dpy = XOpenDisplay(NULL))) {
@@ -3385,9 +3344,9 @@ int main(int argc, char *argv[]) {
 		return config_load_ret;
 
 	// Second pass
-	parse_args(ps, argc, argv, false);
+	parse_args(ps, argc, argv, false, &focus_initial);
 
-	printfdf(false, "(): after 2nd pass:  ps->o.focus_initial =  %i", ps->o.focus_initial);
+	printfdf(false, "(): after 2nd pass:  focus_initial =  %i", focus_initial);
 
 	const char* pipePath = ps->o.pipePath;
 
@@ -3397,7 +3356,7 @@ int main(int argc, char *argv[]) {
 			if (!ps->o.runAsDaemon &&
 					(ps->o.config_reload || ps->o.config_reload_path
 					 || ps->o.config_blank)) {
-				activate_via_fifo(ps, pipePath);
+				activate_via_fifo(ps, pipePath, focus_initial);
 				goto main_end;
 			}
 			break;
@@ -3438,7 +3397,7 @@ int main(int argc, char *argv[]) {
 				goto main_end;
 			}
 
-			activate_via_fifo(ps, pipePath);
+			activate_via_fifo(ps, pipePath, focus_initial);
 
 			poll(&r_fd, 1, -1);
 			char buffer[1024];

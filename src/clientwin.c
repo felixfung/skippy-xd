@@ -951,6 +951,8 @@ childwin_focus(ClientWin *cw) {
 	if (ps->o.moveMouse)
 		XWarpPointer(ps->dpy, None, cw->wid_client,
 				0, 0, 0, 0, cw->src.width / 2, cw->src.height / 2);
+
+	cw->mainwin->client_to_focus = cw;
 	XRaiseWindow(ps->dpy, cw->wid_client);
 	wm_activate_window(ps, cw->wid_client);
 	XFlush(ps->dpy);

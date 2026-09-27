@@ -193,7 +193,6 @@ typedef struct {
 	enum progmode mode;
 	bool runAsDaemon;
 
-	char focus_initial;
 	KeyCode pivotkey;
 	bool multiselect;
 
@@ -214,8 +213,6 @@ typedef struct {
 	int exposeLayout;
 	int switchWaitDuration;
 	bool switchCycleDuringWait;
-	bool switchCycleDesktops;
-	bool exposeCycleDesktops;
 	int distance;
 	bool upscaleWindows;
 
@@ -309,8 +306,6 @@ typedef struct {
 	.exposeLayout = LAYOUT_COSMOS, \
 	.switchWaitDuration = 100, \
 	.switchCycleDuringWait = false, \
-	.switchCycleDesktops = false, \
-	.exposeCycleDesktops = false, \
 	.distance = 50, \
 	.upscaleWindows = false, \
 \
