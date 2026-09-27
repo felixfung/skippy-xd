@@ -27,20 +27,23 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-static void layout_xd(MainWin *mw, dlist *windows,
-		unsigned int *total_width, unsigned int *total_height);
-static void layout_cosmos(MainWin *mw, dlist *windows,
-		unsigned int *total_width, unsigned int *total_height);
+static void layout_xd(dlist *windows,
+		unsigned int *total_width, unsigned int *total_height,
+		bool compact, int distance);
+static void layout_cosmos(dlist *windows,
+		MonitorCoord monitor,
+		unsigned int *total_width, unsigned int *total_height, int distance);
 
 // Redirect to the configured expose layout.  The selected implementation
 // calculates cw->x, cw->y and the total dimensions from cw->src.x, cw->src.y.
 
 void
 layout_run(MainWin *mw, dlist *windows,
+		MonitorCoord monitor, enum layoutmode layout,
 		unsigned int *total_width, unsigned int *total_height)
 {
-	if ((mw->ps->o.mode == PROGMODE_EXPOSE && mw->ps->o.exposeLayout == LAYOUT_COSMOS)
-	|| (mw->ps->o.mode == PROGMODE_SWITCH && mw->ps->o.switchLayout == LAYOUT_COSMOS)) {
+	if (!windows) return;
+	if (layout == LAYOUT_COSMOS) {
 		foreach_dlist (dlist_first(windows)) {
 			ClientWin *cw = iter->data;
 
@@ -62,8 +65,8 @@ layout_run(MainWin *mw, dlist *windows,
 				int current_desktop_x = current_desktop % desktop_dim;
 				int current_desktop_y = current_desktop / desktop_dim;
 
-				cw->src.x += (win_desktop_x - current_desktop_x) * (mw->width + mw->distance);
-				cw->src.y += (win_desktop_y - current_desktop_y) * (mw->height + mw->distance);
+				cw->src.x += (win_desktop_x - current_desktop_x) * (monitor.width + mw->distance);
+				cw->src.y += (win_desktop_y - current_desktop_y) * (monitor.height + mw->distance);
 			}
 
 			cw->x = cw->src.x;
@@ -73,14 +76,15 @@ layout_run(MainWin *mw, dlist *windows,
 		dlist *sorted_windows = dlist_dup(windows);
 		dlist_sort(sorted_windows, sort_cw_by_id, 0);
 		dlist_sort(sorted_windows, sort_cw_by_row, 0);
-		layout_cosmos(mw, sorted_windows, total_width, total_height);
+		layout_cosmos(sorted_windows, monitor, total_width, total_height, mw->distance);
 		dlist_free(sorted_windows);
 	}
 	else {
 		// to get the proper z-order based window ordering,
 		// reversing the list of windows is needed
 		dlist_reverse(windows);
-		layout_xd(mw, windows, total_width, total_height);
+		layout_xd(windows, total_width, total_height,
+				layout == LAYOUT_COMPACTRECT, mw->distance);
 		// reversing the linked list again for proper focus ordering
 		dlist_reverse(windows);
 	}
@@ -90,8 +94,8 @@ layout_run(MainWin *mw, dlist *windows,
 //
 //
 static void
-layout_xd(MainWin *mw, dlist *windows,
-		unsigned int *total_width, unsigned int *total_height)
+layout_xd(dlist *windows,
+		unsigned int *total_width, unsigned int *total_height, bool compact, int distance)
 {
 	int sum_w = 0, max_h = 0;
 
@@ -111,20 +115,19 @@ layout_xd(MainWin *mw, dlist *windows,
 	foreach_dlist (windows) {
 		ClientWin *cw = (ClientWin*) iter->data;
 		dlist *slot_iter = NULL;
-		if ((mw->ps->o.mode == PROGMODE_SWITCH && mw->ps->o.switch_compact)
-		 || (mw->ps->o.mode == PROGMODE_EXPOSE && mw->ps->o.expose_compact))
+		if (compact)
 			slot_iter = dlist_first(slots);
 		for (; slot_iter; slot_iter = slot_iter->next) {
 			dlist *slot = (dlist *) slot_iter->data;
 			// Calculate current total height of slot
-			int slot_h = - mw->distance;
+			int slot_h = - distance;
 			foreach_dlist_vn(slot_cw_iter, slot) {
 				ClientWin *slot_cw = (ClientWin *) slot_cw_iter->data;
-				slot_h = slot_h + slot_cw->src.height + mw->distance;
+				slot_h = slot_h + slot_cw->src.height + distance;
 			}
 			// Add window to slot if the slot height after adding the window
 			// doesn't exceed max window height
-			if (slot_h + mw->distance + cw->src.height < max_h) {
+			if (slot_h + distance + cw->src.height < max_h) {
 				slot_iter->data = dlist_add(slot, cw);
 				break;
 			}
@@ -151,12 +154,12 @@ layout_xd(MainWin *mw, dlist *windows,
 				ClientWin *cw = (ClientWin *) slot_cw_iter->data;
 				cw->x = x + (slot_max_w - cw->src.width) / 2;
 				cw->y = y;
-				y += cw->src.height + mw->distance;
+				y += cw->src.height + distance;
 				rows->data = dlist_add(rows->data, cw);
 			}
 			row_h = MAX(row_h, y - row_y);
 			*total_height = MAX(*total_height, y);
-			x += slot_max_w + mw->distance;
+			x += slot_max_w + distance;
 			*total_width = MAX(*total_width, x);
 			if (x > max_row_w) {
 				x = 0;
@@ -170,8 +173,8 @@ layout_xd(MainWin *mw, dlist *windows,
 		slots = NULL;
 	}
 
-	*total_width -= mw->distance;
-	*total_height -= mw->distance;
+	*total_width -= distance;
+	*total_height -= distance;
 
 	foreach_dlist (rows) {
 		dlist *row = (dlist *) iter->data;
@@ -598,8 +601,9 @@ run_final_settle(AabbWorld *world)
 }
 
 static void
-layout_cosmos(MainWin *mw, dlist *windows,
-		unsigned int *total_width, unsigned int *total_height)
+layout_cosmos(dlist *windows,
+		MonitorCoord monitor,
+		unsigned int *total_width, unsigned int *total_height, int distance)
 {
 	const float aspect_balance = 1.4f;
 	const float clearance = 0.02f;
@@ -625,10 +629,10 @@ layout_cosmos(MainWin *mw, dlist *windows,
 		items[index++] = cw;
 	}
 
-	float monitor_aspect = (float) mw->width / (float) mw->height;
-	float padding = (float) mw->distance + rounding_padding;
+	float monitor_aspect = (float) monitor.width / (float) monitor.height;
+	float padding = (float) distance + rounding_padding;
 	unsigned int scatter_groups = run_scatter(items, count,
-			(float) mw->width, (float) mw->height,
+			(float) monitor.width, (float) monitor.height,
 			aspect_balance, padding, clearance);
 
 	int min_x, max_x, min_y, max_y;
