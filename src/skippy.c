@@ -747,9 +747,9 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 
 	if (ps->o.multiselect) {
 		cmd_len += 2;
-		char pivot_cmd[2];
-		sprintf(pivot_cmd, "%c", PIPEPRM_MULTI_SELECT);
-		strcat(command, pivot_cmd);
+		char multiselect_cmd[2];
+		sprintf(multiselect_cmd, "%c", PIPEPRM_MULTI_SELECT);
+		strcat(command, multiselect_cmd);
 	}
 
 	if (ps->o.wm_class) {
@@ -785,10 +785,11 @@ activate_via_fifo(session_t *ps, const char *pipePath) {
 	}
 
 	if (ps->o.pivotkey) {
-		char pivot_cmd[4];
-		sprintf(pivot_cmd, "%c%c%c", PIPEPRM_PIVOTING, 1, ps->o.pivotkey);
+		char pivot_cmd[5];
+		sprintf(pivot_cmd, "%c%c%c%c", PIPEPRM_PIVOTING,
+				2, ps->o.mousepivot+1, ps->o.pivotkey);
 		strcat(command, pivot_cmd);
-		cmd_len += 4;
+		cmd_len += 5;
 	}
 
 	if (cmd_len > BUF_LEN) {
@@ -1883,11 +1884,41 @@ mainloop(session_t *ps, bool activate_on_start) {
 		if (mw && !toggling)
 		{
 			bool pivotTerminate = false;
-			char keys[32];
-			XQueryKeymap(ps->dpy, keys);
-			int slot = ps->o.pivotkey / 8;
-			char mask = 1 << (ps->o.pivotkey % 8);
-			pivotTerminate = !(keys[slot] & mask);
+			if (!ps->o.mousepivot) {
+				char keys[32];
+				XQueryKeymap(ps->dpy, keys);
+				int slot = ps->o.pivotkey / 8;
+				char mask = 1 << (ps->o.pivotkey % 8);
+				pivotTerminate = !(keys[slot] & mask);
+			}
+			else {
+				int device_id;
+				if (XIGetClientPointer(ps->dpy, None, &device_id)) {
+					XIButtonState buttons = {0};
+
+					Window dummy_window;
+					double dummy_coord;
+					XIModifierState dummy_modifiers;
+					XIGroupState dummy_group;
+
+					XIQueryPointer(ps->dpy, device_id, ps->root,
+							&dummy_window, &dummy_window,
+							&dummy_coord, &dummy_coord,
+							&dummy_coord, &dummy_coord,
+							&buttons, &dummy_modifiers, &dummy_group);
+
+					unsigned int button = ps->o.pivotkey;
+					if (buttons.mask && button > 0
+							&& button / 8 < (unsigned int) buttons.mask_len) {
+						bool pressed = XIMaskIsSet(buttons.mask, button);
+						if (!pressed)
+							die = true;
+					}
+
+					if (buttons.mask)
+						XFree(buttons.mask);
+				}
+			}
 
 			if (pivotTerminate)
 				die = true;
@@ -2390,8 +2421,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 							}
 
 							if (param[i] & PIPEPRM_PIVOTING) {
-								ps->o.pivotkey = str[i][0];
-								printfdf(false, "(): receiving new pivot key=%d",ps->o.pivotkey);
+								ps->o.mousepivot = str[i][0] - 1;
+								ps->o.pivotkey = str[i][1];
+								printfdf(false, "(): receiving new pivot key=%d, mouse pivoting=%d",
+										ps->o.pivotkey, ps->o.mousepivot);
 								toggling = false;
 							}
 
@@ -2559,6 +2592,16 @@ xerror(Display *dpy, XErrorEvent *ev) {
 #endif
 
 static inline void
+xinput_about(FILE *os) {
+#ifdef CFG_XINPUTLIB
+	fprintf(os, "\nMouse pivot: Yes\n"
+			"  Compiled with xinputlib %d.%d.\n", XI_2_Major, XI_2_Minor);
+#else
+	fprintf(os, "\nMouse pivot: No\n");
+#endif
+}
+
+static inline void
 multimonitor_about(FILE *os) {
 #if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
 	fprintf(os, "\nMulti-monitor support: Yes\n");
@@ -2621,6 +2664,8 @@ show_help() {
 			"  --next              - focus on the next window.\n"
 			, stdout);
 
+	xinput_about(stdout);
+
 #ifdef CFG_GIFLIB
 	sgif_about(stdout);
 #else
@@ -2638,6 +2683,7 @@ show_help() {
 #else
 	fprintf(stdout, "\nPNG support: No\n");
 #endif
+
 	multimonitor_about(stdout);
 	chipmunk_about(stdout);
 }
@@ -2695,6 +2741,15 @@ init_xexts(session_t *ps) {
 		printfef(true, "(): FATAL: XFixes extension not found.");
 		return false;
 	}
+
+#ifdef CFG_XINPUTLIB
+	int opcode;
+	if (!XQueryExtension(dpy, "XInputExtension", &opcode,
+			&ps->xinfo.input_ev_base, &ps->xinfo.input_err_base)) {
+		printfef(true, "(): FATAL: XInput extension not found.");
+		return false;
+	}
+#endif
 
 	return true;
 }
@@ -2971,13 +3026,24 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 				break;
 			case OPT_PIVOTING:
 				user_specified_toggle_pivot = true;
-				KeySym keysym = XStringToKeysym(optarg);
-				if (keysym == 0) {
-					printfef(true, "(): \"%s\" was not recognized as a valid KeySym. Run the program 'xev' to find the correct value.", optarg);
-					exit(1);
+				if (strlen(optarg) > 2 && optarg[0] == 'b' && optarg[1] == ':') {
+					char *pivotkey = optarg + 2;
+					if (!(1<=atoi(pivotkey) && atoi(pivotkey) < 99)) {
+						printfef(true, "(): mouse pivot button within 1 and 99");
+						exit(1);
+					}
+					ps->o.pivotkey = atoi(pivotkey);
+					ps->o.mousepivot = true;
 				}
-
-				ps->o.pivotkey = XKeysymToKeycode(ps->dpy, keysym);
+				else {
+					KeySym keysym = XStringToKeysym(optarg);
+					if (keysym == 0) {
+						printfef(true, "(): \"%s\" was not recognized as a valid KeySym. Run the program 'xev' to find the correct value.", optarg);
+						exit(1);
+					}
+					ps->o.pivotkey = XKeysymToKeycode(ps->dpy, keysym);
+					ps->o.mousepivot = false;
+				}
 				break;
 			case OPT_PREV:
 				ps->o.focus_initial--;
@@ -2997,10 +3063,12 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 	if (!user_specified_toggle_pivot) {
 		if (ps->o.mode == PROGMODE_SWITCH) {
 			ps->o.pivotkey = 64; // switch defaults to pivot with Alt_L
+			ps->o.mousepivot = false;
 		}
 		if (ps->o.mode == PROGMODE_EXPOSE
 				|| ps->o.mode == PROGMODE_PAGING) {
 			ps->o.pivotkey = 0; // expose/paging defaults to toggle
+			ps->o.mousepivot = false;
 		}
 	}
 	if (custom_config && !ps->o.runAsDaemon)

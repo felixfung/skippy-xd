@@ -48,6 +48,13 @@ skippy_deps = [
 ]
 
 # optional
+
+xinput_dep = cc.find_library('Xi', required: get_option('skippy_xinput'))
+if xinput_dep.found()
+  add_project_arguments('-DCFG_XINPUTLIB', language: 'c')
+  add_project_dependencies(xinput_dep, language: 'c')
+endif
+
 giflib_dep = cc.find_library('libgif', required: get_option('skippy_gif'))
 if giflib_dep.found()
   add_project_arguments('-DCFG_GIFLIB', language: 'c')

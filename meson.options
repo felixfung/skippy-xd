@@ -1,3 +1,4 @@
+option('skippy_xinput', type: 'feature', value: 'enabled')
 option('skippy_gif', type: 'feature', value: 'enabled')
 option('skippy_jpeg', type: 'feature', value: 'enabled')
 option('skippy_png', type: 'feature', value: 'enabled')
