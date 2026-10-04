@@ -45,6 +45,10 @@
 #include <X11/extensions/Xfixes.h>
 #include <X11/extensions/shape.h>
 
+#ifdef CFG_XINPUTLIB
+#include <X11/extensions/XInput2.h>
+#endif
+
 #ifdef CFG_XINERAMA
 # include <X11/extensions/Xinerama.h>
 #endif
@@ -196,6 +200,7 @@ typedef struct {
 
 	char focus_initial;
 	KeyCode pivotkey;
+	bool mousepivot;
 	bool multiselect;
 
 	char *pipePath;
@@ -297,6 +302,7 @@ typedef struct {
 	.mode = PROGMODE_NORMAL, \
 	.runAsDaemon = false, \
 	.pivotkey = 0, \
+	.mousepivot = false, \
 	.multiselect = false, \
 \
 	.pipePath = NULL, \
@@ -380,6 +386,8 @@ typedef struct {
 	int render_err_base;
 	int fixes_ev_base;
 	int fixes_err_base;
+	int input_ev_base;
+	int input_err_base;
 
 	bool xinerama_exist;
 	int xinerama_err_base;
