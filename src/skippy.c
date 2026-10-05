@@ -1891,6 +1891,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				char mask = 1 << (ps->o.pivotkey % 8);
 				pivotTerminate = !(keys[slot] & mask);
 			}
+#ifdef CFG_XINPUTLIB
 			else {
 				int device_id;
 				if (XIGetClientPointer(ps->dpy, None, &device_id)) {
@@ -1912,13 +1913,14 @@ mainloop(session_t *ps, bool activate_on_start) {
 							&& button / 8 < (unsigned int) buttons.mask_len) {
 						bool pressed = XIMaskIsSet(buttons.mask, button);
 						if (!pressed)
-							die = true;
+							pivotTerminate = true;
 					}
 
 					if (buttons.mask)
 						XFree(buttons.mask);
 				}
 			}
+#endif
 
 			if (pivotTerminate)
 				die = true;
@@ -3025,7 +3027,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 				ps->o.pivotkey = 0;
 				break;
 			case OPT_PIVOTING:
-				user_specified_toggle_pivot = true;
+#ifdef CFG_XINPUTLIB
 				if (strlen(optarg) > 2 && optarg[0] == 'b' && optarg[1] == ':') {
 					char *pivotkey = optarg + 2;
 					if (!(1<=atoi(pivotkey) && atoi(pivotkey) < 99)) {
@@ -3034,8 +3036,11 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 					}
 					ps->o.pivotkey = atoi(pivotkey);
 					ps->o.mousepivot = true;
+					user_specified_toggle_pivot = true;
 				}
-				else {
+				else
+#endif
+				{
 					KeySym keysym = XStringToKeysym(optarg);
 					if (keysym == 0) {
 						printfef(true, "(): \"%s\" was not recognized as a valid KeySym. Run the program 'xev' to find the correct value.", optarg);
@@ -3043,6 +3048,7 @@ parse_args(session_t *ps, int argc, char **argv, bool first_pass) {
 					}
 					ps->o.pivotkey = XKeysymToKeycode(ps->dpy, keysym);
 					ps->o.mousepivot = false;
+					user_specified_toggle_pivot = true;
 				}
 				break;
 			case OPT_PREV:
