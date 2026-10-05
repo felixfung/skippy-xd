@@ -50,7 +50,7 @@
 #endif
 
 #ifdef CFG_XINERAMA
-# include <X11/extensions/Xinerama.h>
+#include <X11/extensions/Xinerama.h>
 #endif
 
 #include <sys/types.h>
