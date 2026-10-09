@@ -1237,14 +1237,8 @@ static void
 init_focus(MainWin *mw, enum layoutmode layout, dlist *windows, Window leader) {
 	session_t *ps = mw->ps;
 
-	// ordering of client windows list
-	// is important for prev/next window selection
 	mw->focuslist = dlist_dup(windows);
-
-	if (ps->o.mode == PROGMODE_EXPOSE && layout == LAYOUT_COSMOS)
-		mw->focuslist = sort_focuslist_cosmos(mw, mw->focuslist);
-	else
-		dlist_reverse(mw->focuslist);
+	dlist_reverse(mw->focuslist);
 
 	dlist *iter = dlist_find(mw->focuslist, clientwin_cmp_func, (void *) leader);
 
@@ -1277,8 +1271,37 @@ init_focus(MainWin *mw, enum layoutmode layout, dlist *windows, Window leader) {
 		}
 	}
 
-	if (ps->o.mode == PROGMODE_SWITCH && layout == LAYOUT_COSMOS)
+	dlist_free(mw->focuslist);
+	mw->focuslist = dlist_dup(windows);
+	dlist_reverse(mw->focuslist);
+
+	if (layout == LAYOUT_COSMOS) {
 		mw->focuslist = sort_focuslist_cosmos(mw, mw->focuslist);
+	}
+	else if ((ps->o.mode == PROGMODE_SWITCH && !ps->o.switchOnCurrentMonitor)
+			|| (ps->o.mode == PROGMODE_EXPOSE && !ps->o.exposeOnCurrentMonitor)) {
+		dlist *newlist = NULL;
+		int i0 = 0;
+
+		iter = dlist_find(mw->focuslist, clientwin_cmp_func, (void *) leader);
+		if (iter)
+			i0 = ((ClientWin *) iter->data)->monitor;
+
+		for (int n = 0; n < mw->nmonitors; n++) {
+			int i = (i0 + n) % mw->nmonitors;
+			dlist *monitorlist = dlist_first(dlist_find_all(mw->focuslist,
+					(dlist_match_func) clientwin_filter_monitor, &mw->monitor[i]));
+
+			foreach_dlist(monitorlist) {
+				ClientWin *cw = (ClientWin *) iter->data;
+				newlist = dlist_add(newlist, cw);
+			}
+			dlist_free(monitorlist);
+		}
+
+		dlist_free(mw->focuslist);
+		mw->focuslist = dlist_first(newlist);
+	}
 }
 
 #define INTERSECTS(x1, y1, w1, h1, x2, y2, w2, h2) \
