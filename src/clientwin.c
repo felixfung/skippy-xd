@@ -43,6 +43,54 @@ void XRoundedRectTint(session_t *ps,
 
 void clientwin_round_corners(ClientWin *cw);
 
+void
+clientwin_fill_shape(ClientWin *cw, Drawable drawable, GC gc, int offset, int expand)
+{
+	MainWin *mw = cw->mainwin;
+	session_t *ps = mw->ps;
+
+	float multiplier = clientwin_get_multiplier(cw);
+	int radius = ps->o.cornerRadius * multiplier;
+	int count = 1;
+
+	bool page = ps->o.mode == PROGMODE_PAGING && ps->o.preservePages
+			&& cw->mode == CLIDISP_DESKTOP && mw->nmonitors > 0;
+	if (page)
+		count = mw->nmonitors;
+
+	for (int i = 0; i < count; ++i) {
+		int x = 0, y = 0, w = cw->mini.width, h = cw->mini.height;
+		if (page) {
+			x = (int)(mw->monitor[i].x * multiplier + cw->x)
+					+ mw->xoff[mw->active_monitor] + ps->o.leftFrameBorder - cw->mini.x;
+			y = (int)(mw->monitor[i].y * multiplier + cw->y)
+					+ mw->yoff[mw->active_monitor] + ps->o.topFrameBorder - cw->mini.y;
+			w = mw->monitor[i].width * multiplier - ps->o.leftFrameBorder;
+			h = mw->monitor[i].height * multiplier - ps->o.topFrameBorder;
+		}
+
+		if (w <= 0 || h <= 0)
+			continue;
+		x += offset - expand;
+		y += offset - expand;
+		w += expand * 2;
+		h += expand * 2;
+		int r = radius > 0 ? MIN(radius + expand, MIN(w / 2, h / 2)) : 0;
+		if (r == 0) {
+			XFillRectangle(ps->dpy, drawable, gc, x, y, w, h);
+			continue;
+		}
+		int dia = r * 2;
+		XFillArc(ps->dpy, drawable, gc, x, y, dia, dia, 90 * 64, 90 * 64);
+		XFillArc(ps->dpy, drawable, gc, x + w - dia, y, dia, dia, 0, 90 * 64);
+		XFillArc(ps->dpy, drawable, gc, x + w - dia, y + h - dia, dia, dia, 270 * 64, 90 * 64);
+		XFillArc(ps->dpy, drawable, gc, x, y + h - dia, dia, dia, 180 * 64, 90 * 64);
+		XFillRectangle(ps->dpy, drawable, gc, x + r, y, w - dia, r);
+		XFillRectangle(ps->dpy, drawable, gc, x + r, y + h - r, w - dia, r);
+		XFillRectangle(ps->dpy, drawable, gc, x, y + r, w, h - dia);
+	}
+}
+
 static void
 clientwin_render_desktop_cover_tint_border(ClientWin *cover, ClientWin *cw,
 		XRenderColor *tint, int border)
@@ -60,9 +108,8 @@ clientwin_render_desktop_cover_tint_border(ClientWin *cover, ClientWin *cw,
 	if (x >= cover->mini.width || y >= cover->mini.height || x + w <= 0 || y + h <= 0)
 		return;
 
-	XRenderTintBorder(ps, cover->mini.window, cover->destination, tint,
-			x, y, cw->mini.width, cw->mini.height, border,
-			ps->o.cornerRadius * mw->multiplier);
+	XRenderTintBorder(cw, cover->mini.window, cover->destination, tint,
+			x, y, border);
 }
 
 static void
@@ -108,20 +155,21 @@ clientwin_validate_panel(dlist *l, void *data) {
 }
 
 int
+clientwin_filter_monitor(dlist *l, void *data) {
+	ClientWin *cw = l->data;
+	MonitorCoord *monitor = data;
+	int midx = cw->src0.x + cw->src0.width / 2;
+	int midy = cw->src0.y + cw->src0.height / 2;
+
+	return monitor->x <= midx && midx < monitor->x + monitor->width
+		&& monitor->y <= midy && midy < monitor->y + monitor->height;
+}
+
+int
 clientwin_filter_func(dlist *l, void *data) {
 	ClientWin *cw = l->data;
 	MainWin *mw = cw->mainwin;
 	session_t *ps = mw->ps;
-
-#ifdef CFG_XINERAMA
-	if (mw->xin_active && !INTERSECTS(
-			cw->src0.x, cw->src0.y, cw->src0.width, cw->src0.height,
-			mw->xin_active->x_org, mw->xin_active->y_org,
-			mw->xin_active->width, mw->xin_active->height)
-			&& ps->o.showOnlyCurrentMonitor
-			&& ps->o.mode != PROGMODE_PAGING)
-		return false;
-#endif
 
 	CARD32 current_desktop = (*(CARD32 *)data);
 	CARD32 w_desktop = wm_get_window_desktop(ps, cw->wid_client);
@@ -239,8 +287,7 @@ clientwin_create(MainWin *mw, Window client) {
 		};
 		cw->mini.window = XCreateWindow(ps->dpy,
 				ps->o.pseudoTrans ? mw->window : ps->root,
-				ps->o.pseudoTrans ? mw->x : 0, ps->o.pseudoTrans ? mw->y : 0,
-				1, 1, 0,
+				0, 0, 1, 1, 0,
 				mw->depth, InputOutput, mw->visual,
 				CWColormap | CWBackPixel | CWBorderPixel | CWEventMask | CWOverrideRedirect, &sattr);
 	}
@@ -417,7 +464,7 @@ static inline bool
 clientwin_update2_filled(session_t *ps, MainWin *mw, ClientWin *cw) {
 	float scale = cw->paneltype == WINTYPE_PANEL
 			   || cw->paneltype == WINTYPE_DESKTOP
-		? 1.0f : cw->mainwin->multiplier;
+		? 1.0f : clientwin_get_multiplier(cw);
 	int width = cw->mini.width > 0 ? cw->mini.width
 				: cw->src.width * scale;
 	int height = cw->mini.height > 0 ? cw->mini.height
@@ -438,7 +485,7 @@ static inline bool
 clientwin_update2_icon(session_t *ps, MainWin *mw, ClientWin *cw) {
 	float scale = cw->paneltype == WINTYPE_PANEL
 			   || cw->paneltype == WINTYPE_DESKTOP
-		? 1.0f : cw->mainwin->multiplier;
+		? 1.0f : clientwin_get_multiplier(cw);
 	int width = cw->mini.width > 0 ? cw->mini.width
 				: cw->src.width * scale;
 	int height = cw->mini.height > 0 ? cw->mini.height
@@ -606,32 +653,18 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 					topborder = ps->o.topFrameBorder;
 				}
 
-#ifdef CFG_XINERAMA
-				XineramaScreenInfo *iter = mw->xin_info;
-				for (int i = 0; i < mw->xin_screens; ++i)
+				for (int i = 0; i < mw->nmonitors; ++i)
 				{
-					int x = dwin->mini.x + iter->x_org - cw->mini.x + leftborder;
-					int y = dwin->mini.y + iter->y_org - cw->mini.y + topborder;
-					int width = iter->width * mw->multiplier;
-					int height = iter->height * mw->multiplier;
+					int x = dwin->mini.x + mw->monitor[i].x - cw->mini.x + leftborder;
+					int y = dwin->mini.y + mw->monitor[i].y - cw->mini.y + topborder;
+					int width = mw->monitor[i].width * mw->multiplier[mw->active_monitor];
+					int height = mw->monitor[i].height * mw->multiplier[mw->active_monitor];
 
 					XRoundedRectComposite(mw->ps,
 							source, cw->destination,
 							x, y, x, y, width, height,
-							ps->o.cornerRadius * mw->multiplier);
-					iter++;
+							ps->o.cornerRadius * mw->multiplier[mw->active_monitor]);
 				}
-#else
-				int x = dwin->mini.x - cw->mini.x + leftborder;
-				int y = dwin->mini.y - cw->mini.y + topborder;
-				int width = dwin->src.width * mw->multiplier;
-				int height = dwin->src.height * mw->multiplier;
-
-				XRoundedRectComposite(mw->ps,
-						source, cw->destination,
-						x, y, x, y, width, height,
-						ps->o.cornerRadius * mw->multiplier);
-#endif /* CFG_XINERAMA */
 			}
 		}
 
@@ -670,33 +703,27 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 			}
 
 			if (tint && tint->alpha && tint_window) {
-#ifdef CFG_XINERAMA
 				if (cw->mode == CLIDISP_DESKTOP)
 				{
-					XineramaScreenInfo *iter = mw->xin_info;
-					for (int i = 0; i < mw->xin_screens; ++i)
+					for (int i = 0; i < mw->nmonitors; ++i)
 					{
-						s_x = iter->x_org * mw->multiplier;
-						s_y = iter->y_org * mw->multiplier;
-						s_w = iter->width * mw->multiplier;
-						s_h = iter->height * mw->multiplier;
+						s_x = mw->monitor[i].x * mw->multiplier[mw->active_monitor];
+						s_y = mw->monitor[i].y * mw->multiplier[mw->active_monitor];
+						s_w = mw->monitor[i].width * mw->multiplier[mw->active_monitor];
+						s_h = mw->monitor[i].height * mw->multiplier[mw->active_monitor];
 
 						XRoundedRectTint(mw->ps,
 								cw->destination, tint,
-								s_x, s_y, s_w, s_h, ps->o.cornerRadius * mw->multiplier);
+								s_x, s_y, s_w, s_h, ps->o.cornerRadius * mw->multiplier[mw->active_monitor]);
 
 						XClearArea(mw->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
-						iter++;
 					}
 				}
 				else {
-#endif /* CFG_XINERAMA */
 					XRenderFillRectangle(mw->ps->dpy, PictOpOver,
 							cw->destination, tint, s_x, s_y, s_w, s_h);
 					XClearArea(mw->ps->dpy, cw->mini.window, s_x, s_y, s_w, s_h, False);
-#ifdef CFG_XINERAMA
 				}
-#endif /* CFG_XINERAMA */
 			}
 		}
 
@@ -774,25 +801,32 @@ void XRoundedRectTint(session_t *ps,
 
 void clientwin_round_corners(ClientWin *cw) {
 	session_t* ps = cw->mainwin->ps;
-	int radius = ps->o.cornerRadius * cw->mainwin->multiplier;
-	int dia = 2 * radius;
 	int w = cw->mini.width;
 	int h = cw->mini.height;
 	XGCValues xgcv;
 	Pixmap mask = XCreatePixmap(ps->dpy, cw->mini.window, w, h, 1);
 	GC shape_gc = XCreateGC(ps->dpy, mask, 0, &xgcv);
 
+	int radius = ps->o.cornerRadius * clientwin_get_multiplier(cw);
+	int dia = 2 * radius;
+
 	XSetForeground(ps->dpy, shape_gc, 0);
 	XFillRectangle(ps->dpy, mask, shape_gc, 0, 0, w, h);
 	XSetForeground(ps->dpy, shape_gc, 1);
-	if (dia > 0) {
-		XFillArc(ps->dpy, mask, shape_gc, 0, 0, dia, dia, 0, 360 * 64);
-		XFillArc(ps->dpy, mask, shape_gc, w-dia-1, 0, dia, dia, 0, 360 * 64);
-		XFillArc(ps->dpy, mask, shape_gc, 0, h-dia-1, dia, dia, 0, 360 * 64);
-		XFillArc(ps->dpy, mask, shape_gc, w-dia-1, h-dia-1, dia, dia, 0, 360 * 64);
+
+	if (ps->o.mode == PROGMODE_PAGING && ps->o.preservePages
+			&& cw->mode == CLIDISP_DESKTOP)
+		clientwin_fill_shape(cw, mask, shape_gc, 0, 0);
+	else {
+		if (dia > 0) {
+			XFillArc(ps->dpy, mask, shape_gc, 0, 0, dia, dia, 0, 360 * 64);
+			XFillArc(ps->dpy, mask, shape_gc, w-dia-1, 0, dia, dia, 0, 360 * 64);
+			XFillArc(ps->dpy, mask, shape_gc, 0, h-dia-1, dia, dia, 0, 360 * 64);
+			XFillArc(ps->dpy, mask, shape_gc, w-dia-1, h-dia-1, dia, dia, 0, 360 * 64);
+		}
+		XFillRectangle(ps->dpy, mask, shape_gc, radius, 0, w-dia, h);
+		XFillRectangle(ps->dpy, mask, shape_gc, 0, radius, w, h-dia);
 	}
-	XFillRectangle(ps->dpy, mask, shape_gc, radius, 0, w-dia, h);
-	XFillRectangle(ps->dpy, mask, shape_gc, 0, radius, w, h-dia);
 	XShapeCombineMask(ps->dpy, cw->mini.window, ShapeBounding, 0, 0, mask, ShapeSet);
 	XFreePixmap(ps->dpy, mask);
 	XFreeGC(ps->dpy, shape_gc);
@@ -800,8 +834,9 @@ void clientwin_round_corners(ClientWin *cw) {
 
 void clientwin_prepmove(ClientWin *cw)
 {
-	int width = MAX(cw->src.width, cw->src.width * cw->mainwin->multiplier);
-	int height = MAX(cw->src.height, cw->src.height * cw->mainwin->multiplier);
+	float multiplier = clientwin_get_multiplier(cw);
+	int width = MAX(cw->src.width, cw->src.width * multiplier);
+	int height = MAX(cw->src.height, cw->src.height * multiplier);
 
 	if (width <= 0 || height <= 0)
 		return;
@@ -835,10 +870,6 @@ clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 
 	cw->mini.x = cw->src.x + (cw->x - cw->src.x + x) * timeslice;
 	cw->mini.y = cw->src.y + (cw->y - cw->src.y + y) * timeslice;
-	if (!ps->o.pseudoTrans) {
-		cw->mini.x += mw->x;
-		cw->mini.y += mw->y;
-	}
 
 	cw->factor = f;
 	cw->mini.width = cw->src.width * f;
