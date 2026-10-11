@@ -111,7 +111,6 @@ mainwin_render_tint_border(ClientWin *cw, XRenderColor *tint, int border)
 	}
 }
 
-/* from 'uncover': */
 static Visual *
 find_argb_visual (Display *dpy, int scr)
 {
@@ -181,6 +180,17 @@ mainwin_create(session_t *ps) {
     else {
 		mw->depth = DefaultDepth(dpy, ps->screen);
 		mw->visual = DefaultVisual(dpy, ps->screen);
+
+		// used only by pseudoTrans in desktopwin_map
+		mw->desktoptransform.matrix[0][0] = 1.0;
+		mw->desktoptransform.matrix[0][1] = 0.0;
+		mw->desktoptransform.matrix[0][2] = 0;
+		mw->desktoptransform.matrix[1][0] = 0.0;
+		mw->desktoptransform.matrix[1][1] = 1.0;
+		mw->desktoptransform.matrix[1][2] = 0;
+		mw->desktoptransform.matrix[2][0] = 0.0;
+		mw->desktoptransform.matrix[2][1] = 0.0;
+		mw->desktoptransform.matrix[2][2] = 1.0;
 	}
 
 	mw->colormap = XCreateColormap(dpy, ps->root, mw->visual, AllocNone);
@@ -571,7 +581,6 @@ mainwin_update_geometry(MainWin *mw)
 		mw->yoff = calloc(mw->nmonitors, sizeof(int));
 	}
 
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
 	{
 		int minx=INT_MAX, miny=INT_MAX, maxx=INT_MIN, maxy=INT_MIN;
 		for (int i = 0; i < mw->nmonitors; ++i) {
@@ -593,7 +602,7 @@ mainwin_update_geometry(MainWin *mw)
 			&root_x, &root_y, &dummy_i, &dummy_i, &dummy_u);
 	printfdf(false, "(): Multi-monitor --> querying pointer... +%i+%i\n",
 			root_x, root_y);
-	
+
 	for (int i = 0; i < mw->nmonitors; ++i)
 	{
 		if (root_x >= mw->monitor[i].x &&
@@ -608,7 +617,6 @@ mainwin_update_geometry(MainWin *mw)
 			break;
 		}
 	}
-#endif
 
 	XMoveResizeWindow(ps->dpy, mw->window, mw->x, mw->y, mw->width, mw->height);
 }

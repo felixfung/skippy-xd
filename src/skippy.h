@@ -209,6 +209,7 @@ typedef struct {
 
 	bool switchOnCurrentMonitor;
 	bool exposeOnCurrentMonitor;
+	bool pagingOnCurrentMonitor;
 
 	char *wm_class;
 	char *wm_title;
@@ -308,6 +309,7 @@ typedef struct {
 \
 	.switchOnCurrentMonitor = true, \
 	.exposeOnCurrentMonitor = false, \
+	.pagingOnCurrentMonitor = true, \
 \
 	.wm_status = NULL, \
 \

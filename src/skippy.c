@@ -813,7 +813,9 @@ anime(
 		if ((mw->ps->o.mode == PROGMODE_SWITCH
 				&& !mw->ps->o.switchOnCurrentMonitor)
 		 || (mw->ps->o.mode == PROGMODE_EXPOSE
-				&& !mw->ps->o.exposeOnCurrentMonitor)) {
+				&& !mw->ps->o.exposeOnCurrentMonitor)
+		 || (mw->ps->o.mode == PROGMODE_PAGING
+				&& !mw->ps->o.pagingOnCurrentMonitor)) {
 			mtarget = mw->multiplier[i];
 			xoff = mw->xoff[i];
 			yoff = mw->yoff[i];
@@ -1391,47 +1393,54 @@ init_multiplier(MainWin *mw, MonitorCoord monitor,
 }
 
 static void
-init_paging_layout(MainWin *mw, Window leader)
+init_paging_layout(MainWin *mw, Window leader, int monitor)
 {
-	int screencount = wm_get_desktops(mw->ps);
-	if (screencount == -1)
-		screencount = 1;
-	int desktop_dim = ceil(sqrt(screencount));
+	session_t *ps = mw->ps;
+	int vdcount = wm_get_desktops(ps);
+	if (vdcount == -1)
+		vdcount = 1;
 
-	int desktop_width = mw->width;
-	int desktop_height = mw->height;
+	printfdf(false,"(): initializing %d pages on monitor %d",
+			vdcount, mw->nmonitors);
 
-#if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
-	printfdf(false,"(): detecting %d monitors and %d virtual desktops",
-			mw->nmonitors, screencount);
+	int desktop_dim = ceil(sqrt(vdcount));
+	int desktop_width = mw->monitor[monitor].width;
+	int desktop_height = mw->monitor[monitor].height;
 
 	int minx = INT_MAX;
 	int miny = INT_MAX;
 	int maxx = INT_MIN;
 	int maxy = INT_MIN;
 
-	for (int i = 0; i < mw->nmonitors; ++i)
-	{
-		minx = MIN(minx, mw->monitor[i].x);
-		miny = MIN(miny, mw->monitor[i].y);
-		maxx = MAX(maxx, mw->monitor[i].x + mw->monitor[i].width);
-		maxy = MAX(maxy, mw->monitor[i].y + mw->monitor[i].height);
+	if (ps->o.pagingOnCurrentMonitor) {
+		for (int i = 0; i < mw->nmonitors; ++i)
+		{
+			minx = MIN(minx, mw->monitor[i].x);
+			miny = MIN(miny, mw->monitor[i].y);
+			maxx = MAX(maxx, mw->monitor[i].x + mw->monitor[i].width);
+			maxy = MAX(maxy, mw->monitor[i].y + mw->monitor[i].height);
+		}
+
+		desktop_width = maxx - minx;
+		desktop_height = maxy - miny;
 	}
 
-	desktop_width = maxx - minx;
-	desktop_height = maxy - miny;
-#endif
-
 	// the paging layout is rectangular
-	// such that screenwidth == ceil(sqrt(screencount))
-	// and the screenheight == ceil(screencount / screenwidth)
+	// such that screenwidth == ceil(sqrt(vdcount))
+	// and the screenheight == ceil(vdcount / screenwidth)
 	int screenwidth = desktop_dim;
-	int screenheight = ceil((float)screencount / (float)screenwidth);
+	int screenheight = ceil((float)vdcount / (float)screenwidth);
 
-	foreach_dlist (mw->clientondesktop) {
+	dlist *windows = mw->clientondesktop;
+	if (!ps->o.pagingOnCurrentMonitor)
+		windows = dlist_first(dlist_find_all(mw->clientondesktop,
+				(dlist_match_func) clientwin_filter_monitor, &mw->monitor[monitor]));
+	foreach_dlist (windows)
+	{
 		ClientWin *cw = (ClientWin *) iter->data;
-		int win_desktop = wm_get_window_desktop(mw->ps, cw->wid_client);
-		int current_desktop = wm_get_current_desktop(mw->ps);
+
+		int win_desktop = wm_get_window_desktop(ps, cw->wid_client);
+		int current_desktop = wm_get_current_desktop(ps);
 		if (win_desktop == -1)
 			win_desktop = current_desktop;
 
@@ -1444,32 +1453,27 @@ init_paging_layout(MainWin *mw, Window leader)
 		cw->x = cw->src.x + win_desktop_x * (desktop_width + mw->distance);
 		cw->y = cw->src.y + win_desktop_y * (desktop_height + mw->distance);
 
-		cw->src.x += (win_desktop_x - current_desktop_x) * (desktop_width + mw->distance);
-		cw->src.y += (win_desktop_y - current_desktop_y) * (desktop_height + mw->distance);
+		cw->src.x += (win_desktop_x - current_desktop_x)
+				* (desktop_width + mw->distance);
+		cw->src.y += (win_desktop_y - current_desktop_y)
+				* (desktop_height + mw->distance);
+		if (!ps->o.pagingOnCurrentMonitor) {
+			cw->x -= mw->monitor[monitor].x;
+			cw->y -= mw->monitor[monitor].y;
+		}
 	}
-
 
 	unsigned int totalwidth = screenwidth * (desktop_width + mw->distance) - mw->distance;
 	unsigned int totalheight = screenheight * (desktop_height + mw->distance) - mw->distance;
 
-	init_multiplier(mw, mw->monitor[mw->active_monitor], totalwidth, totalheight,
-			false, 1, &mw->multiplier[mw->active_monitor],
-			&mw->xoff[mw->active_monitor], &mw->yoff[mw->active_monitor]);
-
-	mw->desktoptransform.matrix[0][0] = 1.0;
-	mw->desktoptransform.matrix[0][1] = 0.0;
-	mw->desktoptransform.matrix[0][2] = mw->xoff[mw->active_monitor];
-	mw->desktoptransform.matrix[1][0] = 0.0;
-	mw->desktoptransform.matrix[1][1] = 1.0;
-	mw->desktoptransform.matrix[1][2] = mw->yoff[mw->active_monitor];
-	mw->desktoptransform.matrix[2][0] = 0.0;
-	mw->desktoptransform.matrix[2][1] = 0.0;
-	mw->desktoptransform.matrix[2][2] = 1.0;
+	init_multiplier(mw, mw->monitor[monitor], totalwidth, totalheight,
+			false, 1, &mw->multiplier[monitor],
+			&mw->xoff[monitor], &mw->yoff[monitor]);
 
 	// create windows which represent each virtual desktop
-	int current_desktop = wm_get_current_desktop(mw->ps);
+	int current_desktop = wm_get_current_desktop(ps);
 	for (int j=0, k=0; j<screenheight; j++) {
-		for (int i=0; i<screenwidth && k<screencount; i++) {
+		for (int i=0; i<screenwidth && k<vdcount; i++) {
 			int desktop_idx = screenwidth * j + i;
 			XSetWindowAttributes sattr = {
 				.event_mask = ButtonPressMask | ButtonReleaseMask | KeyPressMask
@@ -1477,7 +1481,7 @@ init_paging_layout(MainWin *mw, Window leader)
 				//.override_redirect = false,
                 // exclude window frame
 			};
-			Window desktopwin = XCreateWindow(mw->ps->dpy,
+			Window desktopwin = XCreateWindow(ps->dpy,
 					mw->window,
 					0, 0, 1, 1,
 					0, 0, InputOnly, CopyFromParent,
@@ -1499,13 +1503,14 @@ init_paging_layout(MainWin *mw, Window leader)
 			}
 
 			cw->slots = desktop_idx;
+			cw->monitor = monitor;
 			cw->mode = CLIDISP_DESKTOP;
 
 			// when ps->o.includeFrame this would be incorrectly set
 			cw->src.window = desktopwin;
 
 			{
-				unsigned char *str = wm_get_desktop_name(mw->ps, desktop_idx);
+				unsigned char *str = wm_get_desktop_name(ps, desktop_idx);
 				char *str1 = "skippy-xd page ";
 				char *str2 = malloc(sizeof(char)
 						* (strlen(str1) + strlen((char*) str) + 1));
@@ -1518,28 +1523,28 @@ init_paging_layout(MainWin *mw, Window leader)
 
 			cw->zombie = false;
 
-			float multiplier = mw->multiplier[mw->active_monitor];
-			cw->x = cw->src.x = (i * (desktop_width + mw->distance)) * multiplier;
-			cw->y = cw->src.y = (j * (desktop_height + mw->distance)) * multiplier;
+			float multiplier = mw->multiplier[monitor];
+			cw->x = cw->src0.x = cw->src.x = (i * (desktop_width + mw->distance)) * multiplier;
+			cw->y = cw->src0.y = cw->src.y = (j * (desktop_height + mw->distance)) * multiplier;
 			cw->src.width = desktop_width;
 			cw->src.height = desktop_height;
+			cw->src0.width = cw->src.width * multiplier;
+			cw->src0.height = cw->src.height * multiplier;
+			if (!ps->o.pagingOnCurrentMonitor) {
+				cw->src0.x = cw->src.x + mw->monitor[monitor].x;
+				cw->src0.y = cw->src.y + mw->monitor[monitor].y;
+			}
 
 			clientwin_prepmove(cw);
 			clientwin_move(cw, multiplier,
-					mw->xoff[mw->active_monitor], mw->yoff[mw->active_monitor], 1);
-
-			if (mw->ps->o.tooltip_show) {
-				if (cw->tooltip)
-					tooltip_destroy(cw->tooltip);
-				cw->tooltip = tooltip_create(cw->mainwin);
-			}
+					mw->xoff[monitor], mw->yoff[monitor], 1);
 
 			if (!mw->dminis)
 				mw->dminis = dlist_add(NULL, cw);
 			else
 				dlist_add(mw->dminis, cw);
 
-			XRaiseWindow(mw->ps->dpy, cw->mini.window);
+			XRaiseWindow(ps->dpy, cw->mini.window);
 
 			if (cw->slots == current_desktop) {
 				mw->client_to_focus = cw;
@@ -1560,6 +1565,12 @@ init_paging_layout(MainWin *mw, Window leader)
 	}
 
 	mw->focuslist = dlist_dup(mw->dminis);
+
+	foreach_dlist(windows) {
+		ClientWin *cw = iter->data;
+		cw->x *= mw->multiplier[monitor];
+		cw->y *= mw->multiplier[monitor];
+	}
 }
 
 static void
@@ -1590,16 +1601,14 @@ desktopwin_map(ClientWin *cw)
 
 	if (ps->o.pseudoTrans)
 	{
-		int xoff = mw->xoff[mw->active_monitor], yoff = mw->yoff[mw->active_monitor];
-		mw->desktoptransform.matrix[0][2] += cw->mini.x - xoff;
-		mw->desktoptransform.matrix[1][2] += cw->mini.y - yoff;
+		mw->desktoptransform.matrix[0][2] += cw->mini.x;
+		mw->desktoptransform.matrix[1][2] += cw->mini.y;
 		XRenderSetPictureTransform(ps->dpy, cw->origin, &mw->desktoptransform);
-		mw->desktoptransform.matrix[0][2] -= cw->mini.x - xoff;
-		mw->desktoptransform.matrix[1][2] -= cw->mini.y - yoff;
+		mw->desktoptransform.matrix[0][2] -= cw->mini.x;
+		mw->desktoptransform.matrix[1][2] -= cw->mini.y;
 	}
 
 	cw->focused = cw == mw->client_to_focus;
-	
 	clientwin_render(cw);
 
 	XMapWindow(ps->dpy, cw->mini.window);
@@ -1608,6 +1617,12 @@ desktopwin_map(ClientWin *cw)
 
 	if (ps->o.pseudoTrans)
 		mainwin_render_borders(mw);
+
+	if (ps->o.tooltip_show) {
+		if (cw->tooltip)
+			tooltip_destroy(cw->tooltip);
+		cw->tooltip = tooltip_create(cw->mainwin);
+	}
 
 	if (ps->o.tooltip_show)
 		clientwin_tooltip(cw);
@@ -1631,12 +1646,11 @@ skippy_activate(MainWin *mw, Window leader)
 	}
 
 	if (ps->o.mode == PROGMODE_PAGING) {
-		init_paging_layout(mw, leader);
-		foreach_dlist(mw->clientondesktop) {
-			ClientWin *cw = iter->data;
-			cw->x *= mw->multiplier[mw->active_monitor];
-			cw->y *= mw->multiplier[mw->active_monitor];
-		}
+		if (ps->o.pagingOnCurrentMonitor)
+			init_paging_layout(mw, leader, mw->active_monitor);
+		else
+			for (int i=0; i<mw->nmonitors; i++)
+				init_paging_layout(mw, leader, i);
 	}
 	else {
 		enum layoutmode layout = mw->ps->o.switchLayout;
@@ -2017,18 +2031,45 @@ mainloop(session_t *ps, bool activate_on_start) {
 				}
 
 				if (ps->o.mode == PROGMODE_PAGING && mw->ps->o.preservePages) {
-					foreach_dlist (mw->dminis) {
-						ClientWin *cw = (ClientWin *) iter->data;
+					if (ps->o.pagingOnCurrentMonitor) {
+						foreach_dlist (mw->dminis) {
+							ClientWin *cw = (ClientWin *) iter->data;
 
-						float multiplier = mw->multiplier[mw->active_monitor];
-						int xoff = mw->xoff[mw->active_monitor],
-							yoff = mw->yoff[mw->active_monitor];
-						for (int i = 0; i < mw->nmonitors; ++i)
-						{
-							int s_x = mw->monitor[i].x * multiplier + cw->x;
-							int s_y = mw->monitor[i].y * multiplier + cw->y;
-							int s_w = mw->monitor[i].width * multiplier - ps->o.leftFrameBorder;
-							int s_h = mw->monitor[i].height * multiplier - ps->o.topFrameBorder;
+							float multiplier = mw->multiplier[mw->active_monitor];
+							int xoff = mw->xoff[mw->active_monitor],
+								yoff = mw->yoff[mw->active_monitor];
+							for (int i = 0; i < mw->nmonitors; ++i)
+							{
+								int s_x = mw->monitor[i].x * multiplier + cw->x;
+								int s_y = mw->monitor[i].y * multiplier + cw->y;
+								int s_w = mw->monitor[i].width * multiplier - ps->o.leftFrameBorder;
+								int s_h = mw->monitor[i].height * multiplier - ps->o.topFrameBorder;
+
+								XRoundedRectComposite(mw->ps,
+										mw->ps->o.from, mw->background,
+										s_x + xoff + mw->x + ps->o.leftFrameBorder,
+										s_y + yoff + mw->y + ps->o.topFrameBorder,
+										s_x + xoff + ps->o.leftFrameBorder,
+										s_y + yoff + ps->o.topFrameBorder,
+										s_w,
+										s_h,
+										ps->o.cornerRadius * multiplier);
+							}
+							XClearWindow(ps->dpy, mw->window);
+						}
+					}
+					else {
+						foreach_dlist (mw->dminis) {
+							ClientWin *cw = (ClientWin *) iter->data;
+
+							int monitor = cw->monitor;
+							float multiplier = mw->multiplier[monitor];
+							int xoff = mw->xoff[monitor];
+							int yoff = mw->yoff[monitor];
+							int s_x = cw->x;
+							int s_y = cw->y;
+							int s_w = mw->monitor[monitor].width * multiplier - ps->o.leftFrameBorder;
+							int s_h = mw->monitor[monitor].height * multiplier - ps->o.topFrameBorder;
 
 							XRoundedRectComposite(mw->ps,
 									mw->ps->o.from, mw->background,
@@ -3192,6 +3233,8 @@ load_config_file(session_t *ps)
 			&ps->o.switchOnCurrentMonitor);
 	config_get_bool_wrap(config, "multimonitor", "exposeOnCurrentMonitor",
 			&ps->o.exposeOnCurrentMonitor);
+	config_get_bool_wrap(config, "multimonitor", "pagingOnCurrentMonitor",
+			&ps->o.pagingOnCurrentMonitor);
 #endif
 
 	{

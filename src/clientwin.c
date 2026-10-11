@@ -51,16 +51,10 @@ clientwin_fill_shape(ClientWin *cw, Drawable drawable, GC gc, int offset, int ex
 
 	float multiplier = clientwin_get_multiplier(cw);
 	int radius = ps->o.cornerRadius * multiplier;
-	int count = 1;
 
-	bool page = ps->o.mode == PROGMODE_PAGING && ps->o.preservePages
-			&& cw->mode == CLIDISP_DESKTOP && mw->nmonitors > 0;
-	if (page)
-		count = mw->nmonitors;
-
-	for (int i = 0; i < count; ++i) {
+	for (int i = 0; i < mw->nmonitors; ++i) {
 		int x = 0, y = 0, w = cw->mini.width, h = cw->mini.height;
-		if (page) {
+		if (cw->mode == CLIDISP_DESKTOP && ps->o.pagingOnCurrentMonitor) {
 			x = (int)(mw->monitor[i].x * multiplier + cw->x)
 					+ mw->xoff[mw->active_monitor] + ps->o.leftFrameBorder - cw->mini.x;
 			y = (int)(mw->monitor[i].y * multiplier + cw->y)
@@ -703,7 +697,7 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 			}
 
 			if (tint && tint->alpha && tint_window) {
-				if (cw->mode == CLIDISP_DESKTOP)
+				if (cw->mode == CLIDISP_DESKTOP && ps->o.pagingOnCurrentMonitor)
 				{
 					for (int i = 0; i < mw->nmonitors; ++i)
 					{
@@ -736,6 +730,17 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 
 void
 clientwin_render(ClientWin *cw) {
+	MainWin *mw = cw->mainwin;
+	session_t *ps = mw->ps;
+	if (ps->o.mode == PROGMODE_PAGING && !ps->o.pagingOnCurrentMonitor) {
+		foreach_dlist (mw->dminis) {
+			ClientWin *cw2 = iter->data;
+			cw2->focused = cw2->slots == cw->slots;
+			clientwin_repaint(cw2, NULL);
+			if (cw2->tooltip)
+				clientwin_tooltip(cw2);
+		}
+	}
 	clientwin_repaint(cw, NULL);
 }
 

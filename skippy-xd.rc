@@ -47,6 +47,7 @@ pseudoTrans = true
 
 switchOnCurrentMonitor = true
 exposeOnCurrentMonitor = false
+pagingOnCurrentMonitor = true
 
 [layout]
 
