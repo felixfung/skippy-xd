@@ -1,6 +1,6 @@
-# BREAKING!! New compilation and packaging procedure! See https://github.com/felixfung/skippy-xd/pull/552
+# BREAKING!! Version 0.11.0.1 Chipmunk Expose introduced new compilation and packaging procedure! See https://github.com/felixfung/skippy-xd/pull/552
 
-# DOUBLE BREAKING! xinput added as optional (enabled by default) dependency, but since xinput ships with xorg by default compilations could silently pass
+# DOUBLE BREAKING!! Version 0.12.0 Digimon introduced new compilation and packaging procedure! See https://github.com/felixfung/skippy-xd/pull/560
 
 Welcome to skippy-xd!
 
