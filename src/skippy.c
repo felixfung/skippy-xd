@@ -1306,10 +1306,6 @@ init_focus(MainWin *mw, enum layoutmode layout, dlist *windows, Window leader) {
 	}
 }
 
-#define INTERSECTS(x1, y1, w1, h1, x2, y2, w2, h2) \
-		(((x1) < (x2) + (w2)) && ((x2) < (x1) + (w1)) && \
-		 ((y1) < (y2) + (h2)) && ((y2) < (y1) + (h1)))
-
 static void
 calculatePanelBorders(MainWin *mw, MonitorCoord monitor,
 		int *x1, int *y1, int *x2, int *y2) {
@@ -3229,6 +3225,13 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "system", "pseudoTrans", &ps->o.pseudoTrans);
 
 #if defined(CFG_XRANDR) || defined(CFG_XINERAMA)
+	{
+		ps->o.currentMonitor = 0;
+		const char *tmp = config_get(config, "multimonitor", "currentMonitor", "window");
+		if (tmp && strcmp(tmp, "mouse") == 0)
+			ps->o.currentMonitor = 1;
+	}
+
 	config_get_bool_wrap(config, "multimonitor", "switchOnCurrentMonitor",
 			&ps->o.switchOnCurrentMonitor);
 	config_get_bool_wrap(config, "multimonitor", "exposeOnCurrentMonitor",

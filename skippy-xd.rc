@@ -45,6 +45,12 @@ pseudoTrans = true
 
 [multimonitor]
 
+# currentMonitor = mouse, mouse position determines current monitor
+# currentMonitor = window, current window determines current monitor
+currentMonitor = window
+
+# Set to true for windows to lump to current monitor
+# Set to false for windows to stay in their original monitor
 switchOnCurrentMonitor = true
 exposeOnCurrentMonitor = false
 pagingOnCurrentMonitor = true

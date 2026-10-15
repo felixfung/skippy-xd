@@ -595,26 +595,50 @@ mainwin_update_geometry(MainWin *mw)
 		mw->height = maxy - miny;
 	}
 
-	Window dummy_w;
-	int root_x, root_y, dummy_i;
-	unsigned int dummy_u;
-	XQueryPointer(ps->dpy, ps->root, &dummy_w, &dummy_w,
-			&root_x, &root_y, &dummy_i, &dummy_i, &dummy_u);
-	printfdf(false, "(): Multi-monitor --> querying pointer... +%i+%i\n",
-			root_x, root_y);
+	if (ps->o.currentMonitor == 0) {
+		Window wid = wm_get_focused(ps), tmpwin = None;
 
-	for (int i = 0; i < mw->nmonitors; ++i)
-	{
-		if (root_x >= mw->monitor[i].x &&
-				root_x < mw->monitor[i].x + mw->monitor[i].width &&
-			root_y >= mw->monitor[i].y &&
-			root_y < mw->monitor[i].y + mw->monitor[i].height)
+		XWindowAttributes wattr = { };
+		XGetWindowAttributes(ps->dpy, wid, &wattr);
+
+		int x=0, y=0, width=0, height=0;
+		XTranslateCoordinates(ps->dpy, wid, wattr.root,
+				-wattr.border_width, -wattr.border_width,
+				&x, &y, &tmpwin);
+		width = wattr.width;
+		height = wattr.height;
+
+		for (int i=0; i<mw->nmonitors; i++) {
+			MonitorCoord monitor = mw->monitor[i];
+			if (INTERSECTS(monitor.x, monitor.y, monitor.width, monitor.height,
+					x, y, width, height)) {
+				mw->active_monitor = i;
+				break;
+			}
+		}
+	}
+	else {
+		Window dummy_w;
+		int root_x, root_y, dummy_i;
+		unsigned int dummy_u;
+		XQueryPointer(ps->dpy, ps->root, &dummy_w, &dummy_w,
+				&root_x, &root_y, &dummy_i, &dummy_i, &dummy_u);
+		printfdf(false, "(): Multi-monitor --> querying pointer... +%i+%i\n",
+				root_x, root_y);
+
+		for (int i = 0; i < mw->nmonitors; ++i)
 		{
-			printfdf(false, "(): Multi-monitor --> active on monitor %i %ix%i+%i+%i\n",
-					i, mw->monitor[i].width, mw->monitor[i].height,
-					mw->monitor[i].x, mw->monitor[i].y);
-			mw->active_monitor = i;
-			break;
+			if (root_x >= mw->monitor[i].x &&
+					root_x < mw->monitor[i].x + mw->monitor[i].width &&
+				root_y >= mw->monitor[i].y &&
+				root_y < mw->monitor[i].y + mw->monitor[i].height)
+			{
+				printfdf(false, "(): Multi-monitor --> active on monitor %i %ix%i+%i+%i\n",
+						i, mw->monitor[i].width, mw->monitor[i].height,
+						mw->monitor[i].x, mw->monitor[i].y);
+				mw->active_monitor = i;
+				break;
+			}
 		}
 	}
 

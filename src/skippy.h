@@ -207,6 +207,7 @@ typedef struct {
 	int clientList;
 	bool pseudoTrans;
 
+	int currentMonitor;
 	bool switchOnCurrentMonitor;
 	bool exposeOnCurrentMonitor;
 	bool pagingOnCurrentMonitor;
@@ -307,6 +308,7 @@ typedef struct {
 	.clientList = 0, \
 	.pseudoTrans = true, \
 \
+	.currentMonitor = 0, \
 	.switchOnCurrentMonitor = true, \
 	.exposeOnCurrentMonitor = false, \
 	.pagingOnCurrentMonitor = true, \
@@ -1428,5 +1430,9 @@ void XRenderTintBorder(ClientWin *cw,
 extern session_t *ps_g;
 
 int load_config_file(session_t *ps);
+
+#define INTERSECTS(x1, y1, w1, h1, x2, y2, w2, h2) \
+		(((x1) < (x2) + (w2)) && ((x2) < (x1) + (w1)) && \
+		 ((y1) < (y2) + (h2)) && ((y2) < (y1) + (h1)))
 
 #endif /* SKIPPY_H */
