@@ -731,7 +731,8 @@ clientwin_render(ClientWin *cw) {
 	if (ps->o.mode == PROGMODE_PAGING && !ps->o.pagingOnCurrentMonitor) {
 		foreach_dlist (mw->dminis) {
 			ClientWin *cw2 = iter->data;
-			cw2->focused = cw2->slots == cw->slots;
+			cw2->focused = mw->client_to_focus
+				&& cw2->slots == mw->client_to_focus->slots;
 			clientwin_repaint(cw2, NULL);
 			if (cw2->tooltip)
 				clientwin_tooltip(cw2);
