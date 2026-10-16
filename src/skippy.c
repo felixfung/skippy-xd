@@ -1604,7 +1604,6 @@ desktopwin_map(ClientWin *cw)
 		mw->desktoptransform.matrix[1][2] -= cw->mini.y;
 	}
 
-	cw->focused = cw == mw->client_to_focus;
 	clientwin_render(cw);
 
 	XMapWindow(ps->dpy, cw->mini.window);
