@@ -61,6 +61,8 @@ jobs:
             libgif-dev
             libpng-dev
             libxinerama-dev
+            libxrandr-dev
+            libxi-dev
             libchipmunk-dev
 
       - name: Upload artifact

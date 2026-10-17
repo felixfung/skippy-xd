@@ -32,7 +32,7 @@ jobs:
             rpm-build redhat-rpm-config meson gcc \
             libX11-devel libXft-devel libXrender-devel \
             libXcomposite-devel libXdamage-devel libXfixes-devel \
-            libXext-devel libXinerama-devel \
+            libXext-devel libXinerama-devel libXrandr-devel libXi-devel \
             libjpeg-turbo-devel giflib-devel libpng-devel \
             chipmunk-devel
 
