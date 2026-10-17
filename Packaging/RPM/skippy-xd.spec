@@ -16,6 +16,8 @@ BuildRequires:  libXdamage-devel
 BuildRequires:  libXfixes-devel
 BuildRequires:  libXext-devel
 BuildRequires:  libXinerama-devel
+BuildRequires:  libXrandr-devel
+BuildRequires:  libXi-devel
 BuildRequires:  libjpeg-turbo-devel
 BuildRequires:  giflib-devel
 BuildRequires:  libpng-devel
