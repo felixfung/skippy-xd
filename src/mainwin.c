@@ -491,7 +491,7 @@ mainwin_update_geometry(MainWin *mw)
 	if (xrr_monitors && mw->nmonitors > 0) {
 		if (mw->monitor)
 			free(mw->monitor);
-		mw->monitor = calloc(mw->nmonitors, sizeof(*mw->monitor));
+		mw->monitor = calloc(mw->nmonitors, sizeof(MonitorCoord));
 		if (mw->multiplier)
 			free(mw->multiplier);
 		mw->multiplier = calloc(mw->nmonitors, sizeof(float));

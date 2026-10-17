@@ -1660,7 +1660,7 @@ skippy_activate(MainWin *mw, Window leader)
 			i1 = mw->nmonitors;
 		}
 
-		for (int i=i0; i<=i1; i++) {
+		for (int i=i0; i<i1; i++) {
 			dlist *windows = NULL;
 			if (multimonitor)
 				windows = dlist_first(dlist_find_all(mw->clientondesktop,
