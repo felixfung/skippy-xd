@@ -595,6 +595,7 @@ mainwin_update_geometry(MainWin *mw)
 		mw->height = maxy - miny;
 	}
 
+	bool foundmonitor = false;
 	if (ps->o.currentMonitor == 0) {
 		Window wid = wm_get_focused(ps), tmpwin = None;
 
@@ -613,11 +614,13 @@ mainwin_update_geometry(MainWin *mw)
 			if (INTERSECTS(monitor.x, monitor.y, monitor.width, monitor.height,
 					x, y, width, height)) {
 				mw->active_monitor = i;
+				foundmonitor = (wid != mw->window && wid != None);
 				break;
 			}
 		}
 	}
-	else {
+
+	if (!foundmonitor) {
 		Window dummy_w;
 		int root_x, root_y, dummy_i;
 		unsigned int dummy_u;
