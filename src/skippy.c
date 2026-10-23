@@ -1663,6 +1663,23 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 	}
 }
 
+// Capture a window's pixmap as soon as it is mapped, so it still has a
+// preview after it is hidden again.
+static void
+update_new_client(MainWin *mw, Window wid) {
+	count_and_filter_clients(mw);
+	dlist *iter = (wid ? dlist_find(mw->clients, clientwin_cmp_func, (void *) wid): NULL);
+	if (!iter && wid)
+		iter = dlist_find(mw->clients, clientwin_cmp_frame_func, (void *) wid);
+	if (!iter)
+		return;
+
+	ClientWin *cw = (ClientWin *) iter->data;
+	clientwin_update3(cw);
+	clientwin_update2(cw);
+	cw->damaged = true;
+}
+
 static void
 mainloop(session_t *ps, bool activate_on_start) {
 	MainWin *mw = NULL;
@@ -2141,15 +2158,7 @@ mainloop(session_t *ps, bool activate_on_start) {
             }
 			else if (ev.type == CreateNotify || ev.type == MapNotify) {
 				printfdf(false, "(): else if (ev.type == CreateNotify || ev.type == MapNotify) {");
-				count_and_filter_clients(ps->mainwin);
-				dlist *iter = (wid ? dlist_find(ps->mainwin->clients, clientwin_cmp_func, (void *) wid): NULL);
-
-				if (iter) {
-					ClientWin *cw = (ClientWin *) iter->data;
-					clientwin_update3(cw);
-					clientwin_update2(cw);
-					cw->damaged = true;
-				}
+				update_new_client(ps->mainwin, wid);
 				num_events--;
 
 				{
@@ -2169,6 +2178,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 						wid = ev_window(ps, &ev);
 						num_events--;
 
+						if (ev.type == CreateNotify || ev.type == MapNotify) {
+							update_new_client(ps->mainwin, wid);
+							continue;
+						}
 						dlist *iter = (wid ? dlist_find(ps->mainwin->clients,
 								clientwin_cmp_func, (void *) wid): NULL);
 						if (iter) {

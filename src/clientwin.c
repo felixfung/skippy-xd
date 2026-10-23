@@ -34,6 +34,13 @@ clientwin_cmp_func(dlist *l, void *data) {
 		|| cw == (ClientWin *) data;
 }
 
+// Root events report the WM frame, but src.window is the client unless includeFrame is set
+int
+clientwin_cmp_frame_func(dlist *l, void *data) {
+	ClientWin *cw = (ClientWin *) l->data;
+	return wm_find_frame(cw->mainwin->ps, cw->wid_client) == (Window) data;
+}
+
 void XRoundedRectTint(session_t *ps,
 		Picture dst,
 		XRenderColor *tint,

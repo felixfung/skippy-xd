@@ -93,6 +93,7 @@ void clientwin_map(ClientWin *);
 void clientwin_unmap(ClientWin *);
 int clientwin_handle(ClientWin *, XEvent *);
 int clientwin_cmp_func(dlist *, void*);
+int clientwin_cmp_frame_func(dlist *, void*);
 bool clientwin_update(ClientWin *cw);
 bool clientwin_update2(ClientWin *cw);
 bool clientwin_update3(ClientWin *cw);
