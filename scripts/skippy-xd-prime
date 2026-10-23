@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Visit every desktop once so the skippy-xd daemon sees each window mapped
+# and keeps a preview for it. Run with the daemon already started.
+# Usage: skippy-xd-prime [delay-seconds]   (default 0.3)
+set -euo pipefail
+
+delay="${1:-0.3}"
+
+command -v xdotool >/dev/null || { echo "skippy-xd-prime: xdotool not found" >&2; exit 1; }
+pgrep -x skippy-xd >/dev/null || { echo "skippy-xd-prime: skippy-xd daemon not running" >&2; exit 1; }
+
+count=$(xdotool get_num_desktops)
+origin=$(xdotool get_desktop)
+active=$(xdotool getactivewindow 2>/dev/null || true)
+
+for ((d = 0; d < count; d++)); do
+	[ "$d" -eq "$origin" ] && continue
+	xdotool set_desktop "$d"
+	sleep "$delay"
+done
+
+xdotool set_desktop "$origin"
+if [ -n "$active" ]; then
+	sleep "$delay"
+	xdotool windowactivate "$active" 2>/dev/null || true
+fi
