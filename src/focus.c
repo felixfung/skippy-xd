@@ -29,10 +29,27 @@ static void
 focus_miniw_dir(ClientWin *cw, match_func match, dist_func func) {
 	float diff = 0.0;
 	ClientWin *candidate = NULL;
-	session_t * const ps = cw->mainwin->ps;
+	MainWin *mw = cw->mainwin;
+	session_t * const ps = mw->ps;
 
-	dlist *candidates = dlist_first(dlist_find_all(cw->mainwin->focuslist, (dlist_match_func) match, &cw->mini));
-	if (!candidates) return;
+	if (ps->o.mode == PROGMODE_PAGING && !ps->o.pagingOnCurrentMonitor
+			&& cw->monitor != mw->active_monitor) {
+		foreach_dlist (mw->dminis) {
+			ClientWin *dmini = (ClientWin *) iter->data;
+			if (dmini->monitor == mw->active_monitor && dmini->slots == cw->slots)
+				return focus_miniw_dir(dmini, match, func);
+		}
+	}
+
+	dlist *candidates = dlist_first(dlist_find_all(cw->mainwin->focuslist,
+			(dlist_match_func) match, &cw->mini));
+
+	if (!ps->o.pagingOnCurrentMonitor && ps->o.mode == PROGMODE_PAGING)
+		candidates = dlist_first(dlist_find_all(candidates,
+				(dlist_match_func) clientwin_filter_monitor,
+				&mw->monitor[mw->active_monitor]));
+
+ 	if (!candidates) return;
 
 	foreach_dlist (candidates) {
 		ClientWin *win = (ClientWin *) iter->data;

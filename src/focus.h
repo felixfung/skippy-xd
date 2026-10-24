@@ -111,6 +111,14 @@ focus_miniw_adv(session_t *ps, ClientWin *cw, bool move_ptr) {
 
 	ps->mainwin->client_to_focus = cw;
 	ps->mainwin->client_to_focus->focused = 1;
+
+	if (ps->o.mode == PROGMODE_PAGING && !ps->o.pagingOnCurrentMonitor)
+		foreach_dlist(cw->mainwin->dminis) {
+			ClientWin *cw2 = iter->data;
+			if (cw2->slots == cw->slots)
+				cw2->focused = 1;
+		}
+
 	clientwin_render(cw);
 
 	printfdf(false, "(): ");
@@ -133,10 +141,22 @@ focus_miniw_next(session_t *ps, ClientWin *cw) {
 		return;
 	}
 
-	if (e->next)
-		e = e->next;
-	else
-		e = dlist_first(e);
+	if (!ps->o.pagingOnCurrentMonitor && ps->o.mode == PROGMODE_PAGING) {
+		int monitor = ((ClientWin *) e->data)->monitor;
+		if (!e->next || ((ClientWin *) e->next->data)->monitor != monitor) {
+			e = dlist_first(e);
+			while (((ClientWin *) e->data)->monitor != monitor)
+				e = e->next;
+		}
+		else
+			e = e->next;
+	}
+	else {
+		if (e->next)
+			e = e->next;
+		else
+			e = dlist_first(e);
+	}
 
 	if (e->data != cw) {
 		cw->focused = false;
@@ -153,10 +173,20 @@ focus_miniw_prev(session_t *ps, ClientWin *cw) {
 	cw->focused = false;
 	clientwin_render(cw);
 	dlist *cwlist = dlist_first(cw->mainwin->focuslist);
+	dlist *cwlist2 = dlist_last(cwlist);
 	dlist *tgt = NULL;
 
+	int monitor = cw->monitor;
+	if (!ps->o.pagingOnCurrentMonitor && ps->o.mode == PROGMODE_PAGING) {
+		while (((ClientWin *) cwlist->data)->monitor != monitor)
+			cwlist = cwlist->next;
+		cwlist2 = cwlist;
+		while (cwlist2->next && ((ClientWin *) cwlist2->next->data)->monitor == monitor)
+			cwlist2 = cwlist2->next;
+	}
+
 	if (cw == cwlist->data)
-		tgt = dlist_last(cwlist);
+		tgt = cwlist2;
 	else
 		foreach_dlist (cwlist) {
 			if (iter->next && cw == iter->next->data) {
