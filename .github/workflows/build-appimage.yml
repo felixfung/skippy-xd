@@ -32,7 +32,7 @@ jobs:
             build-essential meson ninja-build wget zsync \
             libx11-dev libxft-dev libxrender-dev \
             libxcomposite-dev libxdamage-dev libxfixes-dev \
-            libxext-dev libxinerama-dev \
+            libxext-dev libxinerama-dev libxrandr-dev libxi-dev \
             libjpeg-dev libgif-dev libpng-dev libchipmunk-dev \
             desktop-file-utils
 
