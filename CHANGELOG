@@ -1,5 +1,13 @@
 Skippy-XD changelog
 
+0.12.0 -- "Digimon" (25 Oct 2026) ~/felixfung
+ - Paging focus fix when pseudoTrans = true
+ - Native mouse button for pivoting
+ - Optional XRandR support
+ - Multimonitor setup overhaul
+ - Activation on all monitors possible for switch/expose/paging
+ - Active monitor determined by mouse or currently focused window
+
 0.11.0.1 -- "Chipmunk Expose" (26 Sep 2026) ~/felixfung
  - Meson build allows vendoring of lipchipmunk
  - Removed Makefile
