@@ -596,7 +596,7 @@ mainwin_update_geometry(MainWin *mw)
 	}
 
 	bool foundmonitor = false;
-	if (ps->o.currentMonitor == 0) {
+	if (ps->o.currentMonitor == 0 && ps->mainwin) {
 		Window wid = wm_get_focused(ps), tmpwin = None;
 
 		XWindowAttributes wattr = { };
