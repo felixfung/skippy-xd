@@ -1306,6 +1306,57 @@ init_focus(MainWin *mw, enum layoutmode layout, dlist *windows, Window leader) {
 	}
 }
 
+/*
+ * Some docks (e.g. Plank under a compositor) map a large, mostly transparent
+ * ARGB window and restrict clicks to the visible dock with an input shape.
+ * Use the bounding box of the input shape, when it is smaller than the
+ * window, as the panel's effective geometry.
+ */
+static void
+panel_effective_geometry(session_t *ps, ClientWin *cw,
+		int *x, int *y, int *w, int *h) {
+	*x = cw->src.x;
+	*y = cw->src.y;
+	*w = cw->src.width;
+	*h = cw->src.height;
+
+	int count = 0, ordering = 0;
+	XRectangle *rects = XShapeGetRectangles(ps->dpy, cw->wid_client,
+			ShapeInput, &count, &ordering);
+	if (!rects)
+		return;
+	if (count <= 0) {
+		XFree(rects);
+		return;
+	}
+
+	int rx1 = rects[0].x, ry1 = rects[0].y;
+	int rx2 = rects[0].x + rects[0].width, ry2 = rects[0].y + rects[0].height;
+	for (int i = 1; i < count; ++i) {
+		rx1 = MIN(rx1, rects[i].x);
+		ry1 = MIN(ry1, rects[i].y);
+		rx2 = MAX(rx2, rects[i].x + rects[i].width);
+		ry2 = MAX(ry2, rects[i].y + rects[i].height);
+	}
+	XFree(rects);
+
+	rx1 = MAX(rx1, 0);
+	ry1 = MAX(ry1, 0);
+	rx2 = MIN(rx2, cw->src.width);
+	ry2 = MIN(ry2, cw->src.height);
+	if (rx2 <= rx1 || ry2 <= ry1)
+		return;
+
+	*x = cw->src.x + rx1;
+	*y = cw->src.y + ry1;
+	*w = rx2 - rx1;
+	*h = ry2 - ry1;
+
+	printfdf(false, "(): panel %#010lx window %dx%d+%d+%d, input shape %dx%d+%d+%d",
+			cw->wid_client, cw->src.width, cw->src.height, cw->src.x, cw->src.y,
+			*w, *h, *x, *y);
+}
+
 static void
 calculatePanelBorders(MainWin *mw, MonitorCoord monitor,
 		int *x1, int *y1, int *x2, int *y2) {
@@ -1324,32 +1375,33 @@ calculatePanelBorders(MainWin *mw, MonitorCoord monitor,
 		if (cw->paneltype != WINTYPE_PANEL)
 			continue;
 
+		int px, py, pw, ph;
+		panel_effective_geometry(mw->ps, cw, &px, &py, &pw, &ph);
+
 		if (!(INTERSECTS(monitor.x, monitor.y, monitor.width, monitor.height,
-				cw->x, cw->y, cw->src.width, cw->src.height)))
+				px, py, pw, ph)))
 			continue;
 
 		// assumed horizontal panel
-		if (cw->src.width >= cw->src.height) {
+		if (pw >= ph) {
 			// assumed top panel
-			if (cw->src.y < monitor.y + monitor.height / 2.0) {
-				*y1 = MAX(*y1,
-						cw->src.y + cw->src.height - monitor.y);
+			if (py < monitor.y + monitor.height / 2.0) {
+				*y1 = MAX(*y1, py + ph - monitor.y);
 			}
 			// assumed bottom panel
 			else {
-				*y2 = MIN(*y2, cw->src.y - monitor.y);
+				*y2 = MIN(*y2, py - monitor.y);
 			}
 		}
 		// assumed vertical panel
 		else {
 			// assumed left panel
-			if (cw->src.x < monitor.x + monitor.width / 2.0) {
-				*x1 = MAX(*x1,
-						cw->src.x + cw->src.width - monitor.x);
+			if (px < monitor.x + monitor.width / 2.0) {
+				*x1 = MAX(*x1, px + pw - monitor.x);
 			}
 			// assumed right panel
 			else {
-				*x2 = MIN(*x2, cw->src.x - monitor.x);
+				*x2 = MIN(*x2, px - monitor.x);
 			}
 		}
 	}
