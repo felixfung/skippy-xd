@@ -37,6 +37,8 @@ struct _clientwin_t {
 	client_disp_mode_t mode;
 	Window wid_client;
 	SkippyWindow src, src0;
+	/* _GTK_FRAME_EXTENTS (client-side shadow) cropped from src */
+	int frame_l, frame_t;
 	bool redirected;
 	Pixmap cpixmap;
 	pictw_t *pict_filled;

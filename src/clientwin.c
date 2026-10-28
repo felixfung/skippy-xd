@@ -362,6 +362,39 @@ clientwin_update(ClientWin *cw) {
 
 	cw->src.width = wattr.width;
 	cw->src.height = wattr.height;
+
+	// Crop the invisible client-side shadow margin GTK3/4 CSD windows
+	// advertise in _GTK_FRAME_EXTENTS (left, right, top, bottom).
+	cw->frame_l = cw->frame_t = 0;
+	{
+		static Atom gtk_frame_extents = None;
+		if (!gtk_frame_extents)
+			gtk_frame_extents = XInternAtom(ps->dpy, "_GTK_FRAME_EXTENTS", False);
+
+		Atom type = None;
+		int format = 0;
+		unsigned long nitems = 0, after = 0;
+		unsigned char *data = NULL;
+		if (Success == XGetWindowProperty(ps->dpy, cw->wid_client,
+					gtk_frame_extents, 0, 4, False, XA_CARDINAL,
+					&type, &format, &nitems, &after, &data)
+				&& data && format == 32 && nitems == 4) {
+			long *e = (long *) data;
+			long l = e[0], r = e[1], t = e[2], b = e[3];
+			if (l >= 0 && r >= 0 && t >= 0 && b >= 0
+					&& l + r < cw->src.width && t + b < cw->src.height) {
+				cw->frame_l = l;
+				cw->frame_t = t;
+				cw->src.x += l;
+				cw->src.y += t;
+				cw->src.width -= l + r;
+				cw->src.height -= t + b;
+			}
+		}
+		if (data)
+			XFree(data);
+	}
+
 	cw->x = cw->src0.x = cw->src.x;
 	cw->y = cw->src0.y = cw->src.y;
 	cw->src0.width = cw->src.width;
@@ -757,8 +790,8 @@ clientwin_repair(ClientWin *cw) {
 	}
 	for (int i = 0; i < nrects; i++) {
 		XRectangle r = {
-			.x = rects[i].x * cw->factor,
-			.y = rects[i].y * cw->factor,
+			.x = (rects[i].x - cw->frame_l) * cw->factor,
+			.y = (rects[i].y - cw->frame_t) * cw->factor,
 			.width = rects[i].width * cw->factor,
 			.height = rects[i].height * cw->factor,
 		};
@@ -898,18 +931,23 @@ clientwin_map(ClientWin *cw) {
 	if (!cw->mode)
 		return;
 
+	// Window transform, shifted past the cropped GTK frame extents
+	XTransform transform = cw->mainwin->transform;
+	transform.matrix[0][2] = XDoubleToFixed(cw->frame_l);
+	transform.matrix[1][2] = XDoubleToFixed(cw->frame_t);
+
 	if (cw->origin) {
 		free_damage(ps, &cw->damage);
 		cw->damage = XDamageCreate(ps->dpy, cw->src.window, XDamageReportDeltaRectangles);
 		if (cw->paneltype == WINTYPE_WINDOW)
-			XRenderSetPictureTransform(ps->dpy, cw->origin, &cw->mainwin->transform);
+			XRenderSetPictureTransform(ps->dpy, cw->origin, &transform);
 	}
 
 	if (cw->shadow) {
 		free_damage(ps, &cw->damage);
 		cw->damage = XDamageCreate(ps->dpy, cw->src.window, XDamageReportDeltaRectangles);
 		if (cw->paneltype == WINTYPE_WINDOW)
-			XRenderSetPictureTransform(ps->dpy, cw->shadow, &cw->mainwin->transform);
+			XRenderSetPictureTransform(ps->dpy, cw->shadow, &transform);
 	}
 
 	clientwin_render(cw);
