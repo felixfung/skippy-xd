@@ -329,7 +329,7 @@ typedef struct {
 	.background = NULL, \
 	.preservePages = true, \
 	.moveMouse = false, \
-	.includeFrame = false, \
+	.includeFrame = true, \
 	.leftFrameBorder = 0, \
 	.topFrameBorder = 0, \
 	.cornerRadius = 0, \

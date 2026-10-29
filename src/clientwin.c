@@ -26,7 +26,7 @@ int
 clientwin_cmp_func(dlist *l, void *data) {
 	ClientWin *cw = (ClientWin *) l->data;
 	return cw->src.window == (Window) data
-		|| cw->wid_client == (Window) data
+		|| cw->frame_id == (Window) data
 		|| cw == (ClientWin *) data;
 }
 
@@ -138,7 +138,7 @@ int
 clientwin_validate_panel(dlist *l, void *data) {
 	ClientWin *cw = l->data;
 	session_t *ps = cw->mainwin->ps;
-	cw->paneltype = wm_identify_panel(ps, cw->wid_client);
+	cw->paneltype = wm_identify_panel(ps, cw->src.window);
 	return cw->paneltype == WINTYPE_PANEL? ps->o.panel_show:
 			cw->paneltype == WINTYPE_DESKTOP? ps->o.panel_show_desktop:
 			0;
@@ -162,7 +162,7 @@ clientwin_filter_func(dlist *l, void *data) {
 	session_t *ps = mw->ps;
 
 	CARD32 current_desktop = (*(CARD32 *)data);
-	CARD32 w_desktop = wm_get_window_desktop(ps, cw->wid_client);
+	CARD32 w_desktop = wm_get_window_desktop(ps, cw->src.window);
 	bool filtered_in = true;
 
 	if (ps->o.desktops == NULL) {
@@ -180,7 +180,7 @@ clientwin_filter_func(dlist *l, void *data) {
 
 		// Sticky windows always shown
 		if (w_desktop == (CARD32) -1)
-			return wm_validate_window(mw->ps, cw->wid_client);
+			return wm_validate_window(mw->ps, cw->src.window);
 
 		const char *str = ps->o.desktops;
 		int len = strlen(str);
@@ -225,7 +225,7 @@ clientwin_filter_func(dlist *l, void *data) {
 	}
 
 	if (filtered_in)
-		return wm_validate_window(mw->ps, cw->wid_client);
+		return wm_validate_window(mw->ps, cw->src.window);
 	else
 		return false;
 }
@@ -234,7 +234,7 @@ int
 clientwin_check_group_leader_func(dlist *l, void *data)
 {
 	ClientWin *cw = (ClientWin *)l->data;
-	return wm_get_group_leader(cw->mainwin->ps->dpy, cw->wid_client) == *((Window*)data);
+	return wm_get_group_leader(cw->mainwin->ps->dpy, cw->src.window) == *((Window*)data);
 }
 
 ClientWin *
@@ -253,17 +253,18 @@ clientwin_create(MainWin *mw, Window client) {
 
     cw->slots = 0;
 	cw->mainwin = mw;
-	cw->wid_client = client;
+	cw->src.window = client;
 	cw->origin = None;
 	cw->destination = None;
 	cw->shadow = None;
 	cw->pixmap = None;
 	cw->cpixmap = None;
 
-	if (ps->o.includeFrame)
-		cw->src.window = wm_find_frame(ps, client);
-	if (!cw->src.window)
-		cw->src.window = client;
+	cw->frame_id = wm_find_frame(ps, client);
+	if (!cw->frame_id)
+		cw->frame_id = cw->src.window;
+	cw->drawable_id = ps->o.includeFrame? cw->frame_id: cw->src.window;
+
 	cw->mini.format = mw->format;
 
 	{
@@ -344,17 +345,17 @@ clientwin_update(ClientWin *cw) {
 	session_t *ps = cw->mainwin->ps;
 
 	XWindowAttributes wattr = { };
-	XGetWindowAttributes(ps->dpy, cw->src.window, &wattr);
+	XGetWindowAttributes(ps->dpy, cw->drawable_id, &wattr);
 
 	{
 		Window tmpwin = None;
-		XTranslateCoordinates(ps->dpy, cw->src.window, wattr.root,
+		XTranslateCoordinates(ps->dpy, cw->drawable_id, wattr.root,
 				-wattr.border_width, -wattr.border_width,
 				&cw->src.x, &cw->src.y, &tmpwin);
 
 		if (wattr.width == 0 && wattr.height == 0) {
-			XGetWindowAttributes(ps->dpy, cw->wid_client, &wattr);
-			XTranslateCoordinates(ps->dpy, cw->wid_client, wattr.root,
+			XGetWindowAttributes(ps->dpy, cw->src.window, &wattr);
+			XTranslateCoordinates(ps->dpy, cw->src.window, wattr.root,
 					-wattr.border_width, -wattr.border_width,
 					&cw->src.x, &cw->src.y, &tmpwin);
 		}
@@ -377,9 +378,10 @@ clientwin_update3(ClientWin *cw) {
 	clientwin_free_res2(ps, cw);
 
 	XWindowAttributes wattr = { };
-	XGetWindowAttributes(ps->dpy, cw->src.window, &wattr);
-	bool isViewable = wattr.map_state == IsViewable;
+	if (!XGetWindowAttributes(ps->dpy, cw->drawable_id, &wattr))
+		return false;
 
+	bool isViewable = wattr.map_state == IsViewable;
 	cw->zombie = !isViewable;
 
 	cw->src.format = XRenderFindVisualFormat(ps->dpy, wattr.visual);
@@ -393,18 +395,18 @@ clientwin_update3(ClientWin *cw) {
 		if (cw->origin)
 			free_picture(ps, &cw->origin);
 		cw->origin = XRenderCreatePicture(ps->dpy,
-				cw->src.window, cw->src.format, CPSubwindowMode, &pa);
+				cw->drawable_id, cw->src.format, CPSubwindowMode, &pa);
 		XRenderSetPictureFilter(ps->dpy, cw->origin, FilterBest, 0, 0);
 
 		if (!cw->redirected) {
-			XCompositeRedirectWindow(ps->dpy, cw->src.window,
+			XCompositeRedirectWindow(ps->dpy, cw->drawable_id,
 					CompositeRedirectAutomatic);
 			cw->redirected = true;
 		}
 
 		if (cw->cpixmap)
 			free_pixmap(ps, &cw->cpixmap);
-		cw->cpixmap = XCompositeNameWindowPixmap(ps->dpy, cw->src.window);
+		cw->cpixmap = XCompositeNameWindowPixmap(ps->dpy, cw->drawable_id);
 
 		if (cw->shadow)
 			free_picture(ps, &cw->shadow);
@@ -416,14 +418,14 @@ clientwin_update3(ClientWin *cw) {
 	// Get window icon
 	if (cw->icon_pict)
 		free_pictw(ps, &cw->icon_pict);
-	cw->icon_pict = simg_load_icon(ps, cw->wid_client, ps->o.iconSize);
+	cw->icon_pict = simg_load_icon(ps, cw->src.window, ps->o.iconSize);
 	if (!cw->icon_pict && ps->o.iconDefault)
 		cw->icon_pict = clone_pictw(ps, ps->o.iconDefault);
 
 	// Get window icon for filler
 	if (cw->icon_pict_filler)
 		free_pictw(ps, &cw->icon_pict_filler);
-	cw->icon_pict_filler = simg_load_icon(ps, cw->wid_client, ps->o.fillerIconSize);
+	cw->icon_pict_filler = simg_load_icon(ps, cw->src.window, ps->o.fillerIconSize);
 	if (!cw->icon_pict_filler && ps->o.iconFiller)
 		cw->icon_pict_filler = clone_pictw(ps, ps->o.iconFiller);
 
@@ -432,7 +434,7 @@ clientwin_update3(ClientWin *cw) {
 	// if we ever got a thumbnail for the window,
 	// the mode for that window always will be thumbnail
 	cw->mode = clientwin_get_disp_mode(ps, cw, isViewable);
-	printfdf(false, "(): (%#010lx): %d", cw->wid_client, cw->mode);
+	printfdf(false, "(): (%#010lx): %d", cw->src.window, cw->mode);
 
 	return true;
 }
@@ -544,14 +546,14 @@ clientwin_destroy(ClientWin *cw, bool destroyed) {
 	if (cw->tooltip)
 		tooltip_destroy(cw->tooltip);
 
-	if (cw->src.window && !destroyed) {
+	if (cw->drawable_id && !destroyed) {
 		free_damage(ps, &cw->damage);
 		// Stop listening to events, this should be safe because we don't
 		// monitor window re-map anyway
-		XSelectInput(ps->dpy, cw->src.window, 0);
+		XSelectInput(ps->dpy, cw->drawable_id, 0);
 
 		if (cw->redirected)
-			XCompositeUnredirectWindow(ps->dpy, cw->src.window, CompositeRedirectAutomatic);
+			XCompositeUnredirectWindow(ps->dpy, cw->drawable_id, CompositeRedirectAutomatic);
 	}
 
 	if (cw->mini.window) {
@@ -638,7 +640,7 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 				ClientWin *dwin = (ClientWin *) iter->data;
 
 				int leftborder = 0, topborder = 0;
-				if (wm_get_fullscreen(ps, cw->wid_client)) {
+				if (wm_get_fullscreen(ps, cw->src.window)) {
 					leftborder = ps->o.leftFrameBorder;
 					topborder = ps->o.topFrameBorder;
 				}
@@ -878,7 +880,7 @@ clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 	cw->mini.height = cw->src.height * f;
 
 	int leftborder = ps->o.leftFrameBorder, topborder = ps->o.topFrameBorder;
-	if (wm_get_fullscreen(ps, cw->wid_client))
+	if (wm_get_fullscreen(ps, cw->src.window))
 		leftborder = topborder = 0;
 
 	cw->mini.x += leftborder;
@@ -900,14 +902,14 @@ clientwin_map(ClientWin *cw) {
 
 	if (cw->origin) {
 		free_damage(ps, &cw->damage);
-		cw->damage = XDamageCreate(ps->dpy, cw->src.window, XDamageReportDeltaRectangles);
+		cw->damage = XDamageCreate(ps->dpy, cw->drawable_id, XDamageReportDeltaRectangles);
 		if (cw->paneltype == WINTYPE_WINDOW)
 			XRenderSetPictureTransform(ps->dpy, cw->origin, &cw->mainwin->transform);
 	}
 
 	if (cw->shadow) {
 		free_damage(ps, &cw->damage);
-		cw->damage = XDamageCreate(ps->dpy, cw->src.window, XDamageReportDeltaRectangles);
+		cw->damage = XDamageCreate(ps->dpy, cw->drawable_id, XDamageReportDeltaRectangles);
 		if (cw->paneltype == WINTYPE_WINDOW)
 			XRenderSetPictureTransform(ps->dpy, cw->shadow, &cw->mainwin->transform);
 	}
@@ -951,10 +953,10 @@ childwin_focus(ClientWin *cw) {
 	session_t * const ps = cw->mainwin->ps;
 
 	if (ps->o.moveMouse)
-		XWarpPointer(ps->dpy, None, cw->wid_client,
+		XWarpPointer(ps->dpy, None, cw->src.window,
 				0, 0, 0, 0, cw->src.width / 2, cw->src.height / 2);
-	XRaiseWindow(ps->dpy, cw->wid_client);
-	wm_activate_window(ps, cw->wid_client);
+	XRaiseWindow(ps->dpy, cw->src.window);
+	wm_activate_window(ps, cw->src.window);
 	XFlush(ps->dpy);
 }
 
@@ -972,7 +974,7 @@ clientwin_tooltip(ClientWin *cw) {
 			len = strlen((char*)label);
 		}
 		else if (ps->o.tooltip_option == 0) {
-			label = wm_get_window_title(ps, cw->wid_client, &len);
+			label = wm_get_window_title(ps, cw->src.window, &len);
 
 			if (!label)
 				label = wm_get_window_title(ps, cw->mini.window, &len);
@@ -980,7 +982,7 @@ clientwin_tooltip(ClientWin *cw) {
 		else {
 			XClassHint *hints = allocchk(XAllocClassHint());
 			if (hints) {
-				XGetClassHint(ps->dpy, cw->wid_client, hints);
+				XGetClassHint(ps->dpy, cw->src.window, hints);
 				if (hints->res_class)
 					label = (unsigned char*)hints->res_class;
 				else if (hints->res_name)
@@ -1048,19 +1050,19 @@ close_clientwindow(ClientWin* cw, enum cliop op) {
 
 	{
 		dlist *del = dlist_find(mw->clientondesktop,
-				clientwin_cmp_func, (void *) cw->wid_client);
+				clientwin_cmp_func, (void *) cw->src.window);
 		mw->clientondesktop = dlist_remove(del);
 	}
 
 	{
 		dlist *del = dlist_find(mw->clients,
-				clientwin_cmp_func, (void *) cw->wid_client);
+				clientwin_cmp_func, (void *) cw->src.window);
 		mw->clients = dlist_remove(del);
 	}
 
 	{
 		dlist *del = dlist_find(mw->focuslist,
-				clientwin_cmp_func, (void *) cw->wid_client);
+				clientwin_cmp_func, (void *) cw->src.window);
 		mw->focuslist = dlist_remove(del);
 	}
 
@@ -1185,7 +1187,7 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 		// see: https://tronche.com/gui/x/xlib/events/input-focus/normal-and-grabbed.html
 		printfdf(false, "(): main window id = %#010lx", cw->mainwin->window);
 		printfdfWindowName(ps, "(): client window = ", cw->mainwin->window);
-		printfdf(false, "(): client window id = %#010lx", cw->wid_client);
+		printfdf(false, "(): client window id = %#010lx", cw->src.window);
 		printfdfXFocusChangeEvent(ps, evf, false);
 
 		// printfef("(): usleep(10000);");
@@ -1208,7 +1210,7 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 		// see: https://tronche.com/gui/x/xlib/events/input-focus/normal-and-grabbed.html
 		printfdf(false, "(): main window id = %#010lx", cw->mainwin->window);
 		printfdfWindowName(ps, "(): client window = ", cw->mainwin->window);
-		printfdf(false, "(): client window id = %#010lx", cw->wid_client);
+		printfdf(false, "(): client window id = %#010lx", cw->src.window);
 		printfdfXFocusChangeEvent(ps, evf, false);
 
 		// printfef("(): usleep(10000);");
@@ -1241,7 +1243,7 @@ static int
 clientwin_action(ClientWin *cw, enum cliop action) {
 	MainWin *mw = cw->mainwin;
 	session_t * const ps = mw->ps;
-	const Window wid = cw->wid_client;
+	const Window wid = cw->src.window;
 
 	switch (action) {
 		case CLIENTOP_NO:
