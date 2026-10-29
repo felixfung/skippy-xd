@@ -365,7 +365,7 @@ clientwin_update(ClientWin *cw) {
 
 	// Crop the invisible client-side shadow margin GTK3/4 CSD windows
 	// advertise in _GTK_FRAME_EXTENTS (left, right, top, bottom).
-	cw->frame_l = cw->frame_t = 0;
+	cw->gtkframe_l = cw->gtkframe_t = 0;
 	{
 		static Atom gtk_frame_extents = None;
 		if (!gtk_frame_extents)
@@ -383,8 +383,8 @@ clientwin_update(ClientWin *cw) {
 			long l = e[0], r = e[1], t = e[2], b = e[3];
 			if (l >= 0 && r >= 0 && t >= 0 && b >= 0
 					&& l + r < cw->src.width && t + b < cw->src.height) {
-				cw->frame_l = l;
-				cw->frame_t = t;
+				cw->gtkframe_l = l;
+				cw->gtkframe_t = t;
 				cw->src.x += l;
 				cw->src.y += t;
 				cw->src.width -= l + r;
@@ -790,8 +790,8 @@ clientwin_repair(ClientWin *cw) {
 	}
 	for (int i = 0; i < nrects; i++) {
 		XRectangle r = {
-			.x = (rects[i].x - cw->frame_l) * cw->factor,
-			.y = (rects[i].y - cw->frame_t) * cw->factor,
+			.x = (rects[i].x - cw->gtkframe_l) * cw->factor,
+			.y = (rects[i].y - cw->gtkframe_t) * cw->factor,
 			.width = rects[i].width * cw->factor,
 			.height = rects[i].height * cw->factor,
 		};
@@ -931,24 +931,28 @@ clientwin_map(ClientWin *cw) {
 	if (!cw->mode)
 		return;
 
-	// Window transform, shifted past the cropped GTK frame extents
-	XTransform transform = cw->mainwin->transform;
-	transform.matrix[0][2] = XDoubleToFixed(cw->frame_l);
-	transform.matrix[1][2] = XDoubleToFixed(cw->frame_t);
+	// Shift the window transform past the cropped GTK frame extents.
+	// The offset is in source pixels, so it needs no multiplier.
+	XTransform *transform = &cw->mainwin->transform;
+	transform->matrix[0][2] = XDoubleToFixed(cw->gtkframe_l);
+	transform->matrix[1][2] = XDoubleToFixed(cw->gtkframe_t);
 
 	if (cw->origin) {
 		free_damage(ps, &cw->damage);
 		cw->damage = XDamageCreate(ps->dpy, cw->src.window, XDamageReportDeltaRectangles);
 		if (cw->paneltype == WINTYPE_WINDOW)
-			XRenderSetPictureTransform(ps->dpy, cw->origin, &transform);
+			XRenderSetPictureTransform(ps->dpy, cw->origin, transform);
 	}
 
 	if (cw->shadow) {
 		free_damage(ps, &cw->damage);
 		cw->damage = XDamageCreate(ps->dpy, cw->src.window, XDamageReportDeltaRectangles);
 		if (cw->paneltype == WINTYPE_WINDOW)
-			XRenderSetPictureTransform(ps->dpy, cw->shadow, &transform);
+			XRenderSetPictureTransform(ps->dpy, cw->shadow, transform);
 	}
+
+	transform->matrix[0][2] = 0;
+	transform->matrix[1][2] = 0;
 
 	clientwin_render(cw);
 

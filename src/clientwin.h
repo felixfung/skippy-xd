@@ -37,8 +37,6 @@ struct _clientwin_t {
 	client_disp_mode_t mode;
 	Window wid_client;
 	SkippyWindow src, src0;
-	/* _GTK_FRAME_EXTENTS (client-side shadow) cropped from src */
-	int frame_l, frame_t;
 	bool redirected;
 	Pixmap cpixmap;
 	pictw_t *pict_filled;
@@ -65,6 +63,9 @@ struct _clientwin_t {
 	
 	/* These are virtual positions set by the layout routine */
 	int x, y;
+	/* Left/top _GTK_FRAME_EXTENTS (client-side shadow) cropped from src;
+	 * right/bottom are cropped by shrinking src width/height */
+	int gtkframe_l, gtkframe_t;
 	float fx, fy, fx2, fy2, vx, vy;
 	struct _Tooltip *tooltip;
 	int slots;
