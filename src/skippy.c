@@ -1352,6 +1352,41 @@ panel_effective_geometry(session_t *ps, ClientWin *cw,
 	*w = rx2 - rx1;
 	*h = ry2 - ry1;
 
+	// Auto-hiding docks (e.g. Plank's "intelligent" mode) shrink their input
+	// shape to a thin strip while hidden, and may reappear once skippy is
+	// shown. Remember each panel's visible geometry and keep using it while
+	// the panel is collapsed to less than half of that thickness.
+	{
+		static struct { Window wid; int x, y, w, h; } seen[16];
+		static int nseen = 0;
+		int k = 0;
+		while (k < nseen && seen[k].wid != cw->wid_client)
+			k++;
+
+		bool horizontal = cw->src.width >= cw->src.height;
+		bool collapsed = k < nseen && (horizontal
+				? *h * 2 < seen[k].h : *w * 2 < seen[k].w);
+
+		if (collapsed) {
+			printfdf(false, "(): panel %#010lx collapsed to %dx%d+%d+%d, using %dx%d+%d+%d",
+					cw->wid_client, *w, *h, *x, *y,
+					seen[k].w, seen[k].h, seen[k].x, seen[k].y);
+			*x = seen[k].x;
+			*y = seen[k].y;
+			*w = seen[k].w;
+			*h = seen[k].h;
+		}
+		else if (k < nseen || nseen < (int) (sizeof(seen) / sizeof(seen[0]))) {
+			if (k == nseen)
+				nseen++;
+			seen[k].wid = cw->wid_client;
+			seen[k].x = *x;
+			seen[k].y = *y;
+			seen[k].w = *w;
+			seen[k].h = *h;
+		}
+	}
+
 	printfdf(false, "(): panel %#010lx window %dx%d+%d+%d, input shape %dx%d+%d+%d",
 			cw->wid_client, cw->src.width, cw->src.height, cw->src.x, cw->src.y,
 			*w, *h, *x, *y);
