@@ -263,6 +263,8 @@ typedef struct {
 	bool desktopTinting;
 
 	bool tooltip_show;
+	bool tooltip_focusedOnly;
+	bool tooltip_centered;
 	int tooltip_option;
 	int tooltip_offsetX;
 	int tooltip_offsetY;
@@ -357,6 +359,8 @@ typedef struct {
 	.desktopTinting = true, \
 \
 	.tooltip_show = true, \
+	.tooltip_focusedOnly = false, \
+	.tooltip_centered = false, \
 	.tooltip_option = 1, \
 	.tooltip_offsetX = 0, \
 	.tooltip_offsetY = -5, \

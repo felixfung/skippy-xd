@@ -3474,6 +3474,8 @@ load_config_file(session_t *ps)
 		ps->o.updatetooltip |= update_and_flag(config, "label", "font", "fixed-11:weight=bold", &ps->o.tooltip_font);
 	}
     config_get_bool_wrap(config, "label", "show", &ps->o.tooltip_show);
+    config_get_bool_wrap(config, "label", "focusedOnly", &ps->o.tooltip_focusedOnly);
+    config_get_bool_wrap(config, "label", "centered", &ps->o.tooltip_centered);
 	{
 		const char* tooltipoption = config_get(config, "label", "option", "windowClass");
 		if (strcmp(tooltipoption, "windowTitle") == 0)

@@ -207,8 +207,12 @@ tooltip_map(Tooltip *tt, ClientWin *cw, FcChar8 *text, int len)
 	
 	tt->text_len = len;
 	
-	XMapWindow(ps->dpy, tt->window);
-	XRaiseWindow(ps->dpy, tt->window);
+	if (!ps->o.tooltip_focusedOnly || cw->focused) {
+		XMapWindow(ps->dpy, tt->window);
+		XRaiseWindow(ps->dpy, tt->window);
+	}
+	else
+		XUnmapWindow(ps->dpy, tt->window);
 }
 
 void
@@ -219,7 +223,10 @@ tooltip_move(Tooltip *tt, ClientWin *cw) {
 		y = ps->o.tooltip_offsetY;
 
     x += cw->mini.x + cw->mini.width/2 - tt->width / 2;
-    y += cw->mini.y + cw->mini.height;
+	if (ps->o.tooltip_centered)
+		y += cw->mini.y + cw->mini.height/2 - tt->height / 2;
+	else
+		y += cw->mini.y + cw->mini.height;
 
 	x = MIN(MAX(0, x), tt->mainwin->x + tt->mainwin->width - tt->width);
 	y = MIN(MAX(0, y), tt->mainwin->y + tt->mainwin->height - tt->height);
@@ -242,6 +249,15 @@ tooltip_draw(Tooltip *tt, bool focused)
 {
 	if (!tt || !tt->text)
 		return;
+
+	// With focusedOnly, only the highlighted window shows its label
+	if (tt->mainwin->ps->o.tooltip_focusedOnly) {
+		if (!focused) {
+			XUnmapWindow(tt->mainwin->ps->dpy, tt->window);
+			return;
+		}
+		XMapRaised(tt->mainwin->ps->dpy, tt->window);
+	}
 
 	XftDrawRect(tt->draw, &tt->border, 0, 0, tt->width, 1);
 	XftDrawRect(tt->draw, &tt->border, 0, 1, 1, tt->height - 2);
