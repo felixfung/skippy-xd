@@ -2279,10 +2279,14 @@ mainloop(session_t *ps, bool activate_on_start) {
 						wid = ev_window(ps, &ev);
 						num_events--;
 
-						dlist *iter = (wid ? dlist_find(ps->mainwin->clients,
+						iter = (wid ? dlist_find(ps->mainwin->clients,
 								clientwin_cmp_func, (void *) wid): NULL);
 						if (iter) {
 							ClientWin *cw = (ClientWin *) iter->data;
+							if (ev_next.type == CreateNotify || ev_next.type == MapNotify) {
+								clientwin_update3(cw);
+								clientwin_update2(cw);
+							}
 							cw->damaged = true;
 						}
 					}
