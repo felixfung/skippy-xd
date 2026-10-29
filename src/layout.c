@@ -54,7 +54,7 @@ layout_run(MainWin *mw, dlist *windows,
 					screencount = 1;
 				int desktop_dim = ceil(sqrt(screencount));
 
-				int win_desktop = wm_get_window_desktop(mw->ps, cw->wid_client);
+				int win_desktop = wm_get_window_desktop(mw->ps, cw->src.window);
 				int current_desktop = wm_get_current_desktop(mw->ps);
 				if (win_desktop == -1)
 					win_desktop = current_desktop;

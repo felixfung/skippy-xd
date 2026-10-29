@@ -92,7 +92,7 @@ focus_miniw_adv(session_t *ps, ClientWin *cw, bool move_ptr) {
 	if (!cw || !ps)
 		return;
 
-	printfdfWindowName(ps, "(): window = ", cw->wid_client);
+	printfdfWindowName(ps, "(): window = ", cw->src.window);
 
 	if (unlikely(!cw))
 	{

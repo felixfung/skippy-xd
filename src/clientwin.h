@@ -35,7 +35,7 @@ struct _clientwin_t {
 	MainWin *mainwin;
 
 	client_disp_mode_t mode;
-	Window wid_client;
+	Window frame_id, drawable_id;
 	SkippyWindow src, src0;
 	bool redirected;
 	Pixmap cpixmap;

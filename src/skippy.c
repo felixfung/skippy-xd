@@ -846,7 +846,7 @@ count_clients(MainWin *mw)
 	// Terminate mw->clients that are no longer managed
 	for (dlist *iter = mw->clients; iter; ) {
 		ClientWin *cw = (ClientWin *) iter->data;
-		if (dlist_find_data(stack, (void *) cw->wid_client)) {
+		if (dlist_find_data(stack, (void *) cw->src.window)) {
 			iter = iter->next;
 		}
 		else {
@@ -943,9 +943,9 @@ sort_cw_by_x(dlist *dlist1, dlist *dlist2, void *data)
 		return -1;
 	else if (y1 > y2)
 		return 1;
-	else if (cw1->wid_client < cw2->wid_client)
+	else if (cw1->src.window < cw2->src.window)
 		return -1;
-	else if (cw1->wid_client > cw2->wid_client)
+	else if (cw1->src.window > cw2->src.window)
 		return 1;
 	else
 		return 0;
@@ -968,9 +968,9 @@ sort_cw_by_y(dlist *dlist1, dlist *dlist2, void *data)
 		return -1;
 	else if (x1 > x2)
 		return 1;
-	else if (cw1->wid_client < cw2->wid_client)
+	else if (cw1->src.window < cw2->src.window)
 		return -1;
-	else if (cw1->wid_client > cw2->wid_client)
+	else if (cw1->src.window > cw2->src.window)
 		return 1;
 	else
 		return 0;
@@ -1266,7 +1266,7 @@ init_focus(MainWin *mw, enum layoutmode layout, dlist *windows, Window leader) {
 		mw->client_to_focus->focused = 1;
 		if (iter && !mw->mapped &&
 				(ps->o.switchCycleDuringWait || ps->o.switchWaitDuration == 0)) {
-			Window wid = mw->client_to_focus->wid_client;
+			Window wid = mw->client_to_focus->src.window;
 			XRaiseWindow(ps->dpy, wid);
 			XSetInputFocus(ps->dpy, wid, RevertToParent, CurrentTime);
 			XFlush(ps->dpy);
@@ -1321,7 +1321,7 @@ panel_effective_geometry(session_t *ps, ClientWin *cw,
 	*h = cw->src.height;
 
 	int count = 0, ordering = 0;
-	XRectangle *rects = XShapeGetRectangles(ps->dpy, cw->wid_client,
+	XRectangle *rects = XShapeGetRectangles(ps->dpy, cw->src.window,
 			ShapeInput, &count, &ordering);
 	if (!rects)
 		return;
@@ -1353,7 +1353,7 @@ panel_effective_geometry(session_t *ps, ClientWin *cw,
 	*h = ry2 - ry1;
 
 	printfdf(false, "(): panel %#010lx window %dx%d+%d+%d, input shape %dx%d+%d+%d",
-			cw->wid_client, cw->src.width, cw->src.height, cw->src.x, cw->src.y,
+			cw->src.window, cw->src.width, cw->src.height, cw->src.x, cw->src.y,
 			*w, *h, *x, *y);
 }
 
@@ -1487,7 +1487,7 @@ init_paging_layout(MainWin *mw, Window leader, int monitor)
 	{
 		ClientWin *cw = (ClientWin *) iter->data;
 
-		int win_desktop = wm_get_window_desktop(ps, cw->wid_client);
+		int win_desktop = wm_get_window_desktop(ps, cw->src.window);
 		int current_desktop = wm_get_current_desktop(ps);
 		if (win_desktop == -1)
 			win_desktop = current_desktop;
@@ -1555,7 +1555,7 @@ init_paging_layout(MainWin *mw, Window leader, int monitor)
 			cw->mode = CLIDISP_DESKTOP;
 
 			// when ps->o.includeFrame this would be incorrectly set
-			cw->src.window = desktopwin;
+			cw->drawable_id = cw->frame_id = desktopwin;
 
 			{
 				unsigned char *str = wm_get_desktop_name(ps, desktop_idx);
@@ -1687,7 +1687,7 @@ skippy_activate(MainWin *mw, Window leader)
 	foreach_dlist(mw->clients) {
 		ClientWin *cw = iter->data;
 		clientwin_update3(cw);
-		cw->paneltype = wm_identify_panel(ps, cw->wid_client);
+		cw->paneltype = wm_identify_panel(ps, cw->src.window);
 		if (cw->paneltype == WINTYPE_PANEL || cw->paneltype == WINTYPE_DESKTOP)
 			clientwin_update2(cw);
 	}
@@ -1834,7 +1834,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 							(void *) mw->client_to_focus);
 					if (iter) {
 						childwin_focus(mw->client_to_focus);
-						selected = mw->client_to_focus->wid_client;
+						selected = mw->client_to_focus->src.window;
 					}
 				}
 				else {
@@ -1843,7 +1843,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 							(void *) mw->client_to_focus_on_cancel);
 					if (iter) {
 						childwin_focus(mw->client_to_focus_on_cancel);
-						selected = mw->client_to_focus_on_cancel->wid_client;
+						selected = mw->client_to_focus_on_cancel->src.window;
 					}
 				}
 			}
@@ -1883,7 +1883,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					iter = mw->dminis;
 				for (; iter; iter = iter->next) {
 					ClientWin *cw = iter->data;
-					unsigned long client = cw->wid_client;
+					unsigned long client = cw->src.window;
 					if (ps->o.mode == PROGMODE_PAGING)
 						client = cw->slots;
 					if (cw->multiselect) {
@@ -2271,7 +2271,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 						 && ev_next.type != VisibilityNotify && ev_next.type != ConfigureNotify
 						 && ev_next.type != PropertyNotify && ev_next.type != Expose
 						 && ev_next.type != FocusIn && ev_next.type != FocusOut
-						 && ev_next.type != UnmapNotify && ev_next.type != ReparentNotify
+						 && ev_next.type != UnmapNotify
 						 && ev_next.type != ps->xinfo.damage_ev_base + XDamageNotify)
 							break;
 
