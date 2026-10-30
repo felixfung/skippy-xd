@@ -264,7 +264,7 @@ typedef struct {
 
 	bool tooltip_show;
 	bool tooltip_focusedOnly;
-	bool tooltip_centered;
+	enum align tooltip_position;
 	int tooltip_option;
 	int tooltip_offsetX;
 	int tooltip_offsetY;
@@ -360,7 +360,7 @@ typedef struct {
 \
 	.tooltip_show = true, \
 	.tooltip_focusedOnly = false, \
-	.tooltip_centered = false, \
+	.tooltip_position = ALIGN_RIGHT, \
 	.tooltip_option = 1, \
 	.tooltip_offsetX = 0, \
 	.tooltip_offsetY = -5, \

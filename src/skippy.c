@@ -3475,7 +3475,11 @@ load_config_file(session_t *ps)
 	}
     config_get_bool_wrap(config, "label", "show", &ps->o.tooltip_show);
     config_get_bool_wrap(config, "label", "focusedOnly", &ps->o.tooltip_focusedOnly);
-    config_get_bool_wrap(config, "label", "centered", &ps->o.tooltip_centered);
+    {
+        const char *sspec = config_get(config, "label", "position", "bottom");
+        if (!parse_alignv(ps, sspec, &ps->o.tooltip_position))
+            ps->o.tooltip_position = ALIGN_RIGHT;
+    }
 	{
 		const char* tooltipoption = config_get(config, "label", "option", "windowClass");
 		if (strcmp(tooltipoption, "windowTitle") == 0)

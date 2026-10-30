@@ -223,10 +223,17 @@ tooltip_move(Tooltip *tt, ClientWin *cw) {
 		y = ps->o.tooltip_offsetY;
 
     x += cw->mini.x + cw->mini.width/2 - tt->width / 2;
-	if (ps->o.tooltip_centered)
-		y += cw->mini.y + cw->mini.height/2 - tt->height / 2;
-	else
-		y += cw->mini.y + cw->mini.height;
+	switch (ps->o.tooltip_position) {
+		case ALIGN_LEFT:	// top: label sits above the window
+			y += cw->mini.y - tt->height;
+			break;
+		case ALIGN_MID:		// mid: label in the middle of the window
+			y += cw->mini.y + cw->mini.height/2 - tt->height / 2;
+			break;
+		default:			// bottom (default): label below the window
+			y += cw->mini.y + cw->mini.height;
+			break;
+	}
 
 	x = MIN(MAX(0, x), tt->mainwin->x + tt->mainwin->width - tt->width);
 	y = MIN(MAX(0, y), tt->mainwin->y + tt->mainwin->height - tt->height);

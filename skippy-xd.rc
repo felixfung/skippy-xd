@@ -154,12 +154,13 @@ backgroundTinting = true
 # option = windowClass to display window class
 # option = windowTitle to display window title
 # focusedOnly = true to show only the highlighted window's label
-# centered = true to place the label in the middle of the window
+# position = top, mid or bottom: vertical position of the label
+#            relative to the window (offsetY is added in all cases)
 [label]
 show = true
 option = windowClass
 focusedOnly = false
-centered = false
+position = bottom
 offsetX = 0
 offsetY = -5
 width = 0.8
