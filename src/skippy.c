@@ -3474,9 +3474,8 @@ load_config_file(session_t *ps)
 		ps->o.updatetooltip |= update_and_flag(config, "label", "font", "fixed-11:weight=bold", &ps->o.tooltip_font);
 	}
 	{
-		// "true"/"false" still accepted for older config files
 		const char* tooltipshow = config_get(config, "label", "show", "all");
-		if (strcmp(tooltipshow, "none") == 0 || strcmp(tooltipshow, "false") == 0)
+		if (strcmp(tooltipshow, "none") == 0)
 			ps->o.tooltip_show = TOOLTIP_SHOW_NONE;
 		else if (strcmp(tooltipshow, "focused") == 0)
 			ps->o.tooltip_show = TOOLTIP_SHOW_FOCUSED;
