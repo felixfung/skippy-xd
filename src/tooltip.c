@@ -207,12 +207,8 @@ tooltip_map(Tooltip *tt, ClientWin *cw, FcChar8 *text, int len)
 	
 	tt->text_len = len;
 	
-	if (!ps->o.tooltip_focusedOnly || cw->focused) {
-		XMapWindow(ps->dpy, tt->window);
-		XRaiseWindow(ps->dpy, tt->window);
-	}
-	else
-		XUnmapWindow(ps->dpy, tt->window);
+	XMapWindow(ps->dpy, tt->window);
+	XRaiseWindow(ps->dpy, tt->window);
 }
 
 void
@@ -257,8 +253,11 @@ tooltip_draw(Tooltip *tt, bool focused)
 	if (!tt || !tt->text)
 		return;
 
-	// With focusedOnly, only the highlighted window shows its label
-	if (tt->mainwin->ps->o.tooltip_focusedOnly) {
+	// show = focused: only the highlighted window has its label. The label
+	// is unmapped when the window loses focus, so when it gets focus again
+	// it has to be mapped and raised like tooltip_map() does (otherwise it
+	// may stay below thumbnails mapped after it)
+	if (tt->mainwin->ps->o.tooltip_show == TOOLTIP_SHOW_FOCUSED) {
 		if (!focused) {
 			XUnmapWindow(tt->mainwin->ps->dpy, tt->window);
 			return;

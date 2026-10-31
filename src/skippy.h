@@ -111,6 +111,13 @@ enum cliop {
 	CLIENTOP_NEXT,
 };
 
+/// Which windows get a label (label/show)
+enum {
+	TOOLTIP_SHOW_NONE = 0,
+	TOOLTIP_SHOW_ALL,
+	TOOLTIP_SHOW_FOCUSED,
+};
+
 enum align {
 	ALIGN_LEFT,
 	ALIGN_MID,
@@ -262,10 +269,9 @@ typedef struct {
 	bool panel_show_desktop;
 	bool desktopTinting;
 
-	bool tooltip_show;
-	bool tooltip_focusedOnly;
-	enum align tooltip_position;
+	int tooltip_show;
 	int tooltip_option;
+	enum align tooltip_position;
 	int tooltip_offsetX;
 	int tooltip_offsetY;
 	double tooltip_width;
@@ -358,10 +364,9 @@ typedef struct {
 	.panel_show_desktop = true, \
 	.desktopTinting = true, \
 \
-	.tooltip_show = true, \
-	.tooltip_focusedOnly = false, \
-	.tooltip_position = ALIGN_RIGHT, \
+	.tooltip_show = TOOLTIP_SHOW_ALL, \
 	.tooltip_option = 1, \
+	.tooltip_position = ALIGN_RIGHT, \
 	.tooltip_offsetX = 0, \
 	.tooltip_offsetY = -5, \
 	.tooltip_width = 0.8, \
