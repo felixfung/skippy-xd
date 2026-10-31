@@ -151,8 +151,7 @@ show = true
 backgroundTinting = true
 
 # Label per display window
-# show = all to label every window, focused for the highlighted window only,
-#   none for no labels
+# show = all/focused/none
 # option = windowClass to display window class
 # option = windowTitle to display window title
 # position = top, mid or bottom: vertical position of the label
