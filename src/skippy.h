@@ -258,6 +258,7 @@ typedef struct {
 	bool panel_show;
 	bool panel_tinting;
 	bool panel_reserveSpace;
+	int panel_maxThickness;
 
 	bool panel_show_desktop;
 	bool desktopTinting;
@@ -352,6 +353,7 @@ typedef struct {
 	.panel_show = true, \
 	.panel_tinting = true, \
 	.panel_reserveSpace = true, \
+	.panel_maxThickness = 0, \
 \
 	.panel_show_desktop = true, \
 	.desktopTinting = true, \
