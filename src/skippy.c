@@ -1378,6 +1378,23 @@ calculatePanelBorders(MainWin *mw, MonitorCoord monitor,
 		int px, py, pw, ph;
 		panel_effective_geometry(mw->ps, cw, &px, &py, &pw, &ph);
 
+		// Optionally limit how much space one panel may take, keeping the
+		// edge that touches the screen border (docks like Plank may map a
+		// much taller window than the dock itself)
+		int maxsize = mw->ps->o.panel_maxThickness;
+		if (maxsize > 0) {
+			if (pw >= ph && ph > maxsize) {
+				if (py >= monitor.y + monitor.height / 2.0)
+					py += ph - maxsize;
+				ph = maxsize;
+			}
+			else if (pw < ph && pw > maxsize) {
+				if (px >= monitor.x + monitor.width / 2.0)
+					px += pw - maxsize;
+				pw = maxsize;
+			}
+		}
+
 		if (!(INTERSECTS(monitor.x, monitor.y, monitor.width, monitor.height,
 				px, py, pw, ph)))
 			continue;
@@ -3460,6 +3477,7 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "panel", "show", &ps->o.panel_show);
     config_get_bool_wrap(config, "panel", "backgroundTinting", &ps->o.panel_tinting);
     config_get_bool_wrap(config, "panel", "reserveSpace", &ps->o.panel_reserveSpace);
+    config_get_int_wrap(config, "panel", "maxThickness", &ps->o.panel_maxThickness, 0, INT_MAX);
 
     config_get_bool_wrap(config, "desktop", "show", &ps->o.panel_show_desktop);
     config_get_bool_wrap(config, "desktop", "backgroundTinting", &ps->o.desktopTinting);

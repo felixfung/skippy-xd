@@ -144,6 +144,8 @@ tintOpacity = 196
 show = true
 backgroundTinting = true
 reserveSpace = true
+# Reserve at most this many pixels per panel (0 = no limit)
+maxThickness = 0
 
 # Windows of type _NET_WM_WINDOW_TYPE_DESKTOP
 [desktop]
