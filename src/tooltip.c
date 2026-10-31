@@ -66,6 +66,7 @@ tooltip_create(MainWin *mw) {
 	
 	tt->mainwin = mw;
 	tt->window = None;
+	tt->mapped = false;
 	tt->font = 0;
 	tt->draw = 0;
 	tt->text = 0;
@@ -206,9 +207,6 @@ tooltip_map(Tooltip *tt, ClientWin *cw, FcChar8 *text, int len)
 	memcpy(tt->text, text, len);
 	
 	tt->text_len = len;
-	
-	XMapWindow(ps->dpy, tt->window);
-	XRaiseWindow(ps->dpy, tt->window);
 }
 
 void
@@ -219,7 +217,17 @@ tooltip_move(Tooltip *tt, ClientWin *cw) {
 		y = ps->o.tooltip_offsetY;
 
     x += cw->mini.x + cw->mini.width/2 - tt->width / 2;
-    y += cw->mini.y + cw->mini.height;
+	switch (ps->o.tooltip_position) {
+		case ALIGN_LEFT:	// top: label sits above the window
+			y += cw->mini.y - tt->height;
+			break;
+		case ALIGN_MID:		// mid: label in the middle of the window
+			y += cw->mini.y + cw->mini.height/2 - tt->height / 2;
+			break;
+		default:			// bottom (default): label below the window
+			y += cw->mini.y + cw->mini.height;
+			break;
+	}
 
 	x = MIN(MAX(0, x), tt->mainwin->x + tt->mainwin->width - tt->width);
 	y = MIN(MAX(0, y), tt->mainwin->y + tt->mainwin->height - tt->height);
@@ -227,10 +235,26 @@ tooltip_move(Tooltip *tt, ClientWin *cw) {
 	XMoveWindow(tt->mainwin->ps->dpy, tt->window, x, y);
 }
 
+// Map or unmap the label window, only when its state actually changes.
+// A label is raised when it is mapped so that it stays on top of
+// thumbnails mapped after it (e.g. a bottom label overlapping the next row).
+static void
+tooltip_set_visible(Tooltip *tt, bool visible)
+{
+	if (visible == tt->mapped)
+		return;
+
+	if (visible)
+		XMapRaised(tt->mainwin->ps->dpy, tt->window);
+	else
+		XUnmapWindow(tt->mainwin->ps->dpy, tt->window);
+	tt->mapped = visible;
+}
+
 void
 tooltip_unmap(Tooltip *tt)
 {
-	XUnmapWindow(tt->mainwin->ps->dpy, tt->window);
+	tooltip_set_visible(tt, false);
 	if(tt->text)
 		free(tt->text);
 	tt->text = 0;
@@ -241,6 +265,13 @@ void
 tooltip_draw(Tooltip *tt, bool focused)
 {
 	if (!tt || !tt->text)
+		return;
+
+	// label/show decides whether this label is shown at all
+	bool visible = tt->mainwin->ps->o.tooltip_show == TOOLTIP_SHOW_ALL
+		|| (tt->mainwin->ps->o.tooltip_show == TOOLTIP_SHOW_FOCUSED && focused);
+	tooltip_set_visible(tt, visible);
+	if (!visible)
 		return;
 
 	XftDrawRect(tt->draw, &tt->border, 0, 0, tt->width, 1);

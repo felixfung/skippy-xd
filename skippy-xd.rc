@@ -151,11 +151,14 @@ show = true
 backgroundTinting = true
 
 # Label per display window
+# show = all/focused/none
 # option = windowClass to display window class
 # option = windowTitle to display window title
+# position = top, mid or bottom: vertical position of the label
 [label]
-show = true
+show = all
 option = windowClass
+position = bottom
 offsetX = 0
 offsetY = -5
 width = 0.8
