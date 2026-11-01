@@ -146,5 +146,6 @@ dlist_sort_test = executable('test-dlist-sort',
   ['tests/dlist-sort.c', 'src/dlist.c'],
   include_directories: include_directories('src'),
   dependencies: skippy_deps,
+  c_args: ['-UNDEBUG'],
 )
 test('dlist-sort', dlist_sort_test)
