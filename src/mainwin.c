@@ -440,6 +440,15 @@ mainwin_render_borders(MainWin *mw)
 	if (ps->o.highlight_tintBorder <= 0)
 		return;
 
+	// Preview remapping may omit FocusOut; derive pager borders from the selection.
+	if (ps->o.mode == PROGMODE_PAGING) {
+		foreach_dlist (mw->dminis) {
+			ClientWin *cw = iter->data;
+			cw->focused = mw->client_to_focus && (cw == mw->client_to_focus
+				|| (!ps->o.pagingOnCurrentMonitor
+					&& cw->slots == mw->client_to_focus->slots));
+		}
+	}
 	mainwin_restore_background(mw);
 
 	foreach_dlist (mw->panels) {
