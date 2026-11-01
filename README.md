@@ -33,14 +33,8 @@ Check out the youtube videos:
 
 skippy-xd works on anything X. See https://github.com/felixfung/skippy-xd/wiki/Adoption#compatible-desktop-environmentswindow-managers for details.
 
-Installation and usage is simple:
+Usage is simple:
 ```
-git clone https://github.com/felixfung/skippy-xd.git
-cd skippy-xd
-meson setup build --prefix=/usr
-meson compile -C build
-meson install -C build
-
 skippy-xd --start-daemon
 skippy-xd --switch --next
 skippy-xd --expose
