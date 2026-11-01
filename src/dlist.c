@@ -570,21 +570,47 @@ dlist_swap(dlist *l1, dlist *l2)
 	l2->data = tmp;
 }
 
-void
+// Stable bottom-up merge sort relinks nodes without allocating a second list.
+dlist *
 dlist_sort(dlist *l, dlist_cmp_func cmp, void *data)
 {
-	dlist *start = dlist_first(l);
-	while(start) {
-		dlist *iter = start;
-		start = 0;
-		while(iter) {
-			if(iter->next && cmp(iter, iter->next, data) == 1) {
-				dlist_swap(iter, iter->next);
-				if(! start)
-					start = iter->prev;
+	l = dlist_first(l);
+	if (!l) return NULL;
+	for (size_t width = 1; ; width *= 2) {
+		dlist *input = l, *tail = NULL;
+		unsigned int merges = 0;
+		l = NULL;
+		while (input) {
+			merges++;
+			dlist *right = input;
+			size_t left_count = 0, right_count = width;
+			for (; left_count < width && right; left_count++)
+				right = right->next;
+			while (left_count || (right_count && right)) {
+				dlist *next;
+				if (!left_count) {
+					next = right;
+					right = right->next;
+					right_count--;
+				}
+				else if (!right_count || !right || cmp(input, right, data) <= 0) {
+					next = input;
+					input = input->next;
+					left_count--;
+				}
+				else {
+					next = right;
+					right = right->next;
+					right_count--;
+				}
+				if (tail) tail->next = next;
+				else l = next;
+				next->prev = tail;
+				tail = next;
 			}
-			iter = iter->next;
+			input = right;
 		}
+		tail->next = NULL;
+		if (merges == 1) return l;
 	}
 }
-

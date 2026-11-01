@@ -117,8 +117,8 @@ dlist *dlist_nth(dlist *l, unsigned int n);
 /* swap the data fields of 2 elements */
 void dlist_swap(dlist *, dlist *);
 
-/* sort a list (not very efficient, uses bubble-sort) */
+/* stable in-place merge sort; returns the new head */
 typedef int (*dlist_cmp_func)(dlist *, dlist *, void *);
-void dlist_sort(dlist *, dlist_cmp_func, void *);
+dlist *dlist_sort(dlist *, dlist_cmp_func, void *);
 
 #endif /* SKIPPY_DLIST_H */
