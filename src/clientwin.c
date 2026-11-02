@@ -728,12 +728,13 @@ void
 clientwin_render(ClientWin *cw) {
 	MainWin *mw = cw->mainwin;
 	session_t *ps = mw->ps;
-	if (ps->o.mode == PROGMODE_PAGING && !ps->o.pagingOnCurrentMonitor) {
+	if (ps->o.mode == PROGMODE_PAGING) {
 		foreach_dlist (mw->dminis) {
 			ClientWin *cw2 = iter->data;
 			cw2->focused = mw->client_to_focus
 				&& cw2->slots == mw->client_to_focus->slots;
-			clientwin_repaint(cw2, NULL);
+			if (!ps->o.pagingOnCurrentMonitor)
+				clientwin_repaint(cw2, NULL);
 			if (cw2->tooltip)
 				clientwin_tooltip(cw2);
 		}
