@@ -274,6 +274,7 @@ typedef struct {
 	char *tooltip_text;
 	char *tooltip_textOutline;
 	char *tooltip_font;
+	char *tooltip_emptyText;
 	bool updatetooltip;
 
 	bool enforceFocus;
@@ -368,6 +369,7 @@ typedef struct {
 	.tooltip_text = NULL, \
 	.tooltip_textOutline = NULL, \
 	.tooltip_font = NULL, \
+	.tooltip_emptyText = NULL, \
 \
 	.enforceFocus = true, \
 	.pivotLockingTime = 0, \

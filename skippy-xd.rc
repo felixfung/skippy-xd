@@ -153,6 +153,8 @@ backgroundTinting = true
 # Label per display window
 # option = windowClass to display window class
 # option = windowTitle to display window title
+# emptyText = label shown in the middle of the screen when there is no
+#   window to show; empty for none
 [label]
 show = true
 option = windowClass
@@ -166,6 +168,7 @@ opacity = 196
 text = white
 textOutline = #0e0e0e
 font = fixed-11:weight=bold
+emptyText =
 
 [bindings]
 

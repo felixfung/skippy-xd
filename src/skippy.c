@@ -1675,6 +1675,54 @@ desktopwin_map(ClientWin *cw)
 		clientwin_tooltip(cw);
 }
 
+/*
+ * A label in the middle of the screen when there is no window to show, like
+ * "No Available Windows" in macOS. It looks like the window labels.
+ */
+static Tooltip *empty_notice = NULL;
+
+static void
+empty_notice_hide(void) {
+	if (empty_notice) {
+		tooltip_destroy(empty_notice);
+		empty_notice = NULL;
+	}
+}
+
+static void
+empty_notice_show(MainWin *mw) {
+	session_t *ps = mw->ps;
+	empty_notice_hide();
+
+	if (!ps->o.tooltip_emptyText || ps->o.mode == PROGMODE_PAGING)
+		return;
+	foreach_dlist(mw->clientondesktop) {
+		if (((ClientWin *) iter->data)->mode != CLIDISP_NONE)
+			return;
+	}
+
+	empty_notice = tooltip_create(mw);
+	if (!empty_notice)
+		return;
+	Tooltip *tt = empty_notice;
+
+	int len = strlen(ps->o.tooltip_emptyText);
+	tt->text = (FcChar8 *) mstrdup(ps->o.tooltip_emptyText);
+	tt->text_len = len;
+	XftTextExtentsUtf8(ps->dpy, tt->font, tt->text, len, &tt->extents);
+	tt->width = tt->extents.width + 8;
+	tt->height = tt->font_height + 5;
+
+	MonitorCoord *mon = &mw->monitor[mw->active_monitor];
+	XMoveResizeWindow(ps->dpy, tt->window,
+			mon->x + (mon->width - (int) tt->width) / 2,
+			mon->y + (mon->height - (int) tt->height) / 2,
+			tt->width, tt->height);
+	XMapRaised(ps->dpy, tt->window);
+	tooltip_draw(tt, false);
+	XFlush(ps->dpy);
+}
+
 static void
 skippy_activate(MainWin *mw, Window leader)
 {
@@ -1814,6 +1862,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// Main window destruction, before poll()
 		if (mw && die) {
 			printfdf(false,"(): selecting/canceling and returning to background");
+			empty_notice_hide();
 
 			animating = false;
 
@@ -2041,6 +2090,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 						ClientWin *cw = iter->data;
 						clientwin_map(cw);
 					}
+					empty_notice_show(mw);
 
 					first_animating = false;
 				}
@@ -2073,6 +2123,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 						ClientWin *cw = iter->data;
 						clientwin_map(cw);
 					}
+					empty_notice_show(mw);
 
 					first_animating = false;
 				}
@@ -2215,8 +2266,12 @@ mainloop(session_t *ps, bool activate_on_start) {
 			}
 			else if (mw && ev.type == DestroyNotify) {
 				printfdf(false, "(): else if (ev.type == DestroyNotify) {");
+				// Close when the last shown window goes away, not when any
+				// window is destroyed while there was nothing to show (the
+				// empty notice stays up then)
+				bool had_windows = mw->clientondesktop != NULL;
 				count_and_filter_clients(ps->mainwin);
-				if (!mw->clientondesktop) {
+				if (had_windows && !mw->clientondesktop) {
 					printfdf(false, "(): Last client window destroyed/unmapped, "
 							"exiting.");
 					die = true;
@@ -3484,6 +3539,11 @@ load_config_file(session_t *ps)
     config_get_int_wrap(config, "label", "offsetX", &ps->o.tooltip_offsetX, INT_MIN, INT_MAX);
     config_get_int_wrap(config, "label", "offsetY", &ps->o.tooltip_offsetY, INT_MIN, INT_MAX);
     config_get_double_wrap(config, "label", "width", &ps->o.tooltip_width, 0.0, 1.0);
+	free(ps->o.tooltip_emptyText);
+	{
+		const char *text = config_get(config, "label", "emptyText", "");
+		ps->o.tooltip_emptyText = (text && *text)? mstrdup(text): NULL;
+	}
 	{
 		int old_value = ps->o.tooltip_opacity;
 		config_get_int_wrap(config, "label", "opacity", &ps->o.tooltip_opacity, 0, 256);
@@ -3723,6 +3783,7 @@ main_end:
 			free(ps->o.tooltip_text);
 			free(ps->o.tooltip_textOutline);
 			free(ps->o.tooltip_font);
+			free(ps->o.tooltip_emptyText);
 			free_pictw(ps, &ps->o.background);
 			free_pictspec(ps, &ps->o.bg_spec);
 			free_pictw(ps, &ps->o.iconDefault);
