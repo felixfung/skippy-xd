@@ -153,12 +153,14 @@ backgroundTinting = true
 # Label per display window
 # option = windowClass to display window class
 # option = windowTitle to display window title
+# radius = corner radius of the label box in pixels, 0 for square corners
 [label]
 show = true
 option = windowClass
 offsetX = 0
 offsetY = -5
 width = 0.8
+radius = 0
 border = #0e0e0e
 background = #111111
 backgroundHighlight = #999999

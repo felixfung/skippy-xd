@@ -267,6 +267,7 @@ typedef struct {
 	int tooltip_offsetX;
 	int tooltip_offsetY;
 	double tooltip_width;
+	int tooltip_radius;
 	char *tooltip_border;
 	char *tooltip_background;
 	char *tooltip_backgroundHighlight;
@@ -361,6 +362,7 @@ typedef struct {
 	.tooltip_offsetX = 0, \
 	.tooltip_offsetY = -5, \
 	.tooltip_width = 0.8, \
+	.tooltip_radius = 0, \
 	.tooltip_border = NULL, \
 	.tooltip_background = NULL, \
 	.tooltip_backgroundHighlight = NULL, \
