@@ -771,6 +771,10 @@ clientwin_render(ClientWin *cw) {
 				clientwin_tooltip(cw2);
 		}
 	}
+	// label/show = focused: the label follows the focus
+	if (ps->o.tooltip_show == TOOLTIP_SHOW_FOCUSED && cw->tooltip
+			&& ps->o.mode != PROGMODE_PAGING)
+		clientwin_tooltip(cw);
 	clientwin_repaint(cw, NULL);
 }
 
@@ -1004,6 +1008,12 @@ void
 clientwin_tooltip(ClientWin *cw) {
 	MainWin *mw = cw->mainwin;
 	session_t *ps = mw->ps;
+
+	if (ps->o.tooltip_show == TOOLTIP_SHOW_FOCUSED && !cw->focused) {
+		if (cw->tooltip)
+			tooltip_unmap(cw->tooltip);
+		return;
+	}
 
 	if (cw->tooltip) {
 		int len = 0;

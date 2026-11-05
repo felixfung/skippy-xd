@@ -3473,13 +3473,26 @@ load_config_file(session_t *ps)
 		ps->o.updatetooltip |= update_and_flag(config, "label", "textOutline", "black", &ps->o.tooltip_textOutline);
 		ps->o.updatetooltip |= update_and_flag(config, "label", "font", "fixed-11:weight=bold", &ps->o.tooltip_font);
 	}
-    config_get_bool_wrap(config, "label", "show", &ps->o.tooltip_show);
+	{
+		const char* tooltipshow = config_get(config, "label", "show", "all");
+		if (strcmp(tooltipshow, "none") == 0)
+			ps->o.tooltip_show = TOOLTIP_SHOW_NONE;
+		else if (strcmp(tooltipshow, "focused") == 0)
+			ps->o.tooltip_show = TOOLTIP_SHOW_FOCUSED;
+		else
+			ps->o.tooltip_show = TOOLTIP_SHOW_ALL;
+	}
 	{
 		const char* tooltipoption = config_get(config, "label", "option", "windowClass");
 		if (strcmp(tooltipoption, "windowTitle") == 0)
 			ps->o.tooltip_option = 0;
 		else
 			ps->o.tooltip_option = 1;
+	}
+	{
+		const char *sspec = config_get(config, "label", "position", "bottom");
+		if (!parse_alignv(ps, sspec, &ps->o.tooltip_position))
+			ps->o.tooltip_position = ALIGN_RIGHT;
 	}
     config_get_int_wrap(config, "label", "offsetX", &ps->o.tooltip_offsetX, INT_MIN, INT_MAX);
     config_get_int_wrap(config, "label", "offsetY", &ps->o.tooltip_offsetY, INT_MIN, INT_MAX);
