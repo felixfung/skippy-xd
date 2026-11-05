@@ -26,7 +26,6 @@ struct _Tooltip {
 	unsigned int width, height;
 	
 	Window window;
-	bool mapped;
 	XftFont *font;
 	XftDraw *draw;
 	XftColor color, background, backgroundHighlight, border, outline;
