@@ -1682,24 +1682,12 @@ desktopwin_map(ClientWin *cw)
 static Tooltip *empty_notice = NULL;
 
 static void
-empty_notice_hide(void) {
-	if (empty_notice) {
-		tooltip_destroy(empty_notice);
-		empty_notice = NULL;
-	}
-}
-
-static void
 empty_notice_show(MainWin *mw) {
 	session_t *ps = mw->ps;
-	empty_notice_hide();
 
-	if (!ps->o.tooltip_emptyText || ps->o.mode == PROGMODE_PAGING)
+	if (!ps->o.tooltip_emptyText || ps->o.mode == PROGMODE_PAGING
+			|| dlist_len(mw->clientondesktop) || empty_notice)
 		return;
-	foreach_dlist(mw->clientondesktop) {
-		if (((ClientWin *) iter->data)->mode != CLIDISP_NONE)
-			return;
-	}
 
 	empty_notice = tooltip_create(mw);
 	if (!empty_notice)
@@ -1862,7 +1850,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// Main window destruction, before poll()
 		if (mw && die) {
 			printfdf(false,"(): selecting/canceling and returning to background");
-			empty_notice_hide();
+			if (empty_notice) {
+				tooltip_destroy(empty_notice);
+				empty_notice = NULL;
+			}
 
 			animating = false;
 
