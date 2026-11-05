@@ -2215,8 +2215,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 			}
 			else if (mw && ev.type == DestroyNotify) {
 				printfdf(false, "(): else if (ev.type == DestroyNotify) {");
+				// Exit only when the last shown window goes away
+				bool had_windows = mw->clientondesktop != NULL;
 				count_and_filter_clients(ps->mainwin);
-				if (!mw->clientondesktop) {
+				if (had_windows && !mw->clientondesktop) {
 					printfdf(false, "(): Last client window destroyed/unmapped, "
 							"exiting.");
 					die = true;
