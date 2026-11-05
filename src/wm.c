@@ -793,11 +793,13 @@ wm_validate_window(session_t *ps, Window wid) {
 	if (WMPSN_EWMH == ps->wmpsn) {
 		bool shortcircuit = false;
 		winprop_t prop = wid_get_prop(ps, wid, _NET_WM_STATE, 8192, XA_ATOM, 32);
-		{
-			long v = winprop_get_int(&prop);
-			if (_NET_WM_STATE_SKIP_TASKBAR == v
-			 || _NET_WM_STATE_SKIP_PAGER == v)
+		for (int i = 0; i < prop.nitems; i++) {
+			Atom a = (Atom) prop.data32[i];
+			if (_NET_WM_STATE_SKIP_TASKBAR == a
+			 || _NET_WM_STATE_SKIP_PAGER == a) {
 				shortcircuit = true;
+				break;
+			}
 		}
 		free_winprop(&prop);
 		if (shortcircuit)
