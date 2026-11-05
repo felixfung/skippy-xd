@@ -197,15 +197,8 @@ tooltip_map(Tooltip *tt, ClientWin *cw, FcChar8 *text, int len)
 		XftTextExtentsUtf8(ps->dpy, tt->font, text, len, &tt->extents);
 	}
 
-	if (ps->o.tooltip_radius > 0) {
-		// Rounded label: even padding on all sides, as much as the radius
-		tt->width = tt->extents.xOff + 2 * ps->o.tooltip_radius;
-		tt->height = tt->font_height + 2 * ps->o.tooltip_radius;
-	}
-	else {
-		tt->width = tt->extents.width + 8;
-		tt->height = tt->font_height + 5;
-	}
+	tt->width = tt->extents.width + 8;
+	tt->height = tt->font_height + 5;
 	XResizeWindow(ps->dpy, tt->window, tt->width, tt->height);
 	tooltip_round(tt);
 	tooltip_move(tt, cw);
@@ -222,13 +215,31 @@ tooltip_map(Tooltip *tt, ClientWin *cw, FcChar8 *text, int len)
 	XRaiseWindow(ps->dpy, tt->window);
 }
 
+// How far row y of a w x h box with corner radius r is inset on each side
+static int
+tooltip_row_inset(int y, int h, int r)
+{
+	int row = y < r? y: (y >= h - r? h - 1 - y: -1);
+	if (row < 0)
+		return 0;
+	double dy = r - row - 0.5;
+	return (int) (r - sqrt((double) r * r - dy * dy) + 0.5);
+}
+
+static int
+tooltip_radius(Tooltip *tt)
+{
+	return MAX(0, MIN(tt->mainwin->ps->o.tooltip_radius,
+				(int) MIN(tt->width, tt->height) / 2));
+}
+
 // Round the label's corners with label/radius (0: square)
 static void
 tooltip_round(Tooltip *tt)
 {
 	session_t *ps = tt->mainwin->ps;
 	int w = tt->width, h = tt->height;
-	int r = MIN(ps->o.tooltip_radius, MIN(w, h) / 2);
+	int r = tooltip_radius(tt);
 	if (r <= 0 || w <= 0 || h <= 0) {
 		XShapeCombineMask(ps->dpy, tt->window, ShapeBounding, 0, 0, None, ShapeSet);
 		return;
@@ -242,12 +253,7 @@ tooltip_round(Tooltip *tt)
 	// One span per row, inset the same on both sides: X arcs round the
 	// left and right edges differently, which makes the corners uneven
 	for (int y = 0; y < h; y++) {
-		int inset = 0;
-		int row = y < r? y: (y >= h - r? h - 1 - y: -1);
-		if (row >= 0) {
-			double dy = r - row - 0.5;
-			inset = (int) (r - sqrt((double) r * r - dy * dy) + 0.5);
-		}
+		int inset = tooltip_row_inset(y, h, r);
 		if (w - 2 * inset > 0)
 			XFillRectangle(ps->dpy, mask, gc, inset, y, w - 2 * inset, 1);
 	}
@@ -288,29 +294,30 @@ tooltip_draw(Tooltip *tt, bool focused)
 	if (!tt || !tt->text)
 		return;
 
-	int radius = tt->mainwin->ps->o.tooltip_radius;
+	XftColor *fill = focused? &tt->backgroundHighlight: &tt->background;
+	int r = tooltip_radius(tt);
 
-	// A square border would be cut off at rounded corners: none then
-	int b = radius > 0? 0: 1;
-	if (b) {
+	if (r > 0) {
+		// Rounded: the border colour shows as a 1px outline along the
+		// rounded shape, around the fill inset by one pixel
+		XftDrawRect(tt->draw, &tt->border, 0, 0, tt->width, tt->height);
+		int ih = tt->height - 2, iw = tt->width - 2;
+		for (int y = 0; y < ih; y++) {
+			int inset = tooltip_row_inset(y, ih, MAX(r - 1, 0));
+			if (iw - 2 * inset > 0)
+				XftDrawRect(tt->draw, fill, 1 + inset, 1 + y, iw - 2 * inset, 1);
+		}
+	}
+	else {
 		XftDrawRect(tt->draw, &tt->border, 0, 0, tt->width, 1);
 		XftDrawRect(tt->draw, &tt->border, 0, 1, 1, tt->height - 2);
 		XftDrawRect(tt->draw, &tt->border, 0, tt->height - 1, tt->width, 1);
 		XftDrawRect(tt->draw, &tt->border, tt->width - 1, 1, 1, tt->height - 2);
+		XftDrawRect(tt->draw, fill, 1, 1, tt->width - 2, tt->height - 2);
 	}
-
-	if (focused)
-		XftDrawRect(tt->draw, &tt->backgroundHighlight, b, b, tt->width - 2 * b, tt->height - 2 * b);
-	else
-		XftDrawRect(tt->draw, &tt->background, b, b, tt->width - 2 * b, tt->height - 2 * b);
 
 	int base_x = 4;
 	int base_y = 1 + tt->extents.y + (tt->font_height - tt->extents.y)/2;
-	if (radius > 0) {
-		// Centered in the padded box
-		base_x = ((int) tt->width - tt->extents.xOff) / 2;
-		base_y = ((int) tt->height - tt->font_height) / 2 + tt->font->ascent;
-	}
 
 	if (tt->outline.pixel != None) {
 		for (int dx = -1; dx <= 1; dx++) {
