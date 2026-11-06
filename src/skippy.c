@@ -3484,7 +3484,7 @@ load_config_file(session_t *ps)
     config_get_int_wrap(config, "label", "offsetX", &ps->o.tooltip_offsetX, INT_MIN, INT_MAX);
     config_get_int_wrap(config, "label", "offsetY", &ps->o.tooltip_offsetY, INT_MIN, INT_MAX);
     config_get_double_wrap(config, "label", "width", &ps->o.tooltip_width, 0.0, 1.0);
-    config_get_int_wrap(config, "label", "radius", &ps->o.tooltip_radius, 0, 64);
+    config_get_int_wrap(config, "label", "cornerRadius", &ps->o.tooltip_cornerRadius, 0, 64);
 	{
 		int old_value = ps->o.tooltip_opacity;
 		config_get_int_wrap(config, "label", "opacity", &ps->o.tooltip_opacity, 0, 256);

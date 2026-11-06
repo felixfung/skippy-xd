@@ -215,7 +215,6 @@ tooltip_map(Tooltip *tt, ClientWin *cw, FcChar8 *text, int len)
 	XRaiseWindow(ps->dpy, tt->window);
 }
 
-// How far row y of a w x h box with corner radius r is inset on each side
 static int
 tooltip_row_inset(int y, int h, int r)
 {
@@ -229,18 +228,17 @@ tooltip_row_inset(int y, int h, int r)
 static int
 tooltip_radius(Tooltip *tt)
 {
-	return MAX(0, MIN(tt->mainwin->ps->o.tooltip_radius,
+	return MAX(0, MIN(tt->mainwin->ps->o.tooltip_cornerRadius,
 				(int) MIN(tt->width, tt->height) / 2));
 }
 
-// Round the label's corners with label/radius (0: square)
 static void
 tooltip_round(Tooltip *tt)
 {
 	session_t *ps = tt->mainwin->ps;
 	int w = tt->width, h = tt->height;
 	int r = tooltip_radius(tt);
-	if (r <= 0 || w <= 0 || h <= 0) {
+	if (r == 0) {
 		XShapeCombineMask(ps->dpy, tt->window, ShapeBounding, 0, 0, None, ShapeSet);
 		return;
 	}
@@ -250,8 +248,6 @@ tooltip_round(Tooltip *tt)
 	XSetForeground(ps->dpy, gc, 0);
 	XFillRectangle(ps->dpy, mask, gc, 0, 0, w, h);
 	XSetForeground(ps->dpy, gc, 1);
-	// One span per row, inset the same on both sides: X arcs round the
-	// left and right edges differently, which makes the corners uneven
 	for (int y = 0; y < h; y++) {
 		int inset = tooltip_row_inset(y, h, r);
 		if (w - 2 * inset > 0)
@@ -298,8 +294,6 @@ tooltip_draw(Tooltip *tt, bool focused)
 	int r = tooltip_radius(tt);
 
 	if (r > 0) {
-		// Rounded: the border colour shows as a 1px outline along the
-		// rounded shape, around the fill inset by one pixel
 		XftDrawRect(tt->draw, &tt->border, 0, 0, tt->width, tt->height);
 		int ih = tt->height - 2, iw = tt->width - 2;
 		for (int y = 0; y < ih; y++) {
