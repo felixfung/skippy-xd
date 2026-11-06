@@ -163,6 +163,7 @@ offsetX = 0
 offsetY = -5
 width = 0.8
 cornerRadius = 0
+padding = 0
 border = #0e0e0e
 background = #111111
 backgroundHighlight = #999999

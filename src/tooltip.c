@@ -197,8 +197,9 @@ tooltip_map(Tooltip *tt, ClientWin *cw, FcChar8 *text, int len)
 		XftTextExtentsUtf8(ps->dpy, tt->font, text, len, &tt->extents);
 	}
 
-	tt->width = tt->extents.width + 8;
-	tt->height = tt->font_height + 5;
+	int padding = ps->o.tooltip_padding;
+	tt->width = tt->extents.width + 8 + 2 * padding;
+	tt->height = tt->font_height + 5 + 2 * padding;
 	XResizeWindow(ps->dpy, tt->window, tt->width, tt->height);
 	tooltip_round(tt);
 	tooltip_move(tt, cw);
@@ -320,8 +321,9 @@ tooltip_draw(Tooltip *tt, bool focused)
 		XftDrawRect(tt->draw, fill, 1, 1, tt->width - 2, tt->height - 2);
 	}
 
-	int base_x = 4;
-	int base_y = 1 + tt->extents.y + (tt->font_height - tt->extents.y)/2;
+	int padding = tt->mainwin->ps->o.tooltip_padding;
+	int base_x = 4 + padding;
+	int base_y = 1 + padding + tt->extents.y + (tt->font_height - tt->extents.y)/2;
 
 	if (tt->outline.pixel != None) {
 		for (int dx = -1; dx <= 1; dx++) {
