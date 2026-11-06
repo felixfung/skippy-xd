@@ -1000,14 +1000,14 @@ wm_get_focused(session_t *ps) {
 		int revert_to = 0;
 		if (!XGetInputFocus(ps->dpy, &focused, &revert_to)) {
 			printfdf(false, "(): Currently not focused on any window; returning main window...");
-			return ps->mainwin->window;
+			return ps->mainwin ? ps->mainwin->window : None;
 		}
 	}
 
 	while (focused) {
 		// Discard insane values
 		if (ps->root == focused || PointerRoot == focused)
-			return ps->mainwin->window;
+			return ps->mainwin ? ps->mainwin->window : None;
 
 		// Check for WM_STATE
 		if (wid_has_prop(ps, focused, XA_WM_STATE))
