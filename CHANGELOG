@@ -1,5 +1,17 @@
 Skippy-XD changelog
 
+0.12.1 -- "Touch Grass" (6 Nov 2026) ~/felixfung
+ - Fix when switchOnCurrentMonitor, exposeOnCurrentMonitor = true
+ - Fix segfault when at startup when no windows are focused
+ - Paging tinting correction with pseudoTrans
+ - Use input shape for panel geometry
+ - Crop _GTK_FRAME_EXTENTS from window previews
+ - _NET_WM_STATE queried properly
+ - Label config options enrichment:
+     - Show all/focused/none
+     - Position top/mid/bottom
+     - Rounded corner
+
 0.12.0 -- "Digimon" (25 Oct 2026) ~/felixfung
  - Paging focus fix when pseudoTrans = true
  - Native mouse button for pivoting
