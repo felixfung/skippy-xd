@@ -1704,7 +1704,8 @@ skippy_activate(MainWin *mw, Window leader)
 		if (ps->o.mode == PROGMODE_EXPOSE)
 			layout = ps->o.exposeLayout;
 
-		int i0 = mw->active_monitor, i1 = i0;
+		// The current-monitor case must run the layout loop once too.
+		int i0 = mw->active_monitor, i1 = i0 + 1;
 		bool multimonitor = (ps->o.mode == PROGMODE_SWITCH && !ps->o.switchOnCurrentMonitor)
 				|| (ps->o.mode == PROGMODE_EXPOSE && !ps->o.exposeOnCurrentMonitor);
 		if (multimonitor) {
