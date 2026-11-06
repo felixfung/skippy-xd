@@ -18,6 +18,9 @@
  */
 
 #include "skippy.h"
+#include <math.h>
+
+static void tooltip_round(Tooltip *tt);
 
 void
 tooltip_destroy(Tooltip *tt)
@@ -197,6 +200,7 @@ tooltip_map(Tooltip *tt, ClientWin *cw, FcChar8 *text, int len)
 	tt->width = tt->extents.width + 8;
 	tt->height = tt->font_height + 5;
 	XResizeWindow(ps->dpy, tt->window, tt->width, tt->height);
+	tooltip_round(tt);
 	tooltip_move(tt, cw);
 	
 	if(tt->text)
@@ -209,6 +213,49 @@ tooltip_map(Tooltip *tt, ClientWin *cw, FcChar8 *text, int len)
 	
 	XMapWindow(ps->dpy, tt->window);
 	XRaiseWindow(ps->dpy, tt->window);
+}
+
+static int
+tooltip_row_inset(int y, int h, int r)
+{
+	int row = y < r? y: (y >= h - r? h - 1 - y: -1);
+	if (row < 0)
+		return 0;
+	double dy = r - row - 0.5;
+	return (int) (r - sqrt((double) r * r - dy * dy) + 0.5);
+}
+
+static int
+tooltip_radius(Tooltip *tt)
+{
+	return MAX(0, MIN(tt->mainwin->ps->o.tooltip_cornerRadius,
+				(int) MIN(tt->width, tt->height) / 2));
+}
+
+static void
+tooltip_round(Tooltip *tt)
+{
+	session_t *ps = tt->mainwin->ps;
+	int w = tt->width, h = tt->height;
+	int r = tooltip_radius(tt);
+	if (r == 0) {
+		XShapeCombineMask(ps->dpy, tt->window, ShapeBounding, 0, 0, None, ShapeSet);
+		return;
+	}
+
+	Pixmap mask = XCreatePixmap(ps->dpy, tt->window, w, h, 1);
+	GC gc = XCreateGC(ps->dpy, mask, 0, NULL);
+	XSetForeground(ps->dpy, gc, 0);
+	XFillRectangle(ps->dpy, mask, gc, 0, 0, w, h);
+	XSetForeground(ps->dpy, gc, 1);
+	for (int y = 0; y < h; y++) {
+		int inset = tooltip_row_inset(y, h, r);
+		if (w - 2 * inset > 0)
+			XFillRectangle(ps->dpy, mask, gc, inset, y, w - 2 * inset, 1);
+	}
+	XShapeCombineMask(ps->dpy, tt->window, ShapeBounding, 0, 0, mask, ShapeSet);
+	XFreeGC(ps->dpy, gc);
+	XFreePixmap(ps->dpy, mask);
 }
 
 void
@@ -253,15 +300,25 @@ tooltip_draw(Tooltip *tt, bool focused)
 	if (!tt || !tt->text)
 		return;
 
-	XftDrawRect(tt->draw, &tt->border, 0, 0, tt->width, 1);
-	XftDrawRect(tt->draw, &tt->border, 0, 1, 1, tt->height - 2);
-	XftDrawRect(tt->draw, &tt->border, 0, tt->height - 1, tt->width, 1);
-	XftDrawRect(tt->draw, &tt->border, tt->width - 1, 1, 1, tt->height - 2);
+	XftColor *fill = focused? &tt->backgroundHighlight: &tt->background;
+	int r = tooltip_radius(tt);
 
-	if (focused)
-		XftDrawRect(tt->draw, &tt->backgroundHighlight, 1, 1, tt->width - 2, tt->height - 2);
-	else
-		XftDrawRect(tt->draw, &tt->background, 1, 1, tt->width - 2, tt->height - 2);
+	if (r > 0) {
+		XftDrawRect(tt->draw, &tt->border, 0, 0, tt->width, tt->height);
+		int ih = tt->height - 2, iw = tt->width - 2;
+		for (int y = 0; y < ih; y++) {
+			int inset = tooltip_row_inset(y, ih, MAX(r - 1, 0));
+			if (iw - 2 * inset > 0)
+				XftDrawRect(tt->draw, fill, 1 + inset, 1 + y, iw - 2 * inset, 1);
+		}
+	}
+	else {
+		XftDrawRect(tt->draw, &tt->border, 0, 0, tt->width, 1);
+		XftDrawRect(tt->draw, &tt->border, 0, 1, 1, tt->height - 2);
+		XftDrawRect(tt->draw, &tt->border, 0, tt->height - 1, tt->width, 1);
+		XftDrawRect(tt->draw, &tt->border, tt->width - 1, 1, 1, tt->height - 2);
+		XftDrawRect(tt->draw, fill, 1, 1, tt->width - 2, tt->height - 2);
+	}
 
 	int base_x = 4;
 	int base_y = 1 + tt->extents.y + (tt->font_height - tt->extents.y)/2;
