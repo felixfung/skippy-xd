@@ -3519,9 +3519,9 @@ load_config_file(session_t *ps)
     ps->o.bindings_keysNext = mstrdup(config_get(config, "bindings", "keysNext", "n"));
     ps->o.bindings_keysCancel = mstrdup(config_get(config, "bindings", "keysCancel", "Escape"));
     ps->o.bindings_keysSelect = mstrdup(config_get(config, "bindings", "keysSelect", "Return space"));
-    ps->o.bindings_keysIconify = mstrdup(config_get(config, "bindings", "keysIconify", "1"));
-    ps->o.bindings_keysShade = mstrdup(config_get(config, "bindings", "keysShade", "2"));
-    ps->o.bindings_keysClose = mstrdup(config_get(config, "bindings", "keysClose", "3"));
+    ps->o.bindings_keysIconify = mstrdup(config_get(config, "bindings", "keysIconify", "Next"));
+    ps->o.bindings_keysShade = mstrdup(config_get(config, "bindings", "keysShade", "Prior"));
+    ps->o.bindings_keysClose = mstrdup(config_get(config, "bindings", "keysClose", "Delete"));
 
     // print an error message for any key bindings that aren't recognized
     check_keysyms(ps->o.config_path, ": [bindings] keysUp =", ps->o.bindings_keysUp);
