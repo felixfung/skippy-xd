@@ -1756,6 +1756,12 @@ skippy_activate(MainWin *mw, Window leader)
 	}
 }
 
+/* Events to drop after skippy exits: everything but map/unmap */
+static Bool
+skippy_drop_event(Display *dpy, XEvent *ev, XPointer arg) {
+	return ev->type != MapNotify && ev->type != UnmapNotify;
+}
+
 static void
 mainloop(session_t *ps, bool activate_on_start) {
 	MainWin *mw = NULL;
@@ -1941,9 +1947,16 @@ mainloop(session_t *ps, bool activate_on_start) {
 				clientwin_unmap(iter->data);
 			}
 
-			// Catch all errors, but remove all events
+			// Catch all errors and remove all events, except map/unmap of
+			// client windows: the window just focused may have been
+			// restored from minimized, and the map is when its preview
+			// gets picked up (for later, once it is minimized again)
 			XSync(ps->dpy, False);
-			XSync(ps->dpy, True);
+			{
+				XEvent ev_drop;
+				while (XCheckIfEvent(ps->dpy, &ev_drop, skippy_drop_event, NULL))
+					;
+			}
 
 			if (switchdesktop) {
 				wm_set_desktop_ewmh(ps,
