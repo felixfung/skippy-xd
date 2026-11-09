@@ -371,16 +371,52 @@ clientwin_update(ClientWin *cw) {
 		if (!gtk_frame_extents)
 			gtk_frame_extents = XInternAtom(ps->dpy, "_GTK_FRAME_EXTENTS", False);
 
+		// Chromium drops the property while its window is inactive, but
+		// keeps the same size and shadow margin: remember the last value
+		// seen per window and reuse it while the size is unchanged
+		static struct {
+			Window wid;
+			int width, height;
+			long l, r, t, b;
+		} cache[64];
+		static int cache_next = 0;
+
 		Atom type = None;
 		int format = 0;
 		unsigned long nitems = 0, after = 0;
 		unsigned char *data = NULL;
+		bool found = false;
+		long l = 0, r = 0, t = 0, b = 0;
+		int slot = -1;
+		for (int i = 0; i < 64; i++)
+			if (cache[i].wid == cw->wid_client) {
+				slot = i;
+				break;
+			}
 		if (Success == XGetWindowProperty(ps->dpy, cw->wid_client,
 					gtk_frame_extents, 0, 4, False, XA_CARDINAL,
 					&type, &format, &nitems, &after, &data)
 				&& data && format == 32 && nitems == 4) {
 			long *e = (long *) data;
-			long l = e[0], r = e[1], t = e[2], b = e[3];
+			l = e[0], r = e[1], t = e[2], b = e[3];
+			found = true;
+			if (slot < 0) {
+				slot = cache_next;
+				cache_next = (cache_next + 1) % 64;
+			}
+			cache[slot].wid = cw->wid_client;
+			cache[slot].width = cw->src.width;
+			cache[slot].height = cw->src.height;
+			cache[slot].l = l, cache[slot].r = r;
+			cache[slot].t = t, cache[slot].b = b;
+		}
+		else if (slot >= 0 && cache[slot].width == cw->src.width
+				&& cache[slot].height == cw->src.height) {
+			l = cache[slot].l, r = cache[slot].r;
+			t = cache[slot].t, b = cache[slot].b;
+			found = true;
+		}
+		if (found) {
 			if (l >= 0 && r >= 0 && t >= 0 && b >= 0
 					&& l + r < cw->src.width && t + b < cw->src.height) {
 				cw->gtkframe_l = l;
