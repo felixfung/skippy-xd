@@ -18,6 +18,7 @@
  */
 
 #include "skippy.h"
+#include <limits.h>
 
 static int
 clientwin_action(ClientWin *cw, enum cliop action);
@@ -148,11 +149,34 @@ int
 clientwin_filter_monitor(dlist *l, void *data) {
 	ClientWin *cw = l->data;
 	MonitorCoord *monitor = data;
+	MainWin *mw = cw->mainwin;
 	int midx = cw->src0.x + cw->src0.width / 2;
 	int midy = cw->src0.y + cw->src0.height / 2;
 
-	return monitor->x <= midx && midx < monitor->x + monitor->width
-		&& monitor->y <= midy && midy < monitor->y + monitor->height;
+	// A window whose middle is off every monitor (moved partly off the
+	// screen) belongs to the nearest monitor, instead of to none: it would
+	// be left out of the layout and shown at a stale place
+	int best = -1;
+	long bestdist = LONG_MAX;
+	for (int i = 0; i < mw->nmonitors; i++) {
+		MonitorCoord *m = &mw->monitor[i];
+		long dx = midx < m->x ? m->x - midx
+			: midx >= m->x + m->width ? midx - (m->x + m->width - 1) : 0;
+		long dy = midy < m->y ? m->y - midy
+			: midy >= m->y + m->height ? midy - (m->y + m->height - 1) : 0;
+		long dist = dx * dx + dy * dy;
+		if (dist < bestdist) {
+			bestdist = dist;
+			best = i;
+		}
+	}
+	if (best < 0)
+		return monitor->x <= midx && midx < monitor->x + monitor->width
+			&& monitor->y <= midy && midy < monitor->y + monitor->height;
+
+	MonitorCoord *m = &mw->monitor[best];
+	return m->x == monitor->x && m->y == monitor->y
+		&& m->width == monitor->width && m->height == monitor->height;
 }
 
 int
