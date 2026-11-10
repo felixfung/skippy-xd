@@ -1666,13 +1666,10 @@ desktopwin_map(ClientWin *cw)
 		mainwin_render_borders(mw);
 
 	if (ps->o.tooltip_show) {
-		if (cw->tooltip)
-			tooltip_destroy(cw->tooltip);
-		cw->tooltip = tooltip_create(cw->mainwin);
-	}
-
-	if (ps->o.tooltip_show)
+		if (!cw->tooltip)
+			cw->tooltip = tooltip_create(cw->mainwin);
 		clientwin_tooltip(cw);
+	}
 }
 
 static void

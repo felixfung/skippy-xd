@@ -768,11 +768,11 @@ clientwin_render(ClientWin *cw) {
 				&& cw2->slots == mw->client_to_focus->slots;
 			if (!ps->o.pagingOnCurrentMonitor)
 				clientwin_repaint(cw2, NULL);
-			if (cw2->tooltip)
+			if (!ps->o.pseudoTrans && cw2->tooltip)
 				clientwin_tooltip(cw2);
 		}
 	}
-	// label/show = focused: the label follows the focus
+
 	if (ps->o.tooltip_show == TOOLTIP_SHOW_FOCUSED && cw->tooltip
 			&& ps->o.mode != PROGMODE_PAGING)
 		clientwin_tooltip(cw);
