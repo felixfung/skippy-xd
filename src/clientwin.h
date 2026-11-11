@@ -70,6 +70,8 @@ struct _clientwin_t {
 	struct _Tooltip *tooltip;
 	int slots;
 	int monitor;
+	/* Monitor the window's middle is on, or the nearest one */
+	int src_monitor;
 };
 
 #define CLIENTWT_INIT { \
@@ -98,7 +100,8 @@ clientwin_get_multiplier(ClientWin *cw) {
 }
 void clientwin_fill_shape(ClientWin *cw, Drawable drawable, GC gc, int offset, int expand);
 int clientwin_validate_panel(dlist *, void *);
-int clientwin_filter_monitor(dlist *, void *);
+int clientwin_find_monitor(ClientWin *cw);
+dlist *clientwin_on_monitor(dlist *list, int monitor);
 int clientwin_filter_func(dlist *, void *);
 ClientWin *clientwin_create(MainWin *, Window);
 void clientwin_destroy(ClientWin *, bool destroyed);

@@ -45,9 +45,7 @@ focus_miniw_dir(ClientWin *cw, match_func match, dist_func func) {
 			(dlist_match_func) match, &cw->mini));
 
 	if (!ps->o.pagingOnCurrentMonitor && ps->o.mode == PROGMODE_PAGING)
-		candidates = dlist_first(dlist_find_all(candidates,
-				(dlist_match_func) clientwin_filter_monitor,
-				&mw->monitor[mw->active_monitor]));
+		candidates = clientwin_on_monitor(candidates, mw->active_monitor);
 
  	if (!candidates) return;
 
