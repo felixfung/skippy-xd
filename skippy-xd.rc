@@ -201,9 +201,10 @@ keysCancel = Escape
 keysNext = n
 keysPrev = p
 
-keysIconify = 1
-keysShade = 2
-keysClose = 3
+# PageDown, PageUp, Delete for iconifying, shading, closing
+keysIconify = Next
+keysShade = Prior
+keysClose = Delete
 
 # Mouse button bindings, options include
 # "no": do nothing
