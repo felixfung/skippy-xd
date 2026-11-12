@@ -175,15 +175,14 @@ clientwin_find_monitor(ClientWin *cw) {
 }
 
 /*
- * New list of the windows of list on the given monitor (src_monitor, set
- * along with src0), in the same order.
+ * New list of the windows of list on the given monitor, in the same order.
  */
 dlist *
 clientwin_on_monitor(dlist *list, int monitor) {
 	dlist *n = NULL;
 	foreach_dlist (dlist_first(list)) {
 		ClientWin *cw = iter->data;
-		if (cw->src_monitor == monitor)
+		if (cw->monitor == monitor)
 			n = dlist_add(n, cw);
 	}
 	return dlist_first(n);
@@ -433,7 +432,7 @@ clientwin_update(ClientWin *cw) {
 	cw->y = cw->src0.y = cw->src.y;
 	cw->src0.width = cw->src.width;
 	cw->src0.height = cw->src.height;
-	cw->src_monitor = clientwin_find_monitor(cw);
+	cw->monitor = clientwin_find_monitor(cw);
 
 	return true;
 }

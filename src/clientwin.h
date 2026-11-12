@@ -70,8 +70,6 @@ struct _clientwin_t {
 	struct _Tooltip *tooltip;
 	int slots;
 	int monitor;
-	/* Monitor the window's middle is on, or the nearest one */
-	int src_monitor;
 };
 
 #define CLIENTWT_INIT { \

@@ -1215,30 +1215,11 @@ sort_focuslist_cosmos(MainWin *mw, dlist *list)
 	if (mw->nmonitors <= 1)
 		return sort_focuslist_cosmos_region(list);
 
-	// One pass: move each window to the end of its monitor's list
-	dlist **head = calloc(2 * mw->nmonitors, sizeof(dlist *));
-	if (!head)
-		return sort_focuslist_cosmos_region(list);
-	dlist **tail = head + mw->nmonitors;
-	while (list) {
-		dlist *iter = list;
-		list = iter->next;
-		int i = ((ClientWin *) iter->data)->src_monitor;
-		if (i < 0 || i >= mw->nmonitors)
-			i = 0;
-		iter->prev = tail[i];
-		iter->next = NULL;
-		if (tail[i])
-			tail[i]->next = iter;
-		else
-			head[i] = iter;
-		tail[i] = iter;
-	}
-
 	dlist *ordered = NULL;
 	for (int i = 0; i < mw->nmonitors; i++)
-		ordered = dlist_join(ordered, sort_focuslist_cosmos_region(head[i]));
-	free(head);
+		ordered = dlist_join(ordered,
+				sort_focuslist_cosmos_region(clientwin_on_monitor(list, i)));
+	dlist_free(list);
 	return ordered;
 }
 
@@ -1587,7 +1568,6 @@ init_paging_layout(MainWin *mw, Window leader, int monitor)
 				cw->src0.x = cw->src.x + mw->monitor[monitor].x;
 				cw->src0.y = cw->src.y + mw->monitor[monitor].y;
 			}
-			cw->src_monitor = monitor;
 
 			clientwin_prepmove(cw);
 			clientwin_move(cw, multiplier,
