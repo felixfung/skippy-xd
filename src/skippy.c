@@ -1223,12 +1223,30 @@ sort_focuslist_cosmos(MainWin *mw, dlist *list)
 	return ordered;
 }
 
+// Track actual use independently of the stacking order used to draw previews.
+static void
+record_focus(MainWin *mw, Window focused) {
+	dlist *item = dlist_find(mw->clients, clientwin_cmp_func, (void *) focused);
+	if (item)
+		((ClientWin *) item->data)->focus_serial = ++mw->focus_serial;
+}
+
+// Unseen windows retain their existing stacking order through the stable sort.
+static int
+sort_cw_by_focus(dlist *a, dlist *b, void *data) {
+	uint64_t left = ((ClientWin *) a->data)->focus_serial;
+	uint64_t right = ((ClientWin *) b->data)->focus_serial;
+	return (left < right) - (left > right);
+}
+
 static void
 init_focus(MainWin *mw, enum layoutmode layout, dlist *windows, Window leader) {
 	session_t *ps = mw->ps;
 
 	mw->focuslist = dlist_dup(windows);
 	dlist_reverse(mw->focuslist);
+	record_focus(mw, leader);
+	dlist_sort(mw->focuslist, sort_cw_by_focus, NULL);
 
 	dlist *iter = dlist_find(mw->focuslist, clientwin_cmp_func, (void *) leader);
 
@@ -2419,6 +2437,9 @@ mainloop(session_t *ps, bool activate_on_start) {
 		// Discards all events so that poll() won't constantly hit data to read
 		//XSync(ps->dpy, True);
 		//assert(!XEventsQueued(ps->dpy, QueuedAfterReading));
+
+		if (!mw)
+			record_focus(ps->mainwin, wm_get_focused(ps));
 
 		last_rendered = time_in_millis();
 		XFlush(ps->dpy);
@@ -3677,7 +3698,7 @@ int main(int argc, char *argv[]) {
 	}
 	ps->mainwin = mw;
 
-	XSelectInput(ps->dpy, ps->root, SubstructureNotifyMask);
+	XSelectInput(ps->dpy, ps->root, SubstructureNotifyMask | PropertyChangeMask);
 
 	// Daemon mode
 	if (ps->o.runAsDaemon) {
