@@ -200,6 +200,8 @@ static match_result_t
 match_expr(const char *expr_list, const char *str)
 {
 	match_result_t result = { };
+	if (!str)
+		str = "";
 
 	char *copy = strdup(expr_list);
 	char *token = strtok(copy, ",");
