@@ -1756,7 +1756,6 @@ skippy_activate(MainWin *mw, Window leader)
 	}
 }
 
-/* Events to drop after skippy exits: everything but map/unmap */
 static Bool
 skippy_drop_event(Display *dpy, XEvent *ev, XPointer arg) {
 	return ev->type != MapNotify && ev->type != UnmapNotify;
