@@ -824,8 +824,7 @@ anime(
 		float multiplier = 1.0 + timeslice * (mtarget - 1.0);
 		mainwin_transform(mw, multiplier);
 
-		dlist *windows = dlist_first(dlist_find_all(mw->clientondesktop,
-				(dlist_match_func) clientwin_filter_monitor, &mw->monitor[i]));
+		dlist *windows = clientwin_on_monitor(mw->clientondesktop, i);
 		foreach_dlist (windows) {
 			ClientWin *cw = (ClientWin *) iter->data;
 			clientwin_move(cw, multiplier, xoff, yoff, timeslice);
@@ -1217,22 +1216,11 @@ sort_focuslist_cosmos(MainWin *mw, dlist *list)
 		return sort_focuslist_cosmos_region(list);
 
 	dlist *ordered = NULL;
-	for (int i = 0; i < mw->nmonitors; i++) {
-		dlist *windows = NULL;
-		for (dlist *iter = list; iter; ) {
-			dlist *next = iter->next;
-			if (clientwin_filter_monitor(iter, &mw->monitor[i])) {
-				if (iter == list)
-					list = next;
-				dlist_extract(iter);
-				windows = dlist_join(windows, iter);
-			}
-			iter = next;
-		}
-		ordered = dlist_join(ordered, sort_focuslist_cosmos_region(windows));
-	}
-
-	return dlist_join(ordered, sort_focuslist_cosmos_region(list));
+	for (int i = 0; i < mw->nmonitors; i++)
+		ordered = dlist_join(ordered,
+				sort_focuslist_cosmos_region(clientwin_on_monitor(list, i)));
+	dlist_free(list);
+	return ordered;
 }
 
 static void
@@ -1291,8 +1279,7 @@ init_focus(MainWin *mw, enum layoutmode layout, dlist *windows, Window leader) {
 
 		for (int n = 0; n < mw->nmonitors; n++) {
 			int i = (i0 + n) % mw->nmonitors;
-			dlist *monitorlist = dlist_first(dlist_find_all(mw->focuslist,
-					(dlist_match_func) clientwin_filter_monitor, &mw->monitor[i]));
+			dlist *monitorlist = clientwin_on_monitor(mw->focuslist, i);
 
 			foreach_dlist(monitorlist) {
 				ClientWin *cw = (ClientWin *) iter->data;
@@ -1481,8 +1468,7 @@ init_paging_layout(MainWin *mw, Window leader, int monitor)
 
 	dlist *windows = mw->clientondesktop;
 	if (!ps->o.pagingOnCurrentMonitor)
-		windows = dlist_first(dlist_find_all(mw->clientondesktop,
-				(dlist_match_func) clientwin_filter_monitor, &mw->monitor[monitor]));
+		windows = clientwin_on_monitor(mw->clientondesktop, monitor);
 	foreach_dlist (windows)
 	{
 		ClientWin *cw = (ClientWin *) iter->data;
@@ -1712,8 +1698,7 @@ skippy_activate(MainWin *mw, Window leader)
 		for (int i=i0; i<i1; i++) {
 			dlist *windows = NULL;
 			if (multimonitor)
-				windows = dlist_first(dlist_find_all(mw->clientondesktop,
-						(dlist_match_func) clientwin_filter_monitor, &mw->monitor[i]));
+				windows = clientwin_on_monitor(mw->clientondesktop, i);
 			else
 				windows = dlist_dup(mw->clientondesktop);
 

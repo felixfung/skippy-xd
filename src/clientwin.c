@@ -144,15 +144,48 @@ clientwin_validate_panel(dlist *l, void *data) {
 			0;
 }
 
+/*
+ * Index of the monitor the window's middle is on. A window whose middle is
+ * off every monitor (moved partly off the screen) gets the nearest one, so
+ * it is still laid out.
+ */
 int
-clientwin_filter_monitor(dlist *l, void *data) {
-	ClientWin *cw = l->data;
-	MonitorCoord *monitor = data;
+clientwin_find_monitor(ClientWin *cw) {
+	MainWin *mw = cw->mainwin;
 	int midx = cw->src0.x + cw->src0.width / 2;
 	int midy = cw->src0.y + cw->src0.height / 2;
 
-	return monitor->x <= midx && midx < monitor->x + monitor->width
-		&& monitor->y <= midy && midy < monitor->y + monitor->height;
+	int best = 0;
+	long bestdist = -1;
+	for (int i = 0; i < mw->nmonitors; i++) {
+		MonitorCoord *m = &mw->monitor[i];
+		long dx = midx < m->x ? m->x - midx
+			: midx >= m->x + m->width ? midx - (m->x + m->width - 1) : 0;
+		long dy = midy < m->y ? m->y - midy
+			: midy >= m->y + m->height ? midy - (m->y + m->height - 1) : 0;
+		long dist = dx * dx + dy * dy;
+		if (bestdist < 0 || dist < bestdist) {
+			bestdist = dist;
+			best = i;
+		}
+		if (dist == 0)
+			break;
+	}
+	return best;
+}
+
+/*
+ * New list of the windows of list on the given monitor, in the same order.
+ */
+dlist *
+clientwin_on_monitor(dlist *list, int monitor) {
+	dlist *n = NULL;
+	foreach_dlist (dlist_first(list)) {
+		ClientWin *cw = iter->data;
+		if (cw->monitor == monitor)
+			n = dlist_add(n, cw);
+	}
+	return dlist_first(n);
 }
 
 int
@@ -399,6 +432,7 @@ clientwin_update(ClientWin *cw) {
 	cw->y = cw->src0.y = cw->src.y;
 	cw->src0.width = cw->src.width;
 	cw->src0.height = cw->src.height;
+	cw->monitor = clientwin_find_monitor(cw);
 
 	return true;
 }
