@@ -1187,19 +1187,19 @@ sort_focuslist_cosmos_region(dlist *list)
 
 	if (!best_split) {
 		printfdf(false, "(): cosmos focus fallback row sort n=%u", len);
-		dlist_sort(list, sort_cw_by_y, 0);
+		list = dlist_sort(list, sort_cw_by_y, 0);
 		return dlist_first(list);
 	}
 
 	if (best_horizontal) {
 		printfdf(false, "(): cosmos focus horizontal n=%u split=%u cut2=%ld penalty=%lld outer=%u",
 				len, best_split, best_cut, best_penalty, best_outer_rank);
-		dlist_sort(list, sort_cw_by_y, 0);
+		list = dlist_sort(list, sort_cw_by_y, 0);
 	}
 	else {
 		printfdf(false, "(): cosmos focus vertical n=%u split=%u cut2=%ld penalty=%lld outer=%u",
 				len, best_split, best_cut, best_penalty, best_outer_rank);
-		dlist_sort(list, sort_cw_by_x, 0);
+		list = dlist_sort(list, sort_cw_by_x, 0);
 	}
 
 	dlist *second = dlist_split_nth(list, best_split);

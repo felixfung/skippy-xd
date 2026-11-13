@@ -74,8 +74,8 @@ layout_run(MainWin *mw, dlist *windows,
 		}
 
 		dlist *sorted_windows = dlist_dup(windows);
-		dlist_sort(sorted_windows, sort_cw_by_id, 0);
-		dlist_sort(sorted_windows, sort_cw_by_row, 0);
+		sorted_windows = dlist_sort(sorted_windows, sort_cw_by_id, 0);
+		sorted_windows = dlist_sort(sorted_windows, sort_cw_by_row, 0);
 		layout_cosmos(sorted_windows, monitor, total_width, total_height, mw->distance);
 		dlist_free(sorted_windows);
 	}
