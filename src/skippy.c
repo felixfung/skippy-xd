@@ -822,7 +822,6 @@ anime(
 		}
 
 		float multiplier = 1.0 + timeslice * (mtarget - 1.0);
-		mainwin_transform(mw, multiplier);
 
 		dlist *windows = clientwin_on_monitor(mw->clientondesktop, i);
 		foreach_dlist (windows) {

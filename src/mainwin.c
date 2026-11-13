@@ -184,10 +184,10 @@ mainwin_create(session_t *ps) {
 		// used only by pseudoTrans in desktopwin_map
 		mw->desktoptransform.matrix[0][0] = 1.0;
 		mw->desktoptransform.matrix[0][1] = 0.0;
-		mw->desktoptransform.matrix[0][2] = 0;
+		mw->desktoptransform.matrix[0][2] = 0.0;
 		mw->desktoptransform.matrix[1][0] = 0.0;
 		mw->desktoptransform.matrix[1][1] = 1.0;
-		mw->desktoptransform.matrix[1][2] = 0;
+		mw->desktoptransform.matrix[1][2] = 0.0;
 		mw->desktoptransform.matrix[2][0] = 0.0;
 		mw->desktoptransform.matrix[2][1] = 0.0;
 		mw->desktoptransform.matrix[2][2] = 1.0;
@@ -761,20 +761,6 @@ mainwin_destroy(MainWin *mw) {
 	free(mw->keycodes_Close);
 
 	free(mw);
-}
-
-void
-mainwin_transform(MainWin *mw, float f)
-{
-	mw->transform.matrix[0][0] = XDoubleToFixed(1.0 / f);
-	mw->transform.matrix[0][1] = 0.0;
-	mw->transform.matrix[0][2] = 0.0;
-	mw->transform.matrix[1][0] = 0.0;
-	mw->transform.matrix[1][1] = XDoubleToFixed(1.0 / f);
-	mw->transform.matrix[1][2] = 0.0;
-	mw->transform.matrix[2][0] = 0.0;
-	mw->transform.matrix[2][1] = 0.0;
-	mw->transform.matrix[2][2] = XDoubleToFixed(1.0);
 }
 
 int
