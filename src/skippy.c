@@ -2219,6 +2219,17 @@ mainloop(session_t *ps, bool activate_on_start) {
 					mw->client_to_focus = NULL;
 				}
 			}
+			else if (ev.type == UnmapNotify) {
+				dlist *item = dlist_find(ps->mainwin->clients, clientwin_cmp_func, (void *) wid);
+				if (item) {
+					// Keep the named pixmap; the unmapped window itself has no contents.
+					ClientWin *cw = item->data;
+					cw->zombie = true;
+					cw->mode = clientwin_get_disp_mode(ps, cw, false);
+					clientwin_update2(cw);
+					if (mw && cw->mapped) clientwin_render(cw);
+				}
+			}
 			else if (!mw && (ev.type == ConfigureNotify || ev.type == PropertyNotify)) {
 				printfdf(false,
 						"(): else if (ev.type == ConfigureNotify || ev.type == PropertyNotify) {");
@@ -2267,7 +2278,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 						 && ev_next.type != VisibilityNotify && ev_next.type != ConfigureNotify
 						 && ev_next.type != PropertyNotify && ev_next.type != Expose
 						 && ev_next.type != FocusIn && ev_next.type != FocusOut
-						 && ev_next.type != UnmapNotify && ev_next.type != ReparentNotify
+						 && ev_next.type != ReparentNotify
 						 && ev_next.type != ps->xinfo.damage_ev_base + XDamageNotify)
 							break;
 
