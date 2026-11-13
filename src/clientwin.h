@@ -105,6 +105,7 @@ ClientWin *clientwin_create(MainWin *, Window);
 void clientwin_destroy(ClientWin *, bool destroyed);
 void clientwin_prepmove(ClientWin *);
 void clientwin_move(ClientWin *, float, int, int, float);
+void clientwin_transform(ClientWin *);
 void clientwin_map(ClientWin *);
 void clientwin_unmap(ClientWin *);
 int clientwin_handle(ClientWin *, XEvent *);

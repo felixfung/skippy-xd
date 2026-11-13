@@ -2254,6 +2254,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 					ClientWin *cw = (ClientWin *) iter->data;
 					clientwin_update3(cw);
 					clientwin_update2(cw);
+					clientwin_transform(cw);
 					cw->damaged = true;
 				}
 				num_events--;
@@ -2282,6 +2283,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 							if (ev_next.type == CreateNotify || ev_next.type == MapNotify) {
 								clientwin_update3(cw);
 								clientwin_update2(cw);
+								clientwin_transform(cw);
 							}
 							cw->damaged = true;
 						}

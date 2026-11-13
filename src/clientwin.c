@@ -409,7 +409,7 @@ clientwin_update(ClientWin *cw) {
 		int format = 0;
 		unsigned long nitems = 0, after = 0;
 		unsigned char *data = NULL;
-		if (Success == XGetWindowProperty(ps->dpy, cw->wid_client,
+		if (Success == XGetWindowProperty(ps->dpy, cw->src.window,
 					gtk_frame_extents, 0, 4, False, XA_CARDINAL,
 					&type, &format, &nitems, &after, &data)
 				&& data && format == 32 && nitems == 4) {
@@ -966,11 +966,8 @@ clientwin_move(ClientWin *cw, float f, int x, int y, float timeslice)
 }
 
 void
-clientwin_map(ClientWin *cw) {
+clientwin_transform(ClientWin *cw) {
 	session_t *ps = cw->mainwin->ps;
-	
-	if (!cw->mode)
-		return;
 
 	// Shift the window transform past the cropped GTK frame extents.
 	// The offset is in source pixels, so it needs no multiplier.
@@ -996,6 +993,16 @@ clientwin_map(ClientWin *cw) {
 	transform->matrix[1][2] = 0;
 
 	clientwin_render(cw);
+}
+
+void
+clientwin_map(ClientWin *cw) {
+	session_t *ps = cw->mainwin->ps;
+
+	if (!cw->mode)
+		return;
+
+	clientwin_transform(cw);
 
 	XMapWindow(ps->dpy, cw->mini.window);
 	XRaiseWindow(ps->dpy, cw->mini.window);
