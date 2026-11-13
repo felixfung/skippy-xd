@@ -287,6 +287,7 @@ clientwin_create(MainWin *mw, Window client) {
     cw->slots = 0;
 	cw->mainwin = mw;
 	cw->src.window = client;
+	cw->factor = 1;
 	cw->origin = None;
 	cw->destination = None;
 	cw->shadow = None;
