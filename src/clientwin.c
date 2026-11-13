@@ -1006,8 +1006,10 @@ clientwin_map(ClientWin *cw) {
 	clientwin_transform(cw);
 	clientwin_render(cw);
 
-	XMapWindow(ps->dpy, cw->mini.window);
-	XRaiseWindow(ps->dpy, cw->mini.window);
+	if (!cw->mapped) {
+		XMapWindow(ps->dpy, cw->mini.window);
+		XRaiseWindow(ps->dpy, cw->mini.window);
+	}
 	cw->mapped = true;
 
 	if (ps->o.tooltip_show && ps->o.mode != PROGMODE_PAGING
