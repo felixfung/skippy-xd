@@ -1,5 +1,17 @@
 Skippy-XD changelog
 
+0.12.2 -- "Rainbow Prism" (14 Nov 2026) ~/felixfung
+ - Ensure livepreview pixmap:
+     - Window selection/cancel event processing
+     - Batch process windows snapshots
+     - Fix artifact when unmapping during activation
+ - Small optimization on animation
+ - Fix bugs with includeFrame = false
+ - Fix label flickering
+ - Fix when window centre is off monitors
+ - Fix crashes when a window has no WM_CLASS
+ - label/padding config option
+
 0.12.1 -- "Touch Grass" (6 Nov 2026) ~/felixfung
  - Fix when switchOnCurrentMonitor, exposeOnCurrentMonitor = true
  - Fix segfault when at startup when no windows are focused
