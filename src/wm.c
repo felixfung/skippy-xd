@@ -476,7 +476,16 @@ wm_get_stack_sub(session_t *ps, Window root) {
 		case 1:
 			// Some WMs publish stacking order without advertising it in _NET_SUPPORTED.
 			l = wm_get_stack_fromprop(ps, root, _NET_CLIENT_LIST_STACKING);
-			return l ? l : wm_get_stack_fromprop(ps, root, _NET_CLIENT_LIST);
+			if (l) {
+				printfdf(false,
+						"(): Retrieved window stack from _NET_CLIENT_LIST_STACKING.");
+				return l;
+			}
+			else {
+				printfdf(false,
+						"(): Retrieved window stack from _NET_CLIENT_LIST.");
+				return wm_get_stack_fromprop(ps, root, _NET_CLIENT_LIST);
+			}
 
 		// GNOME WM
 		case 2:
@@ -485,6 +494,7 @@ wm_get_stack_sub(session_t *ps, Window root) {
 
 		// Stupid method, but this gives windows ordered by z-order
 		default:
+			printfdf(false, "(): Retrieved window stack from XQueryTree.");
 		{
 			Window *children = NULL;
 			unsigned nchildren = 0;
@@ -512,7 +522,6 @@ wm_get_stack_sub(session_t *ps, Window root) {
 				}
 			}
 			sxfree(children);
-			printfdf(false, "(): Retrieved window stack by querying all children.");
 		}
 	}
 
