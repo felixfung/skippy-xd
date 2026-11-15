@@ -338,7 +338,6 @@ wm_check_netwm(session_t *ps) {
 			req |= 8;
 		else if (_NET_CLIENT_LIST_STACKING == ldata[i]) {
 			req |= 8;
-			_NET_CLIENT_LIST = _NET_CLIENT_LIST_STACKING;
 		}
 		else if (_NET_WM_STATE_FULLSCREEN == ldata[i])
 			ps->has_ewmh_fullscreen = true;
@@ -475,8 +474,9 @@ wm_get_stack_sub(session_t *ps, Window root) {
 	switch (ps->o.clientList) {
 		// EWMH
 		case 1:
-			printfdf(false, "(): Retrieved window stack from _NET_CLIENT_LIST.");
-			return wm_get_stack_fromprop(ps, root, _NET_CLIENT_LIST);
+			// Some WMs publish stacking order without advertising it in _NET_SUPPORTED.
+			l = wm_get_stack_fromprop(ps, root, _NET_CLIENT_LIST_STACKING);
+			return l ? l : wm_get_stack_fromprop(ps, root, _NET_CLIENT_LIST);
 
 		// GNOME WM
 		case 2:
