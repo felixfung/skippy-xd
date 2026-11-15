@@ -1842,7 +1842,9 @@ mainloop(session_t *ps, bool activate_on_start) {
 					selected = mw->client_to_focus->slots;
 				}
 				else {
-					if (mw->client_to_focus_on_cancel){
+					if (mw->client_to_focus_on_cancel
+							&& dlist_find(ps->mainwin->clients, clientwin_cmp_func,
+								(void *) mw->client_to_focus_on_cancel)) {
 						childwin_focus(mw->client_to_focus_on_cancel);
 					}
 					else {
