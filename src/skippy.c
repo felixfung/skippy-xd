@@ -1842,7 +1842,6 @@ mainloop(session_t *ps, bool activate_on_start) {
 					selected = mw->client_to_focus->slots;
 				}
 				else {
-					// The original window may have closed while paging was active.
 					if (mw->client_to_focus_on_cancel
 							&& dlist_find(ps->mainwin->clients, clientwin_cmp_func,
 								(void *) mw->client_to_focus_on_cancel)) {
