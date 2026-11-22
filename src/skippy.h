@@ -262,6 +262,7 @@ typedef struct {
 	char *multiselect_tint;
 	int multiselect_tintOpacity;
 
+	bool panel_allow_click;
 	bool panel_show;
 	bool panel_tinting;
 	bool panel_reserveSpace;
@@ -359,6 +360,7 @@ typedef struct {
 	.multiselect_tint = NULL, \
 	.multiselect_tintOpacity = 196, \
 \
+	.panel_allow_click = false, \
 	.panel_show = true, \
 	.panel_tinting = true, \
 	.panel_reserveSpace = true, \

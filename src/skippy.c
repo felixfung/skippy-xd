@@ -2367,7 +2367,16 @@ mainloop(session_t *ps, bool activate_on_start) {
 				for (iter = mw->panels; iter && processing; iter = iter->next) {
 					ClientWin *cw = (ClientWin *) iter->data;
 					if (cw->mini.window == wid) {
-						die = mainwin_handle(mw, &ev);
+						if (ps->o.panel_allow_click && cw->paneltype == WINTYPE_PANEL
+								&& (ev.type == ButtonPress || ev.type == ButtonRelease)) {
+							Bool sent = panel_click_send(ps->dpy, cw->src.window,
+									cw->drawable_id, cw->factor, cw->gtkframe_l,
+									cw->gtkframe_t, &cw->panel_click, &ev.xbutton, debuglog);
+							printfdf(false, "(): panel button %u type %d queued=%d",
+									ev.xbutton.button, ev.type, sent);
+						} else {
+							die = mainwin_handle(mw, &ev);
+						}
 						processing = false;
 					}
 				}
@@ -3470,6 +3479,7 @@ load_config_file(session_t *ps)
 	ps->o.multiselect_tint = mstrdup(config_get(config, "multiselect", "tint", "#66B6F6"));
 	config_get_int_wrap(config, "multiselect", "tintOpacity", &ps->o.multiselect_tintOpacity, 0, 256);
 
+    config_get_bool_wrap(config, "panel", "allowClick", &ps->o.panel_allow_click);
     config_get_bool_wrap(config, "panel", "show", &ps->o.panel_show);
     config_get_bool_wrap(config, "panel", "backgroundTinting", &ps->o.panel_tinting);
     config_get_bool_wrap(config, "panel", "reserveSpace", &ps->o.panel_reserveSpace);

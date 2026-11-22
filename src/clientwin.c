@@ -1019,6 +1019,7 @@ clientwin_map(ClientWin *cw) {
 
 void
 clientwin_unmap(ClientWin *cw) {
+	memset(&cw->panel_click, 0, sizeof(cw->panel_click));
 	session_t *ps = cw->mainwin->ps;
 
 	free_damage(ps, &cw->damage);

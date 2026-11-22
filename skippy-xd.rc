@@ -141,6 +141,11 @@ tintOpacity = 196
 
 # Windows of type _NET_WM_WINDOW_TYPE_DOCK
 [panel]
+# Experimental synthetic button forwarding to real panel controls.
+# Includes wheel buttons; panels may reject synthetic events. Hover, dragging,
+# keyboard focus and popup rendering are not implemented by this option.
+allowClick = false
+
 show = true
 backgroundTinting = true
 reserveSpace = true

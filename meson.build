@@ -19,6 +19,7 @@ skippy_sources = [
   'src/img.c',
   'src/layout.c',
   'src/mainwin.c',
+  'src/panel-click.c',
   'src/skippy.c',
   'src/tooltip.c',
   'src/wm.c',
@@ -149,3 +150,12 @@ dlist_sort_test = executable('test-dlist-sort',
   c_args: ['-UNDEBUG'],
 )
 test('dlist-sort', dlist_sort_test)
+
+panel_click_test = executable('test-panel-click',
+  ['tests/panel-click.c', 'src/panel-click.c'],
+  include_directories: include_directories('src'),
+  dependencies: [x11_dep, m_dep],
+  c_args: ['-UNDEBUG'],
+)
+# Returns Meson's skip status (77) if no X display is available.
+test('panel-click', panel_click_test)

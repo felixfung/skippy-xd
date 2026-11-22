@@ -20,6 +20,8 @@
 #ifndef SKIPPY_CLIENT_H
 #define SKIPPY_CLIENT_H
 
+#include "panel-click.h"
+
 typedef struct {
 	Window window;
 	int x, y;
@@ -57,6 +59,7 @@ struct _clientwin_t {
 	bool damaged;
 	bool mapped;
 
+	PanelClickState panel_click;
 	bool zombie;
 	wintype_t paneltype;
 	/* XserverRegion repair; */
