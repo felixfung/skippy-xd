@@ -3551,8 +3551,8 @@ load_config_file(session_t *ps)
 	if (!parse_cliop(ps, config_get(config, "bindings", "miwMouse1", "focus"), &ps->o.bindings_miwMouse[1])
 			|| !parse_cliop(ps, config_get(config, "bindings", "miwMouse2", "close-ewmh"), &ps->o.bindings_miwMouse[2])
 			|| !parse_cliop(ps, config_get(config, "bindings", "miwMouse3", "iconify"), &ps->o.bindings_miwMouse[3])
-			|| !parse_cliop(ps, config_get(config, "bindings", "miwMouse4", "keysNext"), &ps->o.bindings_miwMouse[4])
-			|| !parse_cliop(ps, config_get(config, "bindings", "miwMouse5", "keysPrev"), &ps->o.bindings_miwMouse[5])) {
+			|| !parse_cliop(ps, config_get(config, "bindings", "miwMouse4", "keysPrev"), &ps->o.bindings_miwMouse[4])
+			|| !parse_cliop(ps, config_get(config, "bindings", "miwMouse5", "keysNext"), &ps->o.bindings_miwMouse[5])) {
 		return RET_BADARG;
 	}
 

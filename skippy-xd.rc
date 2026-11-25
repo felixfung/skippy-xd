@@ -220,5 +220,5 @@ keysClose = Delete
 miwMouse1 = focus
 miwMouse2 = close-ewmh
 miwMouse3 = iconify
-miwMouse4 = keysNext
-miwMouse5 = keysPrev
+miwMouse4 = keysPrev
+miwMouse5 = keysNext
