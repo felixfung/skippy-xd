@@ -61,6 +61,7 @@ struct _clientwin_t {
 	wintype_t paneltype;
 	/* XserverRegion repair; */
 	
+	bool animating;
 	/* These are virtual positions set by the layout routine */
 	int x, y;
 	/* Left/top _GTK_FRAME_EXTENTS (client-side shadow) cropped from src;

@@ -2030,6 +2030,7 @@ mainloop(session_t *ps, bool activate_on_start) {
 				if (first_animating) {
 					foreach_dlist (mw->clientondesktop) {
 						ClientWin *cw = iter->data;
+						cw->animating = true;
 						clientwin_prepmove(cw);
 					}
 					foreach_dlist (mw->panels) {
@@ -2127,6 +2128,10 @@ mainloop(session_t *ps, bool activate_on_start) {
 					}
 				}
 
+				foreach_dlist (mw->clientondesktop) {
+					ClientWin *cw = iter->data;
+					cw->animating = false;
+				}
 				anime(ps->mainwin, 1);
 
 				mainwin_render_borders(mw);

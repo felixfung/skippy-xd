@@ -681,16 +681,18 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 		if (cw->zombie)
 			mask = mw->shadowPicture;
 
-		if (!ps->o.pseudoTrans) {
-			XRenderComposite(ps->dpy, PictOpSrc, source, mask,
-					cw->destination, s_x, s_y, 0, 0, s_x, s_y, s_w, s_h);
-		}
-		else {
-			XRenderComposite(ps->dpy, PictOpSrc, mw->background, None,
-					cw->destination, cw->mini.x + s_x, cw->mini.y + s_y, 0, 0,
-					s_x, s_y, s_w, s_h);
-			XRenderComposite(ps->dpy, PictOpOver, source, mask,
-					cw->destination, s_x, s_y, 0, 0, s_x, s_y, s_w, s_h);
+		if (!cw->animating) {
+			if (!ps->o.pseudoTrans) {
+				XRenderComposite(ps->dpy, PictOpSrc, source, mask,
+						cw->destination, s_x, s_y, 0, 0, s_x, s_y, s_w, s_h);
+			}
+			else {
+				XRenderComposite(ps->dpy, PictOpSrc, mw->background, None,
+						cw->destination, cw->mini.x + s_x, cw->mini.y + s_y, 0, 0,
+						s_x, s_y, s_w, s_h);
+				XRenderComposite(ps->dpy, PictOpOver, source, mask,
+						cw->destination, s_x, s_y, 0, 0, s_x, s_y, s_w, s_h);
+			}
 		}
 
 		if (ps->o.background
