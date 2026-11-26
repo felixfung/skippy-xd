@@ -19,6 +19,7 @@
 
 #include "skippy.h"
 #include <errno.h>
+#include <time.h>
 #include <locale.h>
 #include <getopt.h>
 #include <strings.h>
@@ -1742,6 +1743,35 @@ skippy_drop_event(Display *dpy, XEvent *ev, XPointer arg) {
 	return ev->type != MapNotify && ev->type != UnmapNotify;
 }
 
+/* Scheduling-only experiment: steady animation deadlines (no GPU/XRender changes).
+ * CLOCK_MONOTONIC prevents wall-clock corrections from changing animation
+ * progress. nanosleep avoids the busy loop when user actions are blocked.
+ */
+static double
+skippy_animation_clock_ms(void)
+{
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	return (double)ts.tv_sec * 1000.0 + (double)ts.tv_nsec / 1000000.0;
+}
+
+static void
+skippy_animation_sleep_until(double deadline_ms)
+{
+	for (;;) {
+		double delay = deadline_ms - skippy_animation_clock_ms();
+		if (delay <= 0.0)
+			return;
+		struct timespec req;
+		req.tv_sec = (time_t)(delay / 1000.0);
+		req.tv_nsec = (long)((delay - req.tv_sec * 1000.0) * 1000000.0);
+		if (nanosleep(&req, NULL) == 0)
+			return;
+		if (errno != EINTR)
+			return;
+	}
+}
+
 static void
 mainloop(session_t *ps, bool activate_on_start) {
 	MainWin *mw = NULL;
@@ -1753,6 +1783,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 	bool toggling = !ps->o.pivotkey;
 	bool animating = activate;
 	long first_animated = 0L;
+	double animation_start_ms = 0.0;
+	long animation_frame_index = 0L;
 	bool first_animating = false;
 	pid_t trigger_client = 0;
 	bool switchdesktop = false;
@@ -1792,6 +1824,8 @@ mainloop(session_t *ps, bool activate_on_start) {
 			mw = ps->mainwin;
 			pending_damage = false;
 			first_animated = time_in_millis();
+			animation_start_ms = skippy_animation_clock_ms();
+			animation_frame_index = 0;
 			first_animating = true;
 		}
 		if (mw)
@@ -2005,25 +2039,42 @@ mainloop(session_t *ps, bool activate_on_start) {
 				die = true;
 		}
 
-		// animation!
+		// Animation progress and deadlines use the monotonic clock.
 		if (mw && animating) {
-			int timeslice = time_in_millis() - first_animated;
-			int starttime = last_animated + (1000.0 / ps->o.animationRefresh) - first_animated;
-			int stabletime = ps->o.animationDuration;
-			if (ps->o.mode == PROGMODE_SWITCH) {
-				if (ps->o.switchWaitDuration == 0) {
-					starttime = stabletime = timeslice + 1;
-				}
-				else if (ps->o.switchLayout != LAYOUT_COSMOS) {
-					starttime = ps->o.switchWaitDuration + 1;
-					stabletime = ps->o.switchWaitDuration;
-				}
-				else if (ps->o.switchLayout == LAYOUT_COSMOS) {
-					starttime += ps->o.switchWaitDuration;
-					stabletime += ps->o.switchWaitDuration;
+			const double period_ms = 1000.0 / (double)ps->o.animationRefresh;
+			const bool switch_mode = ps->o.mode == PROGMODE_SWITCH;
+			const bool hold_switch = switch_mode && ps->o.switchWaitDuration == 0;
+			const bool wait_only = switch_mode && !hold_switch &&
+				ps->o.switchLayout != LAYOUT_COSMOS;
+			const bool switch_cosmos = switch_mode && !hold_switch && !wait_only;
+			const double phase_delay_ms = switch_cosmos ? ps->o.switchWaitDuration : 0.0;
+			const double frame_epoch_ms = animation_start_ms + phase_delay_ms;
+			const double end_offset_ms = wait_only ? ps->o.switchWaitDuration :
+				(double)ps->o.animationDuration + phase_delay_ms;
+			const double end_deadline_ms = animation_start_ms + end_offset_ms;
+			const double next_frame_ms = frame_epoch_ms +
+				(double)(animation_frame_index + 1) * period_ms;
+			const bool handling_switch_events = switch_mode &&
+				(ps->o.switchCycleDuringWait || ps->o.switchWaitDuration == 0);
+			double now_ms = skippy_animation_clock_ms();
+
+			// Normal expose/paging animations previously busy-spun because they
+			// continue before the main poll(). Switch mode must be allowed to
+			// handle key/daemon events in the regular event loop instead.
+			if (!hold_switch && !handling_switch_events) {
+				double wake_ms = end_deadline_ms;
+				if (!wait_only && next_frame_ms < wake_ms)
+					wake_ms = next_frame_ms;
+				if (wake_ms > now_ms) {
+					skippy_animation_sleep_until(wake_ms);
+					now_ms = skippy_animation_clock_ms();
 				}
 			}
-			if (starttime < timeslice && timeslice < stabletime) {
+
+			int timeslice = (int)(now_ms - animation_start_ms);
+			const bool frame_due = !hold_switch && !wait_only &&
+				now_ms >= next_frame_ms && now_ms < end_deadline_ms;
+			if (frame_due) {
 				if (!mw->mapped)
 					mainwin_map(mw);
 
@@ -2049,14 +2100,14 @@ mainloop(session_t *ps, bool activate_on_start) {
 
 				mainwin_render_borders(mw);
 				last_animated = last_rendered = time_in_millis();
-
-				if (ps->o.mode == PROGMODE_SWITCH
-				&& ps->o.switchLayout == LAYOUT_COSMOS)
-					last_animated = last_rendered -= ps->o.switchWaitDuration;
-
 				XFlush(ps->dpy);
+
+				// Absolute deadlines: skipped frames never shift subsequent ticks.
+				double completed_ms = skippy_animation_clock_ms() - frame_epoch_ms;
+				animation_frame_index = completed_ms > 0.0 ?
+					(long)(completed_ms / period_ms) : 0L;
 			}
-			else if (timeslice >= stabletime) {
+			else if (!hold_switch && now_ms >= end_deadline_ms) {
 				if (!mw->mapped)
 					mainwin_map(mw);
 
@@ -2452,8 +2503,33 @@ mainloop(session_t *ps, bool activate_on_start) {
 			if (timeout < 0)
 				timeout = 0;
 		}
-		if (animating)
-			timeout = 0;
+		if (animating) {
+			// For interactive switch mode, the event-loop poll handles both
+			// input and frame deadlines. Other modes sleep above (and continue).
+			if (mw && ps->o.mode == PROGMODE_SWITCH &&
+				(ps->o.switchCycleDuringWait || ps->o.switchWaitDuration == 0)) {
+				if (ps->o.switchWaitDuration == 0) {
+					timeout = 16; // Indefinite interactive switch hold.
+				} else {
+					double period_ms = 1000.0 / (double)ps->o.animationRefresh;
+					bool cosmos = ps->o.switchLayout == LAYOUT_COSMOS;
+					double delay_ms = cosmos ? ps->o.switchWaitDuration : 0.0;
+					double deadline_ms = animation_start_ms +
+						(cosmos ? ps->o.animationDuration + delay_ms :
+						(double)ps->o.switchWaitDuration);
+					if (cosmos) {
+						double frame_ms = animation_start_ms + delay_ms +
+							(double)(animation_frame_index + 1) * period_ms;
+						if (frame_ms < deadline_ms)
+							deadline_ms = frame_ms;
+					}
+					double remaining = deadline_ms - skippy_animation_clock_ms();
+					timeout = remaining > 0.0 ? (int)(remaining + 0.999) : 0;
+				}
+			} else {
+				timeout = 0;
+			}
+		}
 		poll(r_fd, (r_fd[1].fd >= 0 ? 2: 1), timeout);
 
 		// Handle daemon commands
