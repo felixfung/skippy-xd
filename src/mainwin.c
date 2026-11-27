@@ -651,6 +651,8 @@ mainwin_update_geometry(MainWin *mw)
 void
 mainwin_update(MainWin *mw)
 {
+	dlist_free_with_data(mw->anime_frame);
+	mw->anime_frame = NULL;
 	mainwin_update_geometry(mw);
 	mainwin_update_background(mw);
 }

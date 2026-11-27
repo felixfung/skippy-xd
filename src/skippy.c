@@ -2044,6 +2044,9 @@ mainloop(session_t *ps, bool activate_on_start) {
 				&& ps->o.switchLayout == LAYOUT_COSMOS)
 					timeslice -= ps->o.switchWaitDuration;
 
+				int *frametime = malloc(sizeof(int));
+				*frametime = timeslice;
+				mw->anime_frame = dlist_add(mw->anime_frame, frametime);
 				anime(ps->mainwin, ((float)timeslice)/(float)ps->o.animationDuration);
 
 				mainwin_render_borders(mw);
@@ -2127,6 +2130,9 @@ mainloop(session_t *ps, bool activate_on_start) {
 					}
 				}
 
+				int *frametime = malloc(sizeof(int));
+				*frametime = timeslice;
+				mw->anime_frame = dlist_add(mw->anime_frame, frametime);
 				anime(ps->mainwin, 1);
 
 				mainwin_render_borders(mw);
@@ -2143,6 +2149,15 @@ mainloop(session_t *ps, bool activate_on_start) {
 				}
 
 				XFlush(ps->dpy);
+
+				if (mw) {
+					printfdf(true, "(): animation fps analysis:");
+					foreach_dlist (mw->anime_frame) {
+						int timeslice = * (int *) (iter->data);
+						printfdf(true, "(): %d", timeslice);
+					}
+					printfdf(true, "(): ");
+				}
 
 				focus_miniw_adv(ps, mw->client_to_focus,
 						ps->o.moveMouse);

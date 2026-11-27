@@ -90,6 +90,8 @@ struct _mainwin_t {
 	ClientWin *client_to_focus;
 	/// @brief the originally focused window
 	ClientWin *client_to_focus_on_cancel;
+
+	dlist *anime_frame;
 };
 
 MainWin *mainwin_create(session_t *ps);
